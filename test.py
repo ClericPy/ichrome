@@ -27,40 +27,13 @@ import time
 # # ws.close()
 # import traceback
 
+qq = Queue(1)
+import traceback
+qq.a = 32
+print(qq.a)
 
-def test():
-    start_time = time.time()
-    while time.time()- start_time< 2:
-        # time.sleep(1)
-        result = yield "还没有"
-        
-        print('result:', result)
-        if result:
-            time.sleep(1)
-            return result
-    print('超时了')
-    return
-
-
-g = test()
-# print(next(g))
-g.send(None)
-
-# g.send('ssdf')
-for i in g:
-    # time.sleep(1)
-    print(i)
-#     try:
-#         print(next(g))
-#     except StopIteration:
-#         break
-#     if i > 1:
-#         try:
-#             print(g.send('有了'), 1111)
-#         except StopIteration as e:
-#             print(1222, e.value)
-# # print(next(g))
-# print(next(g))
-# print(next(g))
-# print(next(g))
-# print(next(g))
+try:
+    qq.get(timeout=1)
+except Exception as e:
+    traceback.print_exc()
+    print(e)

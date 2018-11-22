@@ -9,7 +9,7 @@ import subprocess
 import socket
 import time
 import traceback
-from queue import Queue
+from queue import Queue, Empty
 import websocket
 from collections import deque
 
@@ -339,7 +339,7 @@ class Tab(object):
         self.lock = threading.Lock()
         self.ws = websocket.WebSocket()
         self._connect()
-        for job in [self._recv_daemon, self._queue_watcher]:
+        for job in [self._recv_daemon]:
             t = threading.Thread(target=self._recv_daemon, daemon=True)
             t.start()
 
@@ -361,38 +361,43 @@ class Tab(object):
             try:
                 data = self.ws.recv()
                 data = json.loads(data)
+                to_remove = []
+                # print_info(data)
                 for item in self._watchers:
-                    # TODO 等实现接收器, 并且要清理掉 _watcher
-                    if item[0] in data.items():
-                        item[1].send(data)
-
-                # self._message_queue.put({"ts": int(time.time()), "msg": self.ws.recv()})
+                    arg, q = item
+                    if arg in data.items():
+                        q.put(data)
             except websocket._exceptions.WebSocketConnectionClosedException:
                 break
 
     def _recv(self, arg, timeout=None):
-        # TODO 这里注册了事件以后, 要监听 Timeout 时间内如果触发, 拿到返回值
-        timeout = timeout or self.timeout
-        # 等待超时的一个接收器, 要么超时, 要么提前收到结果, 考虑生成器或者队列
-        # 
-        listener = None
+        timeout = self.timeout if timeout is None else timeout
+        q = Queue(1)
         arg = tuple(arg.items())[0]
-        self._watchers.append([arg, listener])
+        item = [arg, q]
+        self._watchers.append(item)
+        try:
+            result = q.get(timeout=timeout)
+        except Empty:
+            result = None
+        self._watchers.remove(item)
+        del q
+        return result
 
-    def _send(self, request):
-        for _ in range(3):
-            try:
-                self._message_id += 1
-                request["id"] = self._message_id
-                with self.lock:
-                    self.ws.send(json.dumps(request))
-                res = self.recv({"id": request["id"]})
-                return res
-            except (
-                websocket._exceptions.WebSocketTimeoutException,
-                websocket._exceptions.WebSocketConnectionClosedException,
-            ):
-                self.refresh_ws()
+    def _send(self, request, timeout=None):
+        try:
+            self._message_id += 1
+            request["id"] = self._message_id
+            # print_info(request, timeout)
+            with self.lock:
+                self.ws.send(json.dumps(request))
+            res = self._recv({"id": request["id"]}, timeout=timeout)
+            return res
+        except (
+            websocket._exceptions.WebSocketTimeoutException,
+            websocket._exceptions.WebSocketConnectionClosedException,
+        ):
+            self.refresh_ws()
 
     def refresh_ws(self):
         self.ws.close()
@@ -415,31 +420,13 @@ class Tab(object):
             print_info(traceback.format_exc())
             return ""
 
-    def _wait_loading(self):
-        data = self._wait_event("Page.loadEventFired")
+    def _wait_loading(self, timeout=None):
+        data = self._wait_event("Page.loadEventFired", timeout=timeout)
         return data
 
-    def _wait_event(self, event=None):
-        # block
-        timeout = 6
-        start_time = time.time()
-        ws = ws or self.ws
-        data = None
-        while time.time() - start_time < timeout:
-            try:
-                data = ws.recv()
-                if not data:
-                    continue
-                data = json.loads(data)
-                if not event or data.get("method") == event:
-                    return data
-            except (
-                websocket._exceptions.WebSocketTimeoutException,
-                websocket._exceptions.WebSocketConnectionClosedException,
-            ):
-                return None
-            # except Exception as e:
-            # print('wait event %s failed for %s' % (event, e))
+    def _wait_event(self, event="", timeout=None):
+        timeout = self.timeout if timeout is None else timeout
+        return self._recv({"method": event}, timeout=timeout)
 
     def reload(self, timeout=5):
         """
@@ -449,18 +436,21 @@ class Tab(object):
 
     def set_url(self, url=None, timeout=5):
         """
-        Navigate the tab to the URL, 
+        Navigate the tab to the URL
         """
-        ws = self.connect(timeout)
         self._send({"method": "Page.enable"})
+        start_load_ts = self.now
         if url:
             self.url = url
-            data = self._send({"method": "Page.navigate", "params": {"url": url}})
+            data = self._send(
+                {"method": "Page.navigate", "params": {"url": url}}, timeout=timeout
+            )
         else:
-            data = self._send({"method": "Page.reload"})
-        if self._wait_loading(ws=ws) is None:
-            self._send({"method": "Page.stopLoading"})
-        ws.close()
+            data = self._send({"method": "Page.reload"}, timeout=timeout)
+        time_passed = self.now - start_load_ts
+        real_timeout = max((timeout - time_passed, 0))
+        if self._wait_loading(timeout=real_timeout) is None:
+            self._send({"method": "Page.stopLoading"}, timeout=0)
         return data
 
     def js(self, javascript):
@@ -493,8 +483,14 @@ def main():
     # # time.sleep(3000)
     # chrome.run_forever()
     chrome = Chrome()
+    # print_info(chrome._get_tabs())
     tab = chrome.tabs[0]
-    print(tab)
+    # print_info(tab)
+    # print_info(tab._send({"method": "Page.navigate", "params": {"url": "http://p.3.cn"}}))
+
+    # start = time.time()
+    # print_info(tab.set_url("http://localhost:5000/sleep/8", timeout=3))
+    # print(time.time() - start)
 
 
 if __name__ == "__main__":
