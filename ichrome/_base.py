@@ -65,7 +65,12 @@ class ChromeDaemon(object):
         auto_restart=True,
         max_deaths=2,
     ):
+        self.max_deaths = max_deaths
+        self._shutdown = False
+        self.ready = False
         self.proc = None
+        self.auto_restart = auto_restart
+
         self.chrome_path = self._ensure_chrome(chrome_path or self.DEFAULT_CHROME_PATH)
         self.host = host
         self.port = port
@@ -76,11 +81,7 @@ class ChromeDaemon(object):
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image
-        self.user_data_dir = (
-            "../chrome-%s-user-data/" % self.port
-            if user_data_dir is None
-            else user_data_dir
-        )
+        self._wrap_user_data_dir(user_data_dir)
         self.start_url = start_url
         self.extra_config = extra_config or [
             "--disable-gpu",
@@ -88,10 +89,18 @@ class ChromeDaemon(object):
             "--no-first-run",
         ]
         self.chrome_proc_start_time = time.time()
-        self.ready = False
-        self.max_deaths = max_deaths
-        self.auto_restart = auto_restart
         self.launch_chrome()
+
+    def _wrap_user_data_dir(self, user_data_dir):
+        """refactor this function to set accurate dir."""
+        user_data_dir = (
+            "./ichrome_user_data/" if user_data_dir is None else user_data_dir
+        )
+        self.user_data_dir = os.path.join(user_data_dir, "chrome_%s" % self.port)
+        if not os.path.isdir(self.user_data_dir):
+            print_info(
+                "creating user data dir at [%s]." % os.path.realpath(self.user_data_dir)
+            )
 
     def launch_chrome(self):
         self.proc = subprocess.Popen(**self.cmd_args)
@@ -210,8 +219,12 @@ class ChromeDaemon(object):
         else:
             print_info("exit daemon")
 
-    def run_forever(self, block=True):
-        t = threading.Thread(target=self.daemon, daemon=True)
+    def run_forever(self, block=True, interval=5, max_deaths=None):
+        t = threading.Thread(
+            target=self.daemon,
+            kwargs={"interval": interval, "max_deaths": max_deaths},
+            daemon=True,
+        )
         t.start()
         if block:
             t.join()
@@ -233,6 +246,7 @@ class ChromeDaemon(object):
     def shutdown(self):
         print_info("shut down %s." % self)
         self.auto_restart = False
+        self._shutdown = True
         self.kill()
 
     def __enter__(self):
@@ -269,7 +283,8 @@ class ChromeDaemon(object):
 
     def __del__(self):
         print_info("%s.__del__()." % self)
-        self.shutdown()
+        if not self._shutdown:
+            self.shutdown()
 
     def __str__(self):
         return "%s(%s:%s)" % (self.__class__.__name__, self.host, self.port)
@@ -342,10 +357,11 @@ class Chrome(object):
             )
             tab = Tab(tab_id, title, _url, websocketURL, self, self.timeout)
             tab.create_time = tab.now
-            print_info("New tab [%s] %s" % (tab_id, url))
+            print_info("new tab %s: %s" % (tab, url))
             return tab
 
     def activate_tab(self, tab_id):
+        ok = False
         if isinstance(tab_id, Tab):
             tab_id = tab_id.tab_id
         r = self.req.get(
@@ -354,12 +370,12 @@ class Chrome(object):
             timeout=self.timeout,
         )
         if r.x and r.ok:
-            # rjson = r.json()
             if r.text == "Target activated":
-                return True
-        return False
+                ok = True
+        print_info("activate_tab %s: %s" % (tab_id, ok))
 
     def close_tab(self, tab_id=None):
+        ok = False
         tab_id = tab_id or self.tabs
         if isinstance(tab_id, Tab):
             tab_id = tab_id.tab_id
@@ -370,8 +386,8 @@ class Chrome(object):
         )
         if r.x and r.ok:
             if r.text == "Target is closing":
-                return True
-        return False
+                ok = True
+        print_info("close tab %s: %s" % (tab_id, ok))
 
     def close_tabs(self, tab_ids):
         return [self.close_tab(tab_id) for tab_id in tab_ids]
@@ -580,20 +596,7 @@ class Tab(object):
 
 
 def main():
-    # chrome = ChromeLauncher(port=9222)
-    # # Launcher
-    # # time.sleep(3000)
-    # chrome.run_forever()
-    chrome = Chrome()
-    # print_info(chrome._get_tabs())
-    tab = chrome.tabs[0]
-    # print_info(tab)
-    # print_info(tab._send({"method": "Page.navigate", "params": {"url": "http://p.3.cn"}}))
-
-    start = time.time()
-    print_info(tab.set_url("http://localhost:5000/sleep/1", timeout=2))
-    print(time.time() - start)
-    print_info(tab.get_html())
+    pass
 
 
 if __name__ == "__main__":
