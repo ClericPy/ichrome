@@ -1,4 +1,4 @@
-# ichrome
+# ichrome - v0.0.1
 
 > A toy for using chrome under the "Chrome Devtools Protocol(CDP)". For python3.6+ (who care python2.x).
 
@@ -75,3 +75,14 @@ if __name__ == "__main__":
     main()
 
 ```
+
+
+### TODO
+
+- Add auto_restart while crash.
+
+- Auto-remove the zombie tabs with a lifebook.
+
+- Add some useful examples.
+
+- Refactor for asyncio.
