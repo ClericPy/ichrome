@@ -221,7 +221,7 @@ class ChromeDaemon(object):
         if self.proc:
             self.proc.kill()
         if force:
-            self.clear_chrome_process(self.port, timeout=5)
+            self.clear_chrome_process(self.port, timeout=self.max_deaths + 1)
         else:
             self.clear_chrome_process(self.port)
         self.port_in_using.discard(self.port)
@@ -234,6 +234,12 @@ class ChromeDaemon(object):
         print_info("shut down %s." % self)
         self.auto_restart = False
         self.kill()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.shutdown()
 
     @staticmethod
     def clear_chrome_process(port=None, timeout=None):
