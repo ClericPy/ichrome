@@ -1,17 +1,17 @@
-import psutil
-from torequests.versions import IS_WINDOWS
-from torequests import tPool
-import threading
-from torequests.utils import print_info
-import os
 import json
-import subprocess
+import os
 import socket
+import subprocess
+import threading
 import time
 import traceback
-from queue import Queue, Empty
+from queue import Empty, Queue
+
+import psutil
 import websocket
-from collections import deque
+from torequests import tPool
+from torequests.utils import print_info, quote_plus
+from torequests.versions import IS_WINDOWS
 
 
 def mute_log():
@@ -23,6 +23,8 @@ def mute_log():
 
 class ChromeDaemon(object):
     """create chrome process.
+    max_deaths: max_deaths=2 means should quick shutdown chrome twice to skip auto_restart.
+
     default extra_config: ["--disable-gpu", "--no-sandbox", "--no-first-run"]
 
     common args:
@@ -52,7 +54,7 @@ class ChromeDaemon(object):
         self,
         chrome_path=None,
         host="localhost",
-        port=None,
+        port=9222,
         headless=False,
         user_agent=None,
         proxy=None,
@@ -222,7 +224,7 @@ class ChromeDaemon(object):
             self.clear_chrome_process(self.port, timeout=5)
         else:
             self.clear_chrome_process(self.port)
-        self.port_in_using.add(self.port)
+        self.port_in_using.discard(self.port)
 
     def restart(self):
         self.kill()
@@ -318,24 +320,91 @@ class Chrome(object):
     def tabs(self):
         return self._get_tabs()
 
+    def new_tab(self, url=""):
+        r = self.req.get(
+            "%s/json/new?%s" % (self.server, quote_plus(url)),
+            retry=self.retry,
+            timeout=self.timeout,
+        )
+        if r.x and r.ok:
+            rjson = r.json()
+            tab_id, title, _url, websocketURL = (
+                rjson["id"],
+                rjson["title"],
+                rjson["url"],
+                rjson["webSocketDebuggerUrl"],
+            )
+            tab = Tab(tab_id, title, _url, websocketURL, self, self.timeout)
+            tab.create_time = tab.now
+            print_info("New tab [%s] %s" % (tab_id, url))
+            return tab
+
+    def activate_tab(self, tab_id):
+        if isinstance(tab_id, Tab):
+            tab_id = tab_id.tab_id
+        r = self.req.get(
+            "%s/json/activate/%s" % (self.server, tab_id),
+            retry=self.retry,
+            timeout=self.timeout,
+        )
+        if r.x and r.ok:
+            # rjson = r.json()
+            if r.text == "Target activated":
+                return True
+        return False
+
+    def close_tab(self, tab_id=None):
+        tab_id = tab_id or self.tabs
+        if isinstance(tab_id, Tab):
+            tab_id = tab_id.tab_id
+        r = self.req.get(
+            "%s/json/close/%s" % (self.server, tab_id),
+            retry=self.retry,
+            timeout=self.timeout,
+        )
+        if r.x and r.ok:
+            if r.text == "Target is closing":
+                return True
+        return False
+
+    def close_tabs(self, tab_ids):
+        return [self.close_tab(tab_id) for tab_id in tab_ids]
+
+    @property
+    def meta(self):
+        r = self.req.get(
+            "%s/json/version" % self.server, retry=self.retry, timeout=self.timeout
+        )
+        if r.x and r.ok:
+            return r.json()
+
     def __str__(self):
         return "[Chromote(tabs=%d)]" % len(self.tabs)
 
     def __repr__(self):
         return "Chromote(%s)" % (self.server)
 
+    def __getitem__(self, index):
+        tabs = self.tabs
+        if isinstance(index, int):
+            if len(tabs) > index:
+                return tabs[index]
+        elif isinstance(index, slice):
+            return tabs.__getitem__(index)
+
 
 class Tab(object):
-    def __init__(self, tid, title, url, websocketURL, chrome, timeout=None):
-        self.tid = tid
+    def __init__(self, tab_id, title, url, websocketURL, chrome, timeout=None):
+        self.tab_id = tab_id
         self.title = title
         self.url = url
         self.websocketURL = websocketURL
         self.chrome = chrome
         self.timeout = timeout
 
+        self.create_time = None
         self._message_id = 0
-        self._watchers = []
+        self._watchers = {}
         self.lock = threading.Lock()
         self.ws = websocket.WebSocket()
         self._connect()
@@ -345,6 +414,12 @@ class Tab(object):
 
     def _connect(self):
         self.ws.connect(self.websocketURL, timeout=self.timeout)
+
+    def activate(self):
+        return self.chrome.activate_tab(self.tab_id)
+
+    def close(self):
+        return self.chrome.close_tab(self.tab_id)
 
     def _recv_daemon(self):
         """
@@ -359,29 +434,42 @@ class Tab(object):
         """
         while self.ws.connected:
             try:
-                data = self.ws.recv()
-                data = json.loads(data)
+                data_str = self.ws.recv()
+                data = json.loads(data_str)
                 to_remove = []
                 # print_info(data)
-                for item in self._watchers:
-                    arg, q = item
-                    if arg in data.items():
-                        q.put(data)
+                for arg in self._ensure_kv_string(data):
+                    q = self._watchers.pop(arg, None)
+                    if q is not None:
+                        q.put(data_str)
             except websocket._exceptions.WebSocketConnectionClosedException:
                 break
 
+    @staticmethod
+    def _ensure_kv_string(dict_obj):
+        result = []
+        for item in dict_obj.items():
+            key = item[0]
+            try:
+                value = json.dumps(item[1], sort_keys=1)
+            except TypeError:
+                value = str(item[1])
+            result.append((key, value))
+        return result
+
     def _recv(self, arg, timeout=None):
+        """arg type: dict"""
         timeout = self.timeout if timeout is None else timeout
         q = Queue(1)
-        arg = tuple(arg.items())[0]
-        item = [arg, q]
-        self._watchers.append(item)
+        arg = self._ensure_kv_string(arg)[0]
+        self._watchers[arg] = q
         try:
             result = q.get(timeout=timeout)
         except Empty:
             result = None
-        self._watchers.remove(item)
-        del q
+        finally:
+            self._watchers.pop(arg, None)
+            del q
         return result
 
     def _send(self, request, timeout=None):
@@ -411,7 +499,12 @@ class Tab(object):
         return self._send({"method": "Network.clearBrowserCookies"})
 
     @property
-    def html(self):
+    def current_url(self):
+        return json.loads(self.js("window.location.href"))["result"]["result"]["value"]
+
+    @property
+    def content(self):
+        """return"""
         try:
             result = json.loads(self.js("document.documentElement.outerHTML"))
             value = result["result"]["result"]["value"]
@@ -419,6 +512,9 @@ class Tab(object):
         except KeyError:
             print_info(traceback.format_exc())
             return ""
+
+    def get_html(self, encoding="utf-8"):
+        return self.content.decode(encoding)
 
     def _wait_loading(self, timeout=None):
         data = self._wait_event("Page.loadEventFired", timeout=timeout)
@@ -466,7 +562,7 @@ class Tab(object):
 
     def __repr__(self):
         return 'ChromeTab("%s", "%s", "%s", port: %s)' % (
-            self.tid,
+            self.tab_id,
             self.title,
             self.url,
             self.chrome.port,
@@ -488,9 +584,10 @@ def main():
     # print_info(tab)
     # print_info(tab._send({"method": "Page.navigate", "params": {"url": "http://p.3.cn"}}))
 
-    # start = time.time()
-    # print_info(tab.set_url("http://localhost:5000/sleep/8", timeout=3))
-    # print(time.time() - start)
+    start = time.time()
+    print_info(tab.set_url("http://localhost:5000/sleep/1", timeout=2))
+    print(time.time() - start)
+    print_info(tab.get_html())
 
 
 if __name__ == "__main__":
