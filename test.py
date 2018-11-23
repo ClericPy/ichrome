@@ -8,9 +8,8 @@ def example():
         chromed.run_forever(0)
         chrome = Chrome()
         tab = chrome.new_tab()
-        time.sleep(3)
+        time.sleep(2)
         tab.close()
-        
 
 
 if __name__ == "__main__":

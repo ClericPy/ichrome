@@ -81,6 +81,8 @@ if __name__ == "__main__":
 
 ### TODO
 
+- Concurrent support.
+
 - Add auto_restart while crash.
 
 - Auto-remove the zombie tabs with a lifebook.
