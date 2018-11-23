@@ -1,6 +1,8 @@
 # ichrome - v0.0.1
 
-> A toy for using chrome under the "Chrome Devtools Protocol(CDP)". For python3.6+ (who care python2.x).
+> A toy for using chrome under the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/). For python3.6+ (who care python2.x).
+
+
 
 ## Features
 
