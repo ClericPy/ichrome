@@ -5,10 +5,12 @@ import time
 
 def example():
     with ChromeDaemon() as chromed:
-        chromed.run_forever(0)
         chrome = Chrome()
         tab = chrome.new_tab()
-        time.sleep(2)
+        tab.set_url("http://p.3.cn")
+        print(tab.get_html()[:30])
+        tab.js("alert('test js alert.')")
+        time.sleep(3)
         tab.close()
 
 

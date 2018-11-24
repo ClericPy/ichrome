@@ -10,7 +10,7 @@ from queue import Empty, Queue
 import psutil
 import websocket
 from torequests import tPool
-from torequests.utils import print_info, quote_plus
+from torequests.utils import print_info, quote_plus, timepass, ttime
 from torequests.versions import IS_WINDOWS
 
 
@@ -62,16 +62,22 @@ class ChromeDaemon(object):
         disable_image=False,
         start_url="about:blank",
         extra_config=None,
-        auto_restart=True,
         max_deaths=2,
+        daemon=True,
+        timeout=2,
     ):
+        self.start_time = time.time()
         self.max_deaths = max_deaths
         self._shutdown = False
+        self._use_daemon = daemon
+        self._daemon_thread = None
+        self._timeout = timeout
         self.ready = False
         self.proc = None
-        self.auto_restart = auto_restart
 
-        self.chrome_path = self._ensure_chrome(chrome_path or self.DEFAULT_CHROME_PATH)
+        self.chrome_path = self._ensure_chrome_path(
+            chrome_path or self.DEFAULT_CHROME_PATH
+        )
         self.host = host
         self.port = port
         self.server = "http://%s:%s" % (self.host, self.port)
@@ -90,6 +96,8 @@ class ChromeDaemon(object):
         ]
         self.chrome_proc_start_time = time.time()
         self.launch_chrome()
+        if self._use_daemon:
+            self.run_forever(block=False)
 
     def _wrap_user_data_dir(self, user_data_dir):
         """refactor this function to set accurate dir."""
@@ -102,17 +110,33 @@ class ChromeDaemon(object):
                 "creating user data dir at [%s]." % os.path.realpath(self.user_data_dir)
             )
 
-    def launch_chrome(self):
-        self.proc = subprocess.Popen(**self.cmd_args)
+    @property
+    def ok(self):
+        ok = False
+        if self.proc:
+            if self.proc.poll() is None and self._ensure_connectable():
+                ok = True
+        return ok
+
+    def _ensure_connectable(self, tries=2):
         url = self.server + "/json"
-        for _ in range(10):
-            r = self.req.get(url, timeout=1)
+        for _ in range(tries):
+            r = self.req.get(url, timeout=self._timeout)
             if r.x and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
-                print_info("launch_chrome success: %s" % self)
-                return
+                return True
             time.sleep(1)
+        return False
+
+    def launch_chrome(self):
+        self.proc = subprocess.Popen(**self.cmd_args)
+        if self.ok:
+            print_info("launch_chrome success: %s" % self)
+            return True
+        else:
+            print_info("launch_chrome failed: %s" % self)
+            return False
 
     @property
     def cmd_args(self):
@@ -141,7 +165,7 @@ class ChromeDaemon(object):
             raise ValueError("port in used")
 
     @staticmethod
-    def _ensure_chrome(chrome_path):
+    def _ensure_chrome_path(chrome_path):
         if IS_WINDOWS:
             backup = [
                 "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
@@ -179,7 +203,7 @@ class ChromeDaemon(object):
             "--remote-debugging-port=%s" % self.port,
         ]
         if self.headless:
-            args.append(self.headless)
+            args.append("--headless")
             args.append("--hide-scrollbars")
         if self.user_data_dir:
             args.append("--user-data-dir=%s" % self.user_data_dir)
@@ -193,41 +217,34 @@ class ChromeDaemon(object):
             args.append(self.start_url)
         return args
 
-    @property
-    def alive(self):
-        if self.proc:
-            return self.proc.poll() is None
-        return False
-
-    def daemon(self, interval=5, max_deaths=None):
+    def _daemon(self, interval=5, max_deaths=None):
         """if chrome proc is killed 3 times too fast (not raise TimeoutExpired),
         will skip auto_restart."""
         return_code = None
         deaths = 0
         max_deaths = max_deaths or self.max_deaths
-        while 1:
+        while self._use_daemon and not self._shutdown and deaths < max_deaths:
+            if not self.ok:
+                self.restart()
+                continue
             try:
                 return_code = self.proc.wait(timeout=interval)
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
-            if deaths >= max_deaths:
-                break
-            if not self.alive and self.auto_restart:
-                self.restart()
-                continue
         else:
-            print_info("exit daemon")
+            print_info("exit process daemon.")
 
     def run_forever(self, block=True, interval=5, max_deaths=None):
-        t = threading.Thread(
-            target=self.daemon,
-            kwargs={"interval": interval, "max_deaths": max_deaths},
-            daemon=True,
-        )
-        t.start()
+        if not self._daemon_thread:
+            self._daemon_thread = threading.Thread(
+                target=self._daemon,
+                kwargs={"interval": interval, "max_deaths": max_deaths},
+                daemon=True,
+            )
+            self._daemon_thread.start()
         if block:
-            t.join()
+            self._daemon_thread.join()
 
     def kill(self, force=False, cycle=5):
         self.ready = False
@@ -240,12 +257,15 @@ class ChromeDaemon(object):
         self.port_in_using.discard(self.port)
 
     def restart(self):
+        print_info("restarting %s" % self)
         self.kill()
-        self.launch_chrome()
+        return self.launch_chrome()
 
     def shutdown(self):
-        print_info("shut down %s." % self)
-        self.auto_restart = False
+        print_info(
+            "shutting %s down, start running at %s, duration is %s."
+            % (self, ttime(self.start_time), timepass(time.time() - self.start_time))
+        )
         self._shutdown = True
         self.kill()
 
@@ -527,13 +547,17 @@ class Tab(object):
     @property
     def content(self):
         """return"""
+        response = None
         try:
-            result = json.loads(self.js("document.documentElement.outerHTML"))
+            response = self.js("document.documentElement.outerHTML")
+            if not response:
+                return b""
+            result = json.loads(response)
             value = result["result"]["result"]["value"]
             return value.encode("utf-8")
-        except KeyError:
-            print_info(traceback.format_exc())
-            return ""
+        except (KeyError, json.decoder.JSONDecodeError):
+            print_info("tab.content error %s:\n%s" % (response, traceback.format_exc()))
+            return b""
 
     def get_html(self, encoding="utf-8"):
         return self.content.decode(encoding)
