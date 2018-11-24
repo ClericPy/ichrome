@@ -463,6 +463,19 @@ class Tab(object):
     def close(self):
         return self.chrome.close_tab(self.tab_id)
 
+    @staticmethod
+    def _normalize_dict_hashable(dict_obj):
+        """input a dict_obj, return the hashable item list."""
+        result = []
+        for item in dict_obj.items():
+            key = item[0]
+            try:
+                value = json.dumps(item[1], sort_keys=1)
+            except TypeError:
+                value = str(item[1])
+            result.append((key, value))
+        return result
+
     def _recv_daemon(self):
         """
         {"id":1,"result":{}}
@@ -477,48 +490,44 @@ class Tab(object):
         while self.ws.connected:
             try:
                 data_str = self.ws.recv()
-                data = json.loads(data_str)
+                if not data_str:
+                    continue
+                try:
+                    data = json.loads(data_str)
+                except (TypeError, json.decoder.JSONDecodeError):
+                    continue
                 to_remove = []
-                # print_info(data)
-                for arg in self._ensure_kv_string(data):
+                # print_info(data_str)
+                for arg in self._normalize_dict_hashable(data):
                     q = self._watchers.pop(arg, None)
                     if q is not None:
                         q.put(data_str)
             except websocket._exceptions.WebSocketConnectionClosedException:
                 break
 
-    @staticmethod
-    def _ensure_kv_string(dict_obj):
-        result = []
-        for item in dict_obj.items():
-            key = item[0]
-            try:
-                value = json.dumps(item[1], sort_keys=1)
-            except TypeError:
-                value = str(item[1])
-            result.append((key, value))
-        return result
-
     def _recv(self, arg, timeout=None):
         """arg type: dict"""
+        result = None
         timeout = self.timeout if timeout is None else timeout
+        if timeout == 0:
+            return result
         q = Queue(1)
-        arg = self._ensure_kv_string(arg)[0]
+        arg = self._normalize_dict_hashable(arg)[0]
         self._watchers[arg] = q
         try:
             result = q.get(timeout=timeout)
         except Empty:
-            result = None
+            pass
         finally:
             self._watchers.pop(arg, None)
             del q
-        return result
+            return result
 
     def _send(self, request, timeout=None):
         try:
+            timeout = self.timeout if timeout is None else timeout
             self._message_id += 1
             request["id"] = self._message_id
-            # print_info(request, timeout)
             with self.lock:
                 self.ws.send(json.dumps(request))
             res = self._recv({"id": request["id"]}, timeout=timeout)
@@ -529,6 +538,14 @@ class Tab(object):
         ):
             self.refresh_ws()
 
+    def send(self, method, timeout=None, callback=None, **kwargs):
+        result = self._send({"method": method, "params": kwargs})
+        return callback(result) if callable(callback) else result
+
+    def recv(self, arg, timeout=None, callback=None):
+        result = self._recv(arg, timeout=timeout)
+        return callback(result) if callable(callback) else result
+
     def refresh_ws(self):
         self.ws.close()
         self._connect()
@@ -537,8 +554,8 @@ class Tab(object):
     def now(self):
         return int(time.time())
 
-    def clear_cookies(self):
-        return self._send({"method": "Network.clearBrowserCookies"})
+    def clear_cookies(self, timeout=0):
+        return self.send("Network.clearBrowserCookies", timeout=timeout)
 
     @property
     def current_url(self):
@@ -562,13 +579,15 @@ class Tab(object):
     def get_html(self, encoding="utf-8"):
         return self.content.decode(encoding)
 
-    def _wait_loading(self, timeout=None):
-        data = self._wait_event("Page.loadEventFired", timeout=timeout)
+    def _wait_loading(self, timeout=None, callback=None):
+        data = self._wait_event(
+            "Page.loadEventFired", timeout=timeout, callback=callback
+        )
         return data
 
-    def _wait_event(self, event="", timeout=None):
+    def _wait_event(self, event="", timeout=None, callback=None):
         timeout = self.timeout if timeout is None else timeout
-        return self._recv({"method": event}, timeout=timeout)
+        return self.recv({"method": event}, timeout=timeout, callback=callback)
 
     def reload(self, timeout=5):
         """
@@ -580,28 +599,24 @@ class Tab(object):
         """
         Navigate the tab to the URL
         """
-        self._send({"method": "Page.enable"})
+        self.send("Page.enable", timeout=0)
         start_load_ts = self.now
         if url:
             self.url = url
-            data = self._send(
-                {"method": "Page.navigate", "params": {"url": url}}, timeout=timeout
-            )
+            data = self.send("Page.navigate", url=url, timeout=timeout)
         else:
-            data = self._send({"method": "Page.reload"}, timeout=timeout)
+            data = self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
         real_timeout = max((timeout - time_passed, 0))
         if self._wait_loading(timeout=real_timeout) is None:
-            self._send({"method": "Page.stopLoading"}, timeout=0)
+            self.send("Page.stopLoading", timeout=0)
         return data
 
     def js(self, javascript):
         """
         Evaluate JavaScript on the page
         """
-        return self._send(
-            {"method": "Runtime.evaluate", "params": {"expression": javascript}}
-        )
+        return self.send("Runtime.evaluate", expression=javascript)
 
     def __str__(self):
         return "Tab(%s)" % (self.url)
