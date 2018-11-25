@@ -7,27 +7,39 @@ import re
 
 
 def example2():
+    from ichrome import Chrome, Tab, ChromeDaemon
     from ichrome import ichrome_logger
-    import logging
+    """Example for crawling a special background request."""
 
-    # ichrome_logger.setLevel(logging.DEBUG)
-    with ChromeDaemon() as chromed:
-        chrome = Chrome()
-        tab = chrome.new_tab("http://p.3.cn")
-        tab.set_url("https://www.bing.com/")
-        print_info(tab.send("Network.enable"))
-        # here will block until input `test` in the baidu input position.
+    # reset default logger level, such as DEBUG
+    # import logging
+    # ichrome_logger.setLevel(logging.INFO)
+    # launch the Chrome process and daemon process, will auto shutdown by 'with' expression.
+    with ChromeDaemon():
+        # create connection to Chrome Devtools
+        chrome = Chrome(host="127.0.0.1", port=9222, timeout=3, retry=1)
+        # now create a new tab without url
+        tab = chrome.new_tab()
+        # reset the url to bing.com, if loading time more than 5 seconds, will stop loading.
+        tab.set_url("https://www.bing.com/", timeout=5)
+        # enable the Network function, otherwise will not recv Network request/response.
+        ichrome_logger.info(tab.send("Network.enable"))
+        # here will block until input string "test" in the input position.
+        # tab is waiting for the event Network.responseReceived which accord with the given filter_function.
         recv_string = tab.wait_event(
             "Network.responseReceived",
             filter_function=lambda r: re.search("&\w+=test", r or ""),
             wait_seconds=9999,
         )
+        # now catching the "Network.responseReceived" event string, load the json.
         recv_string = json.loads(recv_string)
-        rid = recv_string["params"]["requestId"]
-        print_info("requestId: %s" % rid)
-        a = tab.send("Network.getResponseBody", requestId=rid, timeout=5)
-        print_info(a, "getResponseBody success")
-        # chromed.run_forever()
+        # get the requestId to fetch its response body.
+        request_id = recv_string["params"]["requestId"]
+        ichrome_logger.info("requestId: %s" % request_id)
+        # send request for getResponseBody
+        resp = tab.send("Network.getResponseBody", requestId=request_id, timeout=5)
+        # now resp is the response body result.
+        ichrome_logger.info(resp, "getResponseBody success")
 
 
 def example():

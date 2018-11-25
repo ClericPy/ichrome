@@ -15,7 +15,7 @@ install_requires = ["psutil", "torequests", "websocket-client"]
 
 setup(
     name="ichrome",
-    version="0.0.1",
+    version="0.0.2",
     keywords=("chrome"),
     description="toy for chrome devtools protocol. Read more: https://github.com/ClericPy/ichrome.",
     license="MIT License",
