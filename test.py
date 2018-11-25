@@ -1,9 +1,9 @@
-from ichrome import Chrome, Tab, ChromeDaemon
-
-import time
 import json
-from torequests.utils import print_info
 import re
+import time
+
+from ichrome import Chrome, ChromeDaemon, Tab
+from torequests.utils import print_info
 
 
 def example2():

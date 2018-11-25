@@ -6,7 +6,6 @@ import threading
 import time
 import traceback
 from concurrent.futures._base import Error
-from queue import Empty, Queue
 from weakref import WeakValueDictionary
 
 import psutil
