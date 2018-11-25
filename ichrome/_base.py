@@ -5,20 +5,17 @@ import subprocess
 import threading
 import time
 import traceback
+from concurrent.futures._base import Error
 from queue import Empty, Queue
+from weakref import WeakValueDictionary
 
 import psutil
 import websocket
-from torequests import tPool
-from torequests.utils import print_info, quote_plus, timepass, ttime
+from torequests import NewFuture, tPool
+from torequests.utils import quote_plus, timepass, ttime
 from torequests.versions import IS_WINDOWS
 
-
-def mute_log():
-    # mute the print_info logger
-    from torequests.logs import print_logger
-
-    print_logger.setLevel(999)
+from ._logs import ichrome_logger as logger
 
 
 class ChromeDaemon(object):
@@ -94,6 +91,8 @@ class ChromeDaemon(object):
             "--no-sandbox",
             "--no-first-run",
         ]
+        if not isinstance(self.extra_config, list):
+            raise TypeError("extra_config type should be list.")
         self.chrome_proc_start_time = time.time()
         self.launch_chrome()
         if self._use_daemon:
@@ -106,19 +105,24 @@ class ChromeDaemon(object):
         )
         self.user_data_dir = os.path.join(user_data_dir, "chrome_%s" % self.port)
         if not os.path.isdir(self.user_data_dir):
-            print_info(
+            logger.warning(
                 "creating user data dir at [%s]." % os.path.realpath(self.user_data_dir)
             )
 
     @property
     def ok(self):
-        ok = False
-        if self.proc:
-            if self.proc.poll() is None and self._ensure_connectable():
-                ok = True
-        return ok
+        if self.proc_ok and self.connection_ok:
+            return True
+        return False
 
-    def _ensure_connectable(self, tries=2):
+    @property
+    def proc_ok(self):
+        if self.proc and self.proc.poll() is None:
+            return True
+        return False
+
+    @property
+    def connection_ok(self, tries=2):
         url = self.server + "/json"
         for _ in range(tries):
             r = self.req.get(url, timeout=self._timeout)
@@ -132,10 +136,10 @@ class ChromeDaemon(object):
     def launch_chrome(self):
         self.proc = subprocess.Popen(**self.cmd_args)
         if self.ok:
-            print_info("launch_chrome success: %s" % self)
+            logger.info("launch_chrome success: %s" % self)
             return True
         else:
-            print_info("launch_chrome failed: %s" % self)
+            logger.error("launch_chrome failed: %s" % self)
             return False
 
     @property
@@ -152,9 +156,7 @@ class ChromeDaemon(object):
             try:
                 sock = socket.socket()
                 sock.connect((self.host, self.port))
-                print_info(
-                    "shutting down another chrome instance using port %s" % self.port
-                )
+                logger.info("shutting down chrome using port %s" % self.port)
                 self.kill(True)
                 continue
             except ConnectionRefusedError:
@@ -183,7 +185,7 @@ class ChromeDaemon(object):
                     if not (out and out.strip().startswith(b"Version=")):
                         continue
                     if chrome_path and chrome_path != path:
-                        print_info("using chrome path: %s." % (path))
+                        logger.debug("using chrome path: %s." % path)
                     return path
             else:
                 raise FileNotFoundError("Bad chrome path.")
@@ -192,8 +194,9 @@ class ChromeDaemon(object):
             out = subprocess.check_output([path, "--version"], timeout=2)
             if out.startswith(b"Google Chrome "):
                 if chrome_path and chrome_path != path:
-                    print_info("using chrome path: %s." % (path))
+                    logger.debug("using chrome path: %s." % path)
                 return path
+        logger.error("bad chrome_path: %s" % chrome_path)
 
     @property
     def cmd(self):
@@ -223,8 +226,18 @@ class ChromeDaemon(object):
         return_code = None
         deaths = 0
         max_deaths = max_deaths or self.max_deaths
-        while self._use_daemon and not self._shutdown and deaths < max_deaths:
-            if not self.ok:
+        while self._use_daemon:
+            if self._shutdown:
+                logger.info("%s daemon exited after shutdown." % self)
+                break
+            if deaths >= max_deaths:
+                logger.info(
+                    "%s daemon exited for number of deaths is more than %s."
+                    % (self, max_deaths)
+                )
+                break
+            if not self.proc_ok:
+                logger.debug("%s daemon is restarting proc." % self)
                 self.restart()
                 continue
             try:
@@ -232,10 +245,11 @@ class ChromeDaemon(object):
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
-        else:
-            print_info("exit process daemon.")
+        logger.info("%s daemon exited." % self)
 
     def run_forever(self, block=True, interval=5, max_deaths=None):
+        if self._shutdown:
+            raise IOError("%s run_forever failed after shutdown." % self)
         if not self._daemon_thread:
             self._daemon_thread = threading.Thread(
                 target=self._daemon,
@@ -243,6 +257,10 @@ class ChromeDaemon(object):
                 daemon=True,
             )
             self._daemon_thread.start()
+        logger.debug(
+            "%s run_forever(block=%s, interval=%s, max_deaths=%s)."
+            % (self, block, interval, max_deaths or self.max_deaths)
+        )
         if block:
             self._daemon_thread.join()
 
@@ -257,14 +275,18 @@ class ChromeDaemon(object):
         self.port_in_using.discard(self.port)
 
     def restart(self):
-        print_info("restarting %s" % self)
+        logger.info("restarting %s" % self)
         self.kill()
         return self.launch_chrome()
 
     def shutdown(self):
-        print_info(
-            "shutting %s down, start running at %s, duration is %s."
-            % (self, ttime(self.start_time), timepass(time.time() - self.start_time))
+        logger.info(
+            "%s shutting down, start-up: %s, duration: %s."
+            % (
+                self,
+                ttime(self.start_time),
+                timepass(time.time() - self.start_time, accuracy=3, format=1),
+            )
         )
         self._shutdown = True
         self.kill()
@@ -292,7 +314,7 @@ class ChromeDaemon(object):
                     if pname in proc_names and port_args in " ".join(proc.cmdline()):
                         for cmd in proc.cmdline():
                             if port_args in cmd:
-                                print_info("kill %s %s" % (pname, cmd))
+                                logger.debug("kill %s %s" % (pname, cmd))
                                 proc.kill()
                 except:
                     pass
@@ -302,7 +324,6 @@ class ChromeDaemon(object):
             return
 
     def __del__(self):
-        print_info("%s.__del__()." % self)
         if not self._shutdown:
             self.shutdown()
 
@@ -377,7 +398,7 @@ class Chrome(object):
             )
             tab = Tab(tab_id, title, _url, websocketURL, self, self.timeout)
             tab.create_time = tab.now
-            print_info("new tab %s: %s" % (tab, url))
+            logger.info("new tab %s" % (tab))
             return tab
 
     def activate_tab(self, tab_id):
@@ -392,7 +413,7 @@ class Chrome(object):
         if r.x and r.ok:
             if r.text == "Target activated":
                 ok = True
-        print_info("activate_tab %s: %s" % (tab_id, ok))
+        logger.info("activate_tab %s: %s" % (tab_id, ok))
 
     def close_tab(self, tab_id=None):
         ok = False
@@ -407,7 +428,7 @@ class Chrome(object):
         if r.x and r.ok:
             if r.text == "Target is closing":
                 ok = True
-        print_info("close tab %s: %s" % (tab_id, ok))
+        logger.info("close tab %s: %s" % (tab_id, ok))
 
     def close_tabs(self, tab_ids):
         return [self.close_tab(tab_id) for tab_id in tab_ids]
@@ -436,7 +457,7 @@ class Chrome(object):
 
 
 class Tab(object):
-    def __init__(self, tab_id, title, url, websocketURL, chrome, timeout=None):
+    def __init__(self, tab_id, title, url, websocketURL, chrome, timeout=5):
         self.tab_id = tab_id
         self.title = title
         self.url = url
@@ -446,12 +467,12 @@ class Tab(object):
 
         self.create_time = None
         self._message_id = 0
-        self._watchers = {}
+        self._listener = Listener()
         self.lock = threading.Lock()
         self.ws = websocket.WebSocket()
         self._connect()
-        for job in [self._recv_daemon]:
-            t = threading.Thread(target=self._recv_daemon, daemon=True)
+        for target in [self._recv_daemon]:
+            t = threading.Thread(target=target, daemon=True)
             t.start()
 
     def _connect(self):
@@ -462,19 +483,6 @@ class Tab(object):
 
     def close(self):
         return self.chrome.close_tab(self.tab_id)
-
-    @staticmethod
-    def _normalize_dict_hashable(dict_obj):
-        """input a dict_obj, return the hashable item list."""
-        result = []
-        for item in dict_obj.items():
-            key = item[0]
-            try:
-                value = json.dumps(item[1], sort_keys=1)
-            except TypeError:
-                value = str(item[1])
-            result.append((key, value))
-        return result
 
     def _recv_daemon(self):
         """
@@ -490,47 +498,33 @@ class Tab(object):
         while self.ws.connected:
             try:
                 data_str = self.ws.recv()
+                logger.debug(data_str)
                 if not data_str:
                     continue
                 try:
-                    data = json.loads(data_str)
+                    data_dict = json.loads(data_str)
+                    if not isinstance(data_dict, dict):
+                        continue
                 except (TypeError, json.decoder.JSONDecodeError):
                     continue
-                to_remove = []
-                # print_info(data_str)
-                for arg in self._normalize_dict_hashable(data):
-                    q = self._watchers.pop(arg, None)
-                    if q is not None:
-                        q.put(data_str)
-            except websocket._exceptions.WebSocketConnectionClosedException:
+                f = self._listener.find_future(data_dict)
+                if f:
+                    f.set_result(data_str)
+            except (
+                websocket._exceptions.WebSocketConnectionClosedException,
+                ConnectionResetError,
+            ):
                 break
 
-    def _recv(self, arg, timeout=None):
-        """arg type: dict"""
-        result = None
-        timeout = self.timeout if timeout is None else timeout
-        if timeout == 0:
-            return result
-        q = Queue(1)
-        arg = self._normalize_dict_hashable(arg)[0]
-        self._watchers[arg] = q
-        try:
-            result = q.get(timeout=timeout)
-        except Empty:
-            pass
-        finally:
-            self._watchers.pop(arg, None)
-            del q
-            return result
-
-    def _send(self, request, timeout=None):
+    def send(self, method, timeout=None, callback=None, **kwargs):
         try:
             timeout = self.timeout if timeout is None else timeout
+            request = {"method": method, "params": kwargs}
             self._message_id += 1
             request["id"] = self._message_id
             with self.lock:
                 self.ws.send(json.dumps(request))
-            res = self._recv({"id": request["id"]}, timeout=timeout)
+            res = self.recv({"id": request["id"]}, timeout=timeout, callback=callback)
             return res
         except (
             websocket._exceptions.WebSocketTimeoutException,
@@ -538,13 +532,19 @@ class Tab(object):
         ):
             self.refresh_ws()
 
-    def send(self, method, timeout=None, callback=None, **kwargs):
-        result = self._send({"method": method, "params": kwargs})
-        return callback(result) if callable(callback) else result
-
     def recv(self, arg, timeout=None, callback=None):
-        result = self._recv(arg, timeout=timeout)
-        return callback(result) if callable(callback) else result
+        """arg type: dict"""
+        result = None
+        timeout = self.timeout if timeout is None else timeout
+        if timeout == 0:
+            return result
+        f = self._listener.register(arg, timeout=timeout)
+        try:
+            result = f.cx
+        except Error:
+            result = None
+        finally:
+            return callback(result) if callable(callback) else result
 
     def refresh_ws(self):
         self.ws.close()
@@ -573,21 +573,37 @@ class Tab(object):
             value = result["result"]["result"]["value"]
             return value.encode("utf-8")
         except (KeyError, json.decoder.JSONDecodeError):
-            print_info("tab.content error %s:\n%s" % (response, traceback.format_exc()))
+            logger.error(
+                "tab.content error %s:\n%s" % (response, traceback.format_exc())
+            )
             return b""
 
     def get_html(self, encoding="utf-8"):
         return self.content.decode(encoding)
 
-    def _wait_loading(self, timeout=None, callback=None):
-        data = self._wait_event(
+    def wait_loading(self, timeout=None, callback=None):
+        data = self.wait_event(
             "Page.loadEventFired", timeout=timeout, callback=callback
         )
         return data
 
-    def _wait_event(self, event="", timeout=None, callback=None):
+    def wait_event(
+        self,
+        event="",
+        timeout=None,
+        callback=None,
+        filter_function=None,
+        wait_seconds=None,
+    ):
         timeout = self.timeout if timeout is None else timeout
-        return self.recv({"method": event}, timeout=timeout, callback=callback)
+        start_time = time.time()
+        while 1:
+            result = self.recv({"method": event}, timeout=timeout, callback=callback)
+            if not callable(filter_function) or filter_function(result):
+                break
+            if wait_seconds and time.time() - start_time > wait_seconds:
+                break
+        return result
 
     def reload(self, timeout=5):
         """
@@ -608,7 +624,7 @@ class Tab(object):
             data = self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
         real_timeout = max((timeout - time_passed, 0))
-        if self._wait_loading(timeout=real_timeout) is None:
+        if self.wait_loading(timeout=real_timeout) is None:
             self.send("Page.stopLoading", timeout=0)
         return data
 
@@ -632,6 +648,60 @@ class Tab(object):
     def __del__(self):
         with self.lock:
             self.ws.close()
+
+
+class Listener(object):
+    def __init__(self, timeout=None):
+        self.timeout = timeout
+        self.container = []
+        self.id_futures = WeakValueDictionary()
+        self.method_futures = WeakValueDictionary()
+        self.other_futures = WeakValueDictionary()
+
+    @staticmethod
+    def _normalize_dict(dict_obj):
+        """input a dict_obj, return the hashable item list."""
+        if not dict_obj:
+            return None
+        result = []
+        for item in dict_obj.items():
+            key = item[0]
+            try:
+                value = json.dumps(item[1], sort_keys=1)
+            except TypeError:
+                value = str(item[1])
+            result.append((key, value))
+        return tuple(result)
+
+    def register(self, arg, timeout=None):
+        """
+        arg type: dict.
+        """
+        if not isinstance(arg, dict):
+            raise TypeError(
+                "Listener should register a dict arg, such as {'id': 1} or {'method': 'Page.loadEventFired'}"
+            )
+        f = NewFuture(timeout=timeout)
+        if "id" in arg:
+            # id is unique
+            self.id_futures[arg["id"]] = f
+        elif "method" in arg:
+            # method may be duplicate
+            self.method_futures[arg["method"]] = f
+        else:
+            self.other_futures[self._normalize_dict(arg)] = f
+        return f
+
+    def find_future(self, arg):
+        if "id" in arg:
+            # id is unique
+            f = self.id_futures.pop(arg["id"], None)
+        elif "method" in arg:
+            # method may be duplicate
+            f = self.method_futures.pop(arg["method"], None)
+        else:
+            f = self.other_futures.pop(self._normalize_dict(arg), None)
+        return f
 
 
 def main():
