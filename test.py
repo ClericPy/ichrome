@@ -39,7 +39,7 @@ def example2():
         # send request for getResponseBody
         resp = tab.send("Network.getResponseBody", requestId=request_id, timeout=5)
         # now resp is the response body result.
-        ichrome_logger.info(resp, "getResponseBody success")
+        ichrome_logger.info("getResponseBody success %s"% resp)
 
 
 def example():
