@@ -90,7 +90,7 @@ from ichrome import ichrome_logger
 # import logging
 # ichrome_logger.setLevel(logging.INFO)
 # launch the Chrome process and daemon process, will auto shutdown by 'with' expression.
-with ChromeDaemon():
+with ChromeDaemon(host="127.0.0.1", port=9222):
     # create connection to Chrome Devtools
     chrome = Chrome(host="127.0.0.1", port=9222, timeout=3, retry=1)
     # now create a new tab without url
