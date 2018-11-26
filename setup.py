@@ -1,4 +1,3 @@
-#! coding:utf-8
 from setuptools import setup, find_packages
 import sys
 import codecs
@@ -12,6 +11,8 @@ rm -rf dist&rm -rf build&python3 setup.py bdist_wheel&python2 setup.py bdist_whe
 
 py_version = sys.version_info
 install_requires = ["psutil", "torequests", "websocket-client"]
+with open("README.md", encoding="utf-8") as f:
+    README = f.read()
 
 setup(
     name="ichrome",
@@ -20,6 +21,8 @@ setup(
     description="toy for chrome devtools protocol. Read more: https://github.com/ClericPy/ichrome.",
     license="MIT License",
     install_requires=install_requires,
+    long_description=README,
+    long_description_content_type="text/markdown",
     py_modules=["ichrome"],
     author="ClericPy",
     author_email="clericpy@gmail.com",
