@@ -2,6 +2,13 @@
 
 > A toy for using chrome under the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/). For python3.6+ (who care python2.x).
 
+## Install
+
+> pip install ichrome -U
+
+## Why?
+
+- pyppeteer/selenium is awesome, but I don't need so much...
 
 
 ## Features
@@ -121,12 +128,12 @@ with ChromeDaemon(host="127.0.0.1", port=9222):
 
 ### TODO
 
-- Concurrent support.
+- [ ] Concurrent support. (gevent, threading)
 
-- Add auto_restart while crash.
+- [x] Add auto_restart while crash.
 
-- Auto-remove the zombie tabs with a lifebook.
+- [ ] Auto remove the zombie tabs with a lifebook.
 
-- Add some useful examples.
+- [ ] Add some useful examples.
 
-- Refactor for asyncio.
+- [ ] Coroutine support (for asyncio).

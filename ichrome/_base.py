@@ -539,7 +539,7 @@ class Tab(object):
             return result
         f = self._listener.register(arg, timeout=timeout)
         try:
-            result = f.cx
+            result = f.x
         except Error:
             result = None
         finally:

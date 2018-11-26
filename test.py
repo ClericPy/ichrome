@@ -29,7 +29,7 @@ def example2():
         recv_string = tab.wait_event(
             "Network.responseReceived",
             filter_function=lambda r: re.search("&\w+=test", r or ""),
-            wait_seconds=9999,
+            wait_seconds=None,
         )
         # now catching the "Network.responseReceived" event string, load the json.
         recv_string = json.loads(recv_string)
