@@ -44,7 +44,13 @@ class ChromeDaemon(object):
 
     port_in_using = set()
     DEFAULT_CHROME_PATH = None
-    DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"
+    PC_UA = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"
+    MAC_OS_UA = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0_1) Version/8.0.1a Safari/728.28.19"
+    )
+    WECHAT_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-N9100 Build/LRX21V) > AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 > Chrome/37.0.0.0 Mobile Safari/537.36 > MicroMessenger/6.0.2.56_r958800.520 NetType/WIFI"
+    IPAD_UA = "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"
+    MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
 
     def __init__(
         self,
@@ -79,7 +85,7 @@ class ChromeDaemon(object):
         self.server = "http://%s:%s" % (self.host, self.port)
         self.req = tPool()
         self._ensure_port_free()
-        self.UA = user_agent or self.DEFAULT_UA
+        self.UA = user_agent or self.PC_UA
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image
