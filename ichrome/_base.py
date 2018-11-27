@@ -514,11 +514,20 @@ class Tab(object):
     def _connect(self):
         self.ws.connect(self.websocketURL, timeout=self.timeout)
 
-    def activate(self):
+    def activate_tab(self):
         return self.chrome.activate_tab(self.tab_id)
 
-    def close(self):
+    def close_tab(self):
         return self.chrome.close_tab(self.tab_id)
+
+    def activate(self):
+        return self.send("Page.bringToFront")
+
+    def close(self):
+        return self.send("Page.setTouchEmulationEnabled")
+
+    def crash(self):
+        return self.send("Page.crash")
 
     def _recv_daemon(self):
         """
@@ -552,13 +561,14 @@ class Tab(object):
             ):
                 break
 
-    def send(self, method, timeout=None, callback=None, **kwargs):
+    def send(self, method, timeout=None, callback=None, mute_log=False, **kwargs):
         try:
             timeout = self.timeout if timeout is None else timeout
             request = {"method": method, "params": kwargs}
             self._message_id += 1
             request["id"] = self._message_id
-            logger.info("<%s> send: %s" % (self, request))
+            if not mute_log:
+                logger.info("<%s> send: %s" % (self, request))
             with self.lock:
                 self.ws.send(json.dumps(request))
             res = self.recv({"id": request["id"]}, timeout=timeout, callback=callback)
@@ -593,6 +603,29 @@ class Tab(object):
 
     def clear_cookies(self, timeout=0):
         return self.send("Network.clearBrowserCookies", timeout=timeout)
+
+    def delete_cookies(self, name, url=None, domain=None, path=None, timeout=0):
+        return self.send(
+            "Network.deleteCookies",
+            name=name,
+            url=None,
+            domain=None,
+            path=None,
+            timeout=None,
+        )
+
+    def get_cookies(self, urls=None, timeout=None):
+        if urls:
+            if isinstance(urls, str):
+                urls = [urls]
+            urls = list(urls)
+            result = self.send("Network.getCookies", urls=urls, timeout=None)
+        else:
+            result = self.send("Network.getCookies", timeout=None)
+        try:
+            return json.loads(result)["result"]["cookies"]
+        except:
+            return []
 
     @property
     def current_url(self):
@@ -670,11 +703,47 @@ class Tab(object):
             self.send("Page.stopLoading", timeout=0)
         return data
 
-    def js(self, javascript):
+    def js(self, javascript, mute_log=False):
         """
         Evaluate JavaScript on the page
         """
-        return self.send("Runtime.evaluate", expression=javascript)
+        return self.send("Runtime.evaluate", expression=javascript, mute_log=mute_log)
+
+    def querySelectorAll(self, css):
+        if "'" in css:
+            css = css.replace("'", "\\'")
+        javascript = (
+            """
+            var elements = document.querySelectorAll('%s');
+
+            var result = []
+
+            for (const el of elements) {
+                var item = {
+                    tagName: el.tagName,
+                    innerHTML: el.innerHTML,
+                    outerHTML: el.outerHTML,
+                    textContent: el.textContent,
+                    attributes: {}
+                }
+                for (const attr of el.attributes) {
+                    item.attributes[attr.name] = attr.value
+                }
+                result.push(item)
+            }
+            JSON.stringify(result)
+        """
+            % css
+        )
+        try:
+            result = json.loads(self.js(javascript, mute_log=True))["result"]["result"][
+                "value"
+            ]
+            items = json.loads(result)
+            return [Element(**kws) for kws in items]
+        except Exception as e:
+            logger.info("querySelectorAll error: %s" % e)
+            return []
 
     def inject_js(self, url, timeout=None, retry=0):
         # js_source_code = """
@@ -683,9 +752,13 @@ class Tab(object):
         # script.src="{}";
         # document.getElementsByTagName('head')[0].appendChild(script);
         # """.format(url)
-        return self.js(
-            javascript=self.req.get(url, verify=0, timeout=timeout, retry=retry).text
-        )
+        r = self.req.get(url, verify=0, timeout=timeout, retry=retry)
+        if r.x and r.ok:
+            javascript = r.text
+            return self.js(javascript, mute_log=True)
+        else:
+            logger.info("inject_js failed for request: %s" % r.text)
+            return
 
     def click(self, cssselector, index=0):
         cssselector = cssselector.replace("'", '"')
@@ -714,6 +787,26 @@ class Tab(object):
     def __del__(self):
         with self.lock:
             self.ws.close()
+
+
+class Element(object):
+    def __init__(self, tagName, innerHTML, outerHTML, textContent, attributes):
+        self.tagName = tagName.lower()
+        self.innerHTML = innerHTML
+        self.outerHTML = outerHTML
+        self.textContent = textContent
+        self.attributes = attributes
+
+        self.text = textContent
+
+    def get(self, name, default=None):
+        return self.attributes.get(name, default)
+
+    def __str__(self):
+        return "Element(%s)" % self.tagName
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class Listener(object):
