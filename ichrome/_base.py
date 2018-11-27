@@ -321,7 +321,7 @@ class ChromeDaemon(object):
         self.shutdown()
 
     @staticmethod
-    def clear_chrome_process(port=None, timeout=10, max_deaths=2):
+    def clear_chrome_process(port=None, timeout=None, max_deaths=2):
         """kill chrome processes, if port is not set, kill all chrome with --remote-debugging-port.
         set timeout to avoid running forever.
         set max_deaths and port, will return before timeout.
@@ -332,6 +332,8 @@ class ChromeDaemon(object):
         killed = []
         port_args = "--remote-debugging-port=%s" % port
         start_time = time.time()
+        if timeout is None:
+            timeout = max_deaths or 3
         while 1:
             for proc in psutil.process_iter():
                 try:
@@ -725,7 +727,7 @@ class Tab(object):
         else:
             index = int(index)
         if action:
-            action = "el.%s" % action
+            action = "item.result=el.%s" % action
         else:
             action = ""
         javascript = """
@@ -745,13 +747,14 @@ class Tab(object):
                     innerHTML: el.innerHTML,
                     outerHTML: el.outerHTML,
                     textContent: el.textContent,
+                    result: "",
                     attributes: {}
                 }
                 for (const attr of el.attributes) {
                     item.attributes[attr.name] = attr.value
                 }
-                result.push(item)
                 %s
+                result.push(item)
             }
             JSON.stringify(result)
         """ % (
@@ -759,13 +762,20 @@ class Tab(object):
             index,
             action,
         )
+        response = None
         try:
-            result = self.js(javascript, mute_log=True)
-            result = json.loads(result)["result"]["result"]["value"]
-            items = json.loads(result)
-            return [Tag(**kws) for kws in items]
+            response = self.js(javascript, mute_log=True)
+            response = json.loads(response)["result"]["result"]["value"]
+            items = json.loads(response)
+            result = [Tag(**kws) for kws in items]
+            if isinstance(index, int):
+                return result[0]
+            else:
+                return result
         except Exception as e:
-            logger.info("querySelectorAll error: %s, result: %s" % (e, result))
+            logger.info("querySelectorAll error: %s, response: %s" % (e, response))
+            if isinstance(index, int):
+                return None
             return []
 
     def inject_js(self, url, timeout=None, retry=0):
@@ -807,12 +817,13 @@ class Tab(object):
 
 
 class Tag(object):
-    def __init__(self, tagName, innerHTML, outerHTML, textContent, attributes):
+    def __init__(self, tagName, innerHTML, outerHTML, textContent, attributes, result):
         self.tagName = tagName.lower()
         self.innerHTML = innerHTML
         self.outerHTML = outerHTML
         self.textContent = textContent
         self.attributes = attributes
+        self.result = result
 
         self.text = textContent
 
