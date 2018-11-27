@@ -1,4 +1,4 @@
-# [ichrome - v0.0.5](https://github.com/ClericPy/ichrome)
+# [ichrome - v0.0.6](https://github.com/ClericPy/ichrome)
 
 > A toy for using chrome under the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/). For python3.6+ (who cares python2.x).
 

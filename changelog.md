@@ -3,17 +3,17 @@
 
 ---
 
-- 0.0.5
+- 0.0.6
+    - fix tab.querySelectorAll should have return one item if index is not None
 
+- 0.0.5
     - add action arg for tab.click and tab.querySelectorAll
 
 - 0.0.4
-
     - add tab.querySelectorAll & Tab class to make crawler simple.
     - add ichrome.__tips__ for doc urls.
 
 - 0.0.3
-
     - add Tab.inject_js method
     - add some default User-Agent
     - add command line usage for ChromeDaemon 
