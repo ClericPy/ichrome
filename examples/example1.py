@@ -14,6 +14,7 @@ Test normal usage of ichrome.
   3.8 use querySelectorAll to get the elements.
   3.9 Network crawling from the background ajax request.
   3.10 click some element by tab.click with css selector.
+  3.11 show html source code of the tab
 """
 
 
@@ -85,6 +86,8 @@ def example():
         logger.info("getResponseBody success %s" % resp)
         # directly click the button matched the cssselector #sb_form_go, here is the submit button.
         logger.info(tab.click("#sb_form_go"))
+        # show some html source code of the tab
+        logger.info(tab.html[:100])
         chromed.run_forever()
 
 
