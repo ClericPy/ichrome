@@ -52,7 +52,7 @@ def example():
             tab.inject_js("https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js")
         )
         logger.info(tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)"))
-        tab.js('alert("Now input `test` to the input position.")')
+        tab.js('alert("Check the links above disabled, and then input `test` to the input position.")')
         # automate press accept for alert~
         tab.send("Page.handleJavaScriptDialog", accept=True)
         # remove href of the a tag.
