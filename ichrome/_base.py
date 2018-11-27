@@ -66,6 +66,7 @@ class ChromeDaemon(object):
         extra_config=None,
         max_deaths=2,
         daemon=True,
+        block=False,
         timeout=2,
     ):
         self.start_time = time.time()
@@ -91,6 +92,8 @@ class ChromeDaemon(object):
         self.disable_image = disable_image
         self._wrap_user_data_dir(user_data_dir)
         self.start_url = start_url
+        if extra_config and isinstance(extra_config, str):
+            extra_config = [extra_config]
         self.extra_config = extra_config or [
             "--disable-gpu",
             "--no-sandbox",
@@ -101,7 +104,7 @@ class ChromeDaemon(object):
         self.chrome_proc_start_time = time.time()
         self.launch_chrome()
         if self._use_daemon:
-            self.run_forever(block=False)
+            self.run_forever(block=block)
 
     def _wrap_user_data_dir(self, user_data_dir):
         """refactor this function to set accurate dir."""
@@ -141,10 +144,10 @@ class ChromeDaemon(object):
     def launch_chrome(self):
         self.proc = subprocess.Popen(**self.cmd_args)
         if self.ok:
-            logger.info("launch_chrome success: %s" % self)
+            logger.info("launch_chrome success: %s, args: %s" % (self, self.proc.args))
             return True
         else:
-            logger.error("launch_chrome failed: %s" % self)
+            logger.error("launch_chrome failed: %s, args: %s" % (self, self.cmd))
             return False
 
     @property
@@ -223,6 +226,8 @@ class ChromeDaemon(object):
             args.append("--blink-settings=imagesEnabled=false")
         if self.start_url:
             args.append(self.start_url)
+        if self.extra_config:
+            args.append(self.extra_config)
         return args
 
     def _daemon(self, interval=5, max_deaths=None):
@@ -269,14 +274,12 @@ class ChromeDaemon(object):
         if block:
             self._daemon_thread.join()
 
-    def kill(self, force=False, cycle=5):
+    def kill(self, force=False):
         self.ready = False
         if self.proc:
             self.proc.kill()
         if force:
-            self.clear_chrome_process(self.port, timeout=self.max_deaths + 1)
-        else:
-            self.clear_chrome_process(self.port)
+            self.clear_chrome_process(self.port, max_deaths=self.max_deaths)
         self.port_in_using.discard(self.port)
 
     def restart(self):
@@ -303,13 +306,15 @@ class ChromeDaemon(object):
         self.shutdown()
 
     @staticmethod
-    def clear_chrome_process(port=None, timeout=None):
-        """kill chrome processes, if port is not set, kill all chrome with --remote-debugging-port
-        set timeout to ensure chrome not restart (to make auto_restart lose efficacy).
+    def clear_chrome_process(port=None, timeout=10, max_deaths=2):
+        """kill chrome processes, if port is not set, kill all chrome with --remote-debugging-port.
+        set timeout to avoid running forever.
+        set max_deaths and port, will return before timeout.
         """
         port = port or ""
         # win32 and linux chrome proc_names
         proc_names = {"chrome.exe", "chrome"}
+        killed = []
         port_args = "--remote-debugging-port=%s" % port
         start_time = time.time()
         while 1:
@@ -321,8 +326,12 @@ class ChromeDaemon(object):
                             if port_args in cmd:
                                 logger.debug("kill %s %s" % (pname, cmd))
                                 proc.kill()
+                                if port:
+                                    killed.append(port_args)
                 except:
                     pass
+            if port and len(killed) >= max_deaths:
+                return
             if timeout and time.time() - start_time < timeout:
                 time.sleep(1)
                 continue
@@ -401,8 +410,8 @@ class Chrome(object):
                 rjson["url"],
                 rjson["webSocketDebuggerUrl"],
             )
-            tab = Tab(tab_id, title, _url, websocketURL, self, self.timeout)
-            tab.create_time = tab.now
+            tab = Tab(tab_id, title, _url, websocketURL, self)
+            tab._create_time = tab.now
             logger.info("new tab %s" % (tab))
             return tab
 
@@ -465,12 +474,13 @@ class Tab(object):
     def __init__(self, tab_id, title, url, websocketURL, chrome, timeout=5):
         self.tab_id = tab_id
         self.title = title
-        self.url = url
+        self._url = url
         self.websocketURL = websocketURL
         self.chrome = chrome
         self.timeout = timeout
 
-        self.create_time = None
+        self.req = tPool()
+        self._create_time = time.time()
         self._message_id = 0
         self._listener = Listener()
         self.lock = threading.Lock()
@@ -479,6 +489,10 @@ class Tab(object):
         for target in [self._recv_daemon]:
             t = threading.Thread(target=target, daemon=True)
             t.start()
+
+    @property
+    def url(self):
+        return self._url
 
     def _connect(self):
         self.ws.connect(self.websocketURL, timeout=self.timeout)
@@ -623,7 +637,7 @@ class Tab(object):
         self.send("Page.enable", timeout=0)
         start_load_ts = self.now
         if url:
-            self.url = url
+            self._url = url
             data = self.send("Page.navigate", url=url, timeout=timeout)
         else:
             data = self.send("Page.reload", timeout=timeout)
@@ -638,6 +652,30 @@ class Tab(object):
         Evaluate JavaScript on the page
         """
         return self.send("Runtime.evaluate", expression=javascript)
+
+    def inject_js(self, url, timeout=None, retry=0):
+        # js_source_code = """
+        # var script=document.createElement("script");
+        # script.type="text/javascript";
+        # script.src="{}";
+        # document.getElementsByTagName('head')[0].appendChild(script);
+        # """.format(url)
+        return self.js(
+            javascript=self.req.get(url, verify=0, timeout=timeout, retry=retry).text
+        )
+
+    def click(self, cssselector, index=0):
+        cssselector = cssselector.replace("'", '"')
+        if index is None:
+            # click all
+            return self.js(
+                "document.querySelectorAll('%s').forEach(function (e){e.click()})"
+                % cssselector
+            )
+        else:
+            return self.js(
+                "document.querySelectorAll('%s')[%s].click()" % (cssselector, index)
+            )
 
     def __str__(self):
         return "Tab(%s)" % (self.url)
