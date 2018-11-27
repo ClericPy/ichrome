@@ -724,7 +724,7 @@ class Tab(object):
         else:
             index = int(index)
         if action:
-            action = "item.result=el.%s" % action
+            action = "item.result=el.%s || '';item.result=item.result.toString()" % action
         else:
             action = ""
         javascript = """
@@ -750,7 +750,10 @@ class Tab(object):
                 for (const attr of el.attributes) {
                     item.attributes[attr.name] = attr.value
                 }
-                %s
+                try {
+                    %s
+                } catch (error) {
+                }
                 result.push(item)
             }
             JSON.stringify(result)
@@ -766,7 +769,10 @@ class Tab(object):
             items = json.loads(response)
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
-                return result[0]
+                if result:
+                    return result[0]
+                else:
+                    return None
             else:
                 return result
         except Exception as e:
