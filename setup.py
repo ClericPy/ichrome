@@ -16,7 +16,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="ichrome",
-    version="0.0.2",
+    version="0.0.3",
     keywords=("chrome"),
     description="toy for chrome devtools protocol. Read more: https://github.com/ClericPy/ichrome.",
     license="MIT License",
