@@ -634,24 +634,21 @@ class Tab(object):
         return json.loads(self.js("window.location.href"))["result"]["result"]["value"]
 
     @property
-    def content(self):
+    def html(self):
         """return"""
         response = None
         try:
             response = self.js("document.documentElement.outerHTML")
             if not response:
-                return b""
+                return ""
             result = json.loads(response)
             value = result["result"]["result"]["value"]
-            return value.encode("utf-8")
+            return value
         except (KeyError, json.decoder.JSONDecodeError):
             logger.error(
                 "tab.content error %s:\n%s" % (response, traceback.format_exc())
             )
-            return b""
-
-    def get_html(self, encoding="utf-8"):
-        return self.content.decode(encoding)
+            return ""
 
     def wait_loading(self, timeout=None, callback=None):
         data = self.wait_event(
