@@ -15,6 +15,7 @@ Test normal usage of ichrome.
 def example():
     import sys
     import os
+
     # use local ichrome module
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     os.chdir("..")  # for reuse exiting user data dir
@@ -36,7 +37,9 @@ def example():
         tab = chrome.new_tab()
         # reset the url to bing.com, if loading time more than 5 seconds, will stop loading.
         # if inject js success, will alert Vue
-        tab.set_url("https://www.bing.com/", timeout=5)
+        tab.set_url(
+            "https://www.bing.com/", referrer="https://www.github.com/", timeout=5
+        )
         # test inject_js, if success, will alert jQuery version info 3.3.1
         ichrome_logger.info(
             tab.inject_js("https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js")
@@ -45,6 +48,8 @@ def example():
             tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)")
         )
         tab.js('alert("Now input `test` to the input position.")')
+        # automate press accept for alert~
+        tab.send("Page.handleJavaScriptDialog", accept=True)
         # enable the Network function, otherwise will not recv Network request/response.
         ichrome_logger.info(tab.send("Network.enable"))
         # here will block until input string "test" in the input position.
