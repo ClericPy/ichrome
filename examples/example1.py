@@ -6,9 +6,11 @@ Test normal usage of ichrome.
 3. Tab ops:
   3.1 create a new tab
   3.2 goto new url with tab.set_url, and will stop load for timeout.
-  3.3 inject the jQuery lib by a static url.
-  3.4 Network crawling from the background ajax request.
-  3.5 click some element by tab.click with css selector.
+  3.3 get cookies from url
+  3.4 inject the jQuery lib by a static url.
+  3.5 Network crawling from the background ajax request.
+  3.6 click some element by tab.click with css selector.
+  3.7 use querySelectorAll to get the elements.
 """
 
 
@@ -19,7 +21,7 @@ def example():
     # use local ichrome module
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     os.chdir("..")  # for reuse exiting user data dir
-    from ichrome import Chrome, Tab, ChromeDaemon, ichrome_logger
+    from ichrome import Chrome, Tab, ChromeDaemon, ichrome_logger as logger
     import re
     import json
     import time
@@ -28,7 +30,7 @@ def example():
 
     # reset default logger level, such as DEBUG
     # import logging
-    # ichrome_logger.setLevel(logging.INFO)
+    # logger.setLevel(logging.INFO)
     # launch the Chrome process and daemon process, will auto shutdown by 'with' expression.
     with ChromeDaemon(host="127.0.0.1", port=9222) as chromed:
         # create connection to Chrome Devtools
@@ -40,18 +42,20 @@ def example():
         tab.set_url(
             "https://www.bing.com/", referrer="https://www.github.com/", timeout=5
         )
+        # get_cookies from url
+        logger.info(tab.get_cookies("http://cn.bing.com"))
         # test inject_js, if success, will alert jQuery version info 3.3.1
-        ichrome_logger.info(
+        logger.info(
             tab.inject_js("https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js")
         )
-        ichrome_logger.info(
+        logger.info(
             tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)")
         )
         tab.js('alert("Now input `test` to the input position.")')
         # automate press accept for alert~
         tab.send("Page.handleJavaScriptDialog", accept=True)
         # enable the Network function, otherwise will not recv Network request/response.
-        ichrome_logger.info(tab.send("Network.enable"))
+        logger.info(tab.send("Network.enable"))
         # here will block until input string "test" in the input position.
         # tab is waiting for the event Network.responseReceived which accord with the given filter_function.
         recv_string = tab.wait_event(
@@ -63,13 +67,16 @@ def example():
         recv_string = json.loads(recv_string)
         # get the requestId to fetch its response body.
         request_id = recv_string["params"]["requestId"]
-        ichrome_logger.info("requestId: %s" % request_id)
+        logger.info("requestId: %s" % request_id)
         # send request for getResponseBody
         resp = tab.send("Network.getResponseBody", requestId=request_id, timeout=5)
         # now resp is the response body result.
-        ichrome_logger.info("getResponseBody success %s" % resp)
+        logger.info("getResponseBody success %s" % resp)
         # directly click the button matched the cssselector #sb_form_go, here is the submit button.
-        ichrome_logger.info(tab.click("#sb_form_go"))
+        logger.info(tab.click("#sb_form_go"))
+        # use querySelectorAll to get the elements.
+        for i in tab.querySelectorAll("#sc_hdu>li"):
+            logger.info(i, i.get("id"), i.text)
         chromed.run_forever()
 
 

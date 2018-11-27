@@ -1,10 +1,6 @@
+import argparse
 import os
 import sys
-import argparse
-
-if __package__ == "":
-    path = os.path.dirname(os.path.dirname(__file__))
-    sys.path.insert(0, path)
 
 from ichrome import ChromeDaemon, __version__, ichrome_logger
 
