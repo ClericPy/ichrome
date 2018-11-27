@@ -3,6 +3,11 @@
 
 ---
 
+- 0.0.4
+
+    - add tab.querySelectorAll & Tab class to make crawler simple.
+    - add ichrome.__tips__ for doc urls.
+
 - 0.0.3
 
     - add Tab.inject_js method

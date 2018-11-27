@@ -8,6 +8,7 @@ rm -rf "dist/*";rm -rf "build/*";python3 setup.py bdist_wheel;twine upload "dist
 win32:
 rm -rf dist&rm -rf build&python3 setup.py bdist_wheel&twine upload "dist/*"&rm -rf dist&rm -rf build&rm -rf ichrome.egg-info
 """
+version = "0.0.4"
 if sys.version_info < (3, 6):
     sys.exit("pypinfo requires Python 3.6+")
 py_version = sys.version_info
@@ -17,7 +18,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="ichrome",
-    version="0.0.3",
+    version=version,
     keywords=("chrome"),
     description="toy for chrome devtools protocol. Read more: https://github.com/ClericPy/ichrome.",
     license="MIT License",

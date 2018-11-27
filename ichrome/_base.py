@@ -740,7 +740,7 @@ class Tab(object):
                 "value"
             ]
             items = json.loads(result)
-            return [Element(**kws) for kws in items]
+            return [Tag(**kws) for kws in items]
         except Exception as e:
             logger.info("querySelectorAll error: %s" % e)
             return []
@@ -789,7 +789,7 @@ class Tab(object):
             self.ws.close()
 
 
-class Element(object):
+class Tag(object):
     def __init__(self, tagName, innerHTML, outerHTML, textContent, attributes):
         self.tagName = tagName.lower()
         self.innerHTML = innerHTML
@@ -803,7 +803,7 @@ class Element(object):
         return self.attributes.get(name, default)
 
     def __str__(self):
-        return "Element(%s)" % self.tagName
+        return "Tag(%s)" % self.tagName
 
     def __repr__(self):
         return self.__str__()
