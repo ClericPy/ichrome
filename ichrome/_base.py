@@ -709,16 +709,35 @@ class Tab(object):
         """
         return self.send("Runtime.evaluate", expression=javascript, mute_log=mute_log)
 
-    def querySelectorAll(self, css):
-        if "'" in css:
-            css = css.replace("'", "\\'")
-        javascript = (
-            """
+    def querySelectorAll(self, cssselector, index=None, action=None):
+        """
+        tab.querySelectorAll("#sc_hdu>li>a", index=2, action="removeAttribute('href')")
+        for i in tab.querySelectorAll("#sc_hdu>li"):
+        ichrome_logger.info(
+                "Tag: %s, id:%s, class:%s, text:%s"
+                % (i, i.get("id"), i.get("class"), i.text)
+            )
+        """
+        if "'" in cssselector:
+            cssselector = cssselector.replace("'", "\\'")
+        if index is None:
+            index = "null"
+        else:
+            index = int(index)
+        if action:
+            action = "el.%s" % action
+        javascript = """
             var elements = document.querySelectorAll('%s');
 
             var result = []
+            var index_filter = %s
 
-            for (const el of elements) {
+            for (let index = 0; index < elements.length; index++) {
+                const el = elements[index];
+                if (index_filter!=null && index_filter!=index) {
+                    continue
+                }
+
                 var item = {
                     tagName: el.tagName,
                     innerHTML: el.innerHTML,
@@ -730,19 +749,21 @@ class Tab(object):
                     item.attributes[attr.name] = attr.value
                 }
                 result.push(item)
+                %s
             }
             JSON.stringify(result)
-        """
-            % css
+        """ % (
+            cssselector,
+            index,
+            action,
         )
         try:
-            result = json.loads(self.js(javascript, mute_log=True))["result"]["result"][
-                "value"
-            ]
+            result = self.js(javascript, mute_log=True)
+            result = json.loads(result)["result"]["result"]["value"]
             items = json.loads(result)
             return [Tag(**kws) for kws in items]
         except Exception as e:
-            logger.info("querySelectorAll error: %s" % e)
+            logger.info("querySelectorAll error: %s, result: %s" % (e, result))
             return []
 
     def inject_js(self, url, timeout=None, retry=0):
@@ -760,18 +781,12 @@ class Tab(object):
             logger.info("inject_js failed for request: %s" % r.text)
             return
 
-    def click(self, cssselector, index=0):
-        cssselector = cssselector.replace("'", '"')
-        if index is None:
-            # click all
-            return self.js(
-                "document.querySelectorAll('%s').forEach(function (e){e.click()})"
-                % cssselector
-            )
-        else:
-            return self.js(
-                "document.querySelectorAll('%s')[%s].click()" % (cssselector, index)
-            )
+    def click(self, cssselector, index=0, action="click()"):
+        """
+        tab.click("#sc_hdu>li>a") # click first node's link.
+        tab.click("#sc_hdu>li>a", index=3, action="removeAttribute('href')") # remove href of the a tag.
+        """
+        return self.querySelectorAll(cssselector, index=index, action=action)
 
     def __str__(self):
         return "Tab(%s)" % (self.url)
