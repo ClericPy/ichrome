@@ -48,9 +48,7 @@ def example():
         logger.info(
             tab.inject_js("https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js")
         )
-        logger.info(
-            tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)")
-        )
+        logger.info(tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)"))
         tab.js('alert("Now input `test` to the input position.")')
         # automate press accept for alert~
         tab.send("Page.handleJavaScriptDialog", accept=True)
@@ -76,7 +74,10 @@ def example():
         logger.info(tab.click("#sb_form_go"))
         # use querySelectorAll to get the elements.
         for i in tab.querySelectorAll("#sc_hdu>li"):
-            logger.info(i, i.get("id"), i.text)
+            logger.info(
+                "Tag: %s, id:%s, class:%s, text:%s"
+                % (i, i.get("id"), i.get("class"), i.text)
+            )
         chromed.run_forever()
 
 

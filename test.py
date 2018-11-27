@@ -6,4 +6,7 @@ with ChromeDaemon():
     tab = chrome[0]
     tab.set_url("http://cn.bing.com")
     for i in tab.querySelectorAll("#sc_hdu>li"):
-        print(i, i.get("id"), i.text)
+        ichrome_logger.info(
+                "Tag: %s, id:%s, class:%s, text:%s"
+                % (i, i.get("id"), i.get("class"), i.text)
+            )
