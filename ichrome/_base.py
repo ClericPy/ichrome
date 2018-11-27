@@ -726,6 +726,8 @@ class Tab(object):
             index = int(index)
         if action:
             action = "el.%s" % action
+        else:
+            action = ""
         javascript = """
             var elements = document.querySelectorAll('%s');
 
