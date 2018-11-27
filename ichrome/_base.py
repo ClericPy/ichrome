@@ -238,7 +238,10 @@ class ChromeDaemon(object):
         max_deaths = max_deaths or self.max_deaths
         while self._use_daemon:
             if self._shutdown:
-                logger.info("%s daemon exited after shutdown." % self)
+                logger.info(
+                    "%s daemon exited after shutdown(%s)."
+                    % (self, ttime(self._shutdown))
+                )
                 break
             if deaths >= max_deaths:
                 logger.info(
@@ -259,7 +262,10 @@ class ChromeDaemon(object):
 
     def run_forever(self, block=True, interval=5, max_deaths=None):
         if self._shutdown:
-            raise IOError("%s run_forever failed after shutdown." % self)
+            raise IOError(
+                "%s run_forever failed after shutdown(%s)."
+                % (self, ttime(self._shutdown))
+            )
         if not self._daemon_thread:
             self._daemon_thread = threading.Thread(
                 target=self._daemon,
@@ -279,7 +285,10 @@ class ChromeDaemon(object):
         if self.proc:
             self.proc.kill()
         if force:
-            self.clear_chrome_process(self.port, max_deaths=self.max_deaths)
+            max_deaths = self.max_deaths
+        else:
+            max_deaths = 0
+        self.clear_chrome_process(self.port, max_deaths=max_deaths)
         self.port_in_using.discard(self.port)
 
     def restart(self):
@@ -288,6 +297,12 @@ class ChromeDaemon(object):
         return self.launch_chrome()
 
     def shutdown(self):
+        if self._shutdown:
+            logger.info(
+                "can not shutdown twice, %s has been shutdown at %s"
+                % (self, ttime(self._shutdown))
+            )
+            return
         logger.info(
             "%s shutting down, start-up: %s, duration: %s."
             % (
@@ -296,7 +311,7 @@ class ChromeDaemon(object):
                 timepass(time.time() - self.start_time, accuracy=3, format=1),
             )
         )
-        self._shutdown = True
+        self._shutdown = time.time()
         self.kill()
 
     def __enter__(self):
@@ -331,6 +346,8 @@ class ChromeDaemon(object):
                 except:
                     pass
             if port and len(killed) >= max_deaths:
+                return
+            if max_deaths is 0:
                 return
             if timeout and time.time() - start_time < timeout:
                 time.sleep(1)
@@ -541,6 +558,7 @@ class Tab(object):
             request = {"method": method, "params": kwargs}
             self._message_id += 1
             request["id"] = self._message_id
+            logger.info("<%s> send: %s" % (self, request))
             with self.lock:
                 self.ws.send(json.dumps(request))
             res = self.recv({"id": request["id"]}, timeout=timeout, callback=callback)
@@ -630,7 +648,7 @@ class Tab(object):
         """
         return self.set_url(timeout=timeout)
 
-    def set_url(self, url=None, timeout=5):
+    def set_url(self, url=None, referrer=None, timeout=5):
         """
         Navigate the tab to the URL
         """
@@ -638,7 +656,12 @@ class Tab(object):
         start_load_ts = self.now
         if url:
             self._url = url
-            data = self.send("Page.navigate", url=url, timeout=timeout)
+            if referrer is None:
+                data = self.send("Page.navigate", url=url, timeout=timeout)
+            else:
+                data = self.send(
+                    "Page.navigate", url=url, referrer=referrer, timeout=timeout
+                )
         else:
             data = self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
