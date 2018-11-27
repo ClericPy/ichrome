@@ -724,7 +724,9 @@ class Tab(object):
         else:
             index = int(index)
         if action:
-            action = "item.result=el.%s || '';item.result=item.result.toString()" % action
+            action = (
+                "item.result=el.%s || '';item.result=item.result.toString()" % action
+            )
         else:
             action = ""
         javascript = """
@@ -832,6 +834,16 @@ class Tag(object):
 
     def get(self, name, default=None):
         return self.attributes.get(name, default)
+
+    def to_dict(self):
+        return {
+            "tagName": self.tagName,
+            "innerHTML": self.innerHTML,
+            "outerHTML": self.outerHTML,
+            "textContent": self.textContent,
+            "attributes": self.attributes,
+            "result": self.result,
+        }
 
     def __str__(self):
         return "Tag(%s)" % self.tagName

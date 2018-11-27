@@ -3,6 +3,10 @@
 
 ---
 
+- 0.0.7
+    - remove nonsense tab.get_html and tab.content, use tab.html instead.
+    - fix action result of Tag object; add Tag.to_dict
+
 - 0.0.6
     - fix tab.querySelectorAll should have return one item if index is not None
 
