@@ -3,6 +3,10 @@
 
 ---
 
+- 0.0.5
+
+    - add action arg for tab.click and tab.querySelectorAll
+
 - 0.0.4
 
     - add tab.querySelectorAll & Tab class to make crawler simple.
