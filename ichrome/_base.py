@@ -43,7 +43,6 @@ class ChromeDaemon(object):
     """
 
     port_in_using = set()
-    DEFAULT_CHROME_PATH = None
     PC_UA = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"
     MAC_OS_UA = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0_1) Version/8.0.1a Safari/728.28.19"
@@ -77,13 +76,10 @@ class ChromeDaemon(object):
         self._timeout = timeout
         self.ready = False
         self.proc = None
-
-        self.chrome_path = self._ensure_chrome_path(
-            chrome_path or self.DEFAULT_CHROME_PATH
-        )
         self.host = host
         self.port = port
         self.server = "http://%s:%s" % (self.host, self.port)
+        self.chrome_path = chrome_path or self._get_default_path()
         self.req = tPool()
         self._ensure_port_free()
         self.UA = user_agent or self.PC_UA
@@ -175,36 +171,25 @@ class ChromeDaemon(object):
             raise ValueError("port in used")
 
     @staticmethod
-    def _ensure_chrome_path(chrome_path):
+    def _get_default_path():
         if IS_WINDOWS:
-            backup = [
+            paths = [
                 "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
                 "C:/Program Files/Google/Chrome/Application/chrome.exe",
+                "%s\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe"
+                % os.getenv("USERPROFILE"),
             ]
-            paths = [chrome_path] + backup
             for path in paths:
                 if not path:
                     continue
                 if os.path.isfile(path):
-                    cmd = 'wmic datafile where name="%s" get Version /value' % (
-                        path.replace("/", "\\\\")
-                    )
-                    out = subprocess.check_output(cmd, timeout=2)
-                    if not (out and out.strip().startswith(b"Version=")):
-                        continue
-                    if chrome_path and chrome_path != path:
-                        logger.debug("using chrome path: %s." % path)
                     return path
-            else:
-                raise FileNotFoundError("Bad chrome path.")
         else:
-            path = chrome_path or "google-chrome"
+            path = "google-chrome"
             out = subprocess.check_output([path, "--version"], timeout=2)
             if out.startswith(b"Google Chrome "):
-                if chrome_path and chrome_path != path:
-                    logger.debug("using chrome path: %s." % path)
                 return path
-        logger.error("bad chrome_path: %s" % chrome_path)
+        raise FileNotFoundError("Not found executable chrome file.")
 
     @property
     def cmd(self):
