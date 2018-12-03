@@ -82,7 +82,7 @@ class ChromeDaemon(object):
         self.chrome_path = chrome_path or self._get_default_path()
         self.req = tPool()
         self._ensure_port_free()
-        self.UA = user_agent or self.PC_UA
+        self.UA = self.PC_UA if user_agent is None else user_agent
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image
@@ -137,6 +137,40 @@ class ChromeDaemon(object):
             time.sleep(1)
         return False
 
+    @property
+    def cmd(self):
+        args = [
+            self.chrome_path,
+            "--remote-debugging-address=%s" % self.host,
+            "--remote-debugging-port=%s" % self.port,
+        ]
+        if self.headless:
+            args.append("--headless")
+            args.append("--hide-scrollbars")
+        if self.user_data_dir:
+            args.append("--user-data-dir=%s" % self.user_data_dir)
+        if self.UA:
+            args.append('--user-agent=%s' % self.UA)
+        if self.proxy:
+            args.append('--proxy-server=%s' % self.proxy)
+        if self.disable_image:
+            args.append("--blink-settings=imagesEnabled=false")
+        if self.extra_config:
+            args.extend(self.extra_config)
+        if self.start_url:
+            args.append(self.start_url)
+        return args
+
+    @property
+    def cmd_args(self):
+        # list2cmdline for linux use args list failed...
+        return {
+            "args": subprocess.list2cmdline(self.cmd),
+            "shell": True,
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.PIPE,
+        }
+
     def launch_chrome(self):
         self.proc = subprocess.Popen(**self.cmd_args)
         if self.ok:
@@ -145,15 +179,6 @@ class ChromeDaemon(object):
         else:
             logger.error("launch_chrome failed: %s, args: %s" % (self, self.cmd))
             return False
-
-    @property
-    def cmd_args(self):
-        return {
-            "args": self.cmd,
-            "shell": True,
-            "stdout": subprocess.PIPE,
-            "stderr": subprocess.PIPE,
-        }
 
     def _ensure_port_free(self):
         for _ in range(3):
@@ -185,35 +210,17 @@ class ChromeDaemon(object):
                 if os.path.isfile(path):
                     return path
         else:
-            path = "google-chrome"
-            out = subprocess.check_output([path, "--version"], timeout=2)
-            if out.startswith(b"Google Chrome "):
-                return path
+            paths = ["google-chrome", "google-chrome-stable"]
+            for path in paths:
+                try:
+                    out = subprocess.check_output([path, "--version"], timeout=2)
+                    if not out:
+                        continue
+                    if out.startswith(b"Google Chrome "):
+                        return path
+                except (FileNotFoundError, subprocess.TimeoutExpired):
+                    continue
         raise FileNotFoundError("Not found executable chrome file.")
-
-    @property
-    def cmd(self):
-        args = [
-            self.chrome_path,
-            "--remote-debugging-address=%s" % self.host,
-            "--remote-debugging-port=%s" % self.port,
-        ]
-        if self.headless:
-            args.append("--headless")
-            args.append("--hide-scrollbars")
-        if self.user_data_dir:
-            args.append("--user-data-dir=%s" % self.user_data_dir)
-        if self.UA:
-            args.append('--user-agent="%s"' % self.UA)
-        if self.proxy:
-            args.append('--proxy-server="%s"' % self.proxy)
-        if self.disable_image:
-            args.append("--blink-settings=imagesEnabled=false")
-        if self.start_url:
-            args.append(self.start_url)
-        if self.extra_config:
-            args.append(self.extra_config)
-        return args
 
     def _daemon(self, interval=5, max_deaths=None):
         """if chrome proc is killed 3 times too fast (not raise TimeoutExpired),
