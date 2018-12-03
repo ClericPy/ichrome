@@ -6,7 +6,7 @@ import codecs
 linux:
 rm -rf "dist/*";rm -rf "build/*";python3 setup.py bdist_wheel;twine upload "dist/*;rm -rf "dist/*";rm -rf "build/*""
 win32:
-rm -rf dist&rm -rf build&python3 setup.py bdist_wheel&twine upload "dist/*"&rm -rf dist&rm -rf build&rm -rf ichrome.egg-info
+rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -rf dist;rm -rf build;rm -rf ichrome.egg-info
 """
 version = "0.0.9"
 if sys.version_info < (3, 6):
