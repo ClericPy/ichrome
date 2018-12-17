@@ -53,13 +53,17 @@ def example():
             tab.inject_js("https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js")
         )
         logger.info(tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)"))
-        tab.js('alert("Check the links above disabled, and then input `test` to the input position.")')
+        tab.js(
+            'alert("Check the links above disabled, and then input `test` to the input position.")'
+        )
         # automate press accept for alert~
         tab.send("Page.handleJavaScriptDialog", accept=True)
         # remove href of the a tag.
         tab.click("#sc_hdu>li>a", index=3, action="removeAttribute('href')")
         # remove href of all the 'a' tag.
-        tab.querySelectorAll("#sc_hdu>li>a", index=None, action="removeAttribute('href')")
+        tab.querySelectorAll(
+            "#sc_hdu>li>a", index=None, action="removeAttribute('href')"
+        )
         # use querySelectorAll to get the elements.
         for i in tab.querySelectorAll("#sc_hdu>li"):
             logger.info(
@@ -88,7 +92,7 @@ def example():
         logger.info(tab.click("#sb_form_go"))
         # show some html source code of the tab
         logger.info(tab.html[:100])
-        chromed.run_forever()
+        # chromed.run_forever()
 
 
 if __name__ == "__main__":
