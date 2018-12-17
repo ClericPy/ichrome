@@ -67,7 +67,11 @@ class ChromeDaemon(object):
         daemon=True,
         block=False,
         timeout=2,
+        debug=False,
     ):
+        if debug:
+            logger.setLevel(10)
+        self.debug = debug
         self.start_time = time.time()
         self.max_deaths = max_deaths
         self._shutdown = False
@@ -104,9 +108,8 @@ class ChromeDaemon(object):
 
     def _wrap_user_data_dir(self, user_data_dir):
         """refactor this function to set accurate dir."""
-        user_data_dir = (
-            "./ichrome_user_data/" if user_data_dir is None else user_data_dir
-        )
+        default_path = os.path.join(os.path.expanduser("~"), "ichrome_user_data")
+        user_data_dir = default_path if user_data_dir is None else user_data_dir
         self.user_data_dir = os.path.join(user_data_dir, "chrome_%s" % self.port)
         if not os.path.isdir(self.user_data_dir):
             logger.warning(
@@ -150,9 +153,9 @@ class ChromeDaemon(object):
         if self.user_data_dir:
             args.append("--user-data-dir=%s" % self.user_data_dir)
         if self.UA:
-            args.append('--user-agent=%s' % self.UA)
+            args.append("--user-agent=%s" % self.UA)
         if self.proxy:
-            args.append('--proxy-server=%s' % self.proxy)
+            args.append("--proxy-server=%s" % self.proxy)
         if self.disable_image:
             args.append("--blink-settings=imagesEnabled=false")
         if self.extra_config:
@@ -164,12 +167,13 @@ class ChromeDaemon(object):
     @property
     def cmd_args(self):
         # list2cmdline for linux use args list failed...
-        return {
-            "args": subprocess.list2cmdline(self.cmd),
-            "shell": True,
-            "stdout": subprocess.PIPE,
-            "stderr": subprocess.PIPE,
-        }
+        cmd_string = subprocess.list2cmdline(self.cmd)
+        logger.debug("running with: %s" % cmd_string)
+        kwargs = {"args": cmd_string, "shell": True}
+        if not self.debug:
+            kwargs["stdout"] = subprocess.DEVNULL
+            kwargs["stderr"] = subprocess.DEVNULL
+        return kwargs
 
     def launch_chrome(self):
         self.proc = subprocess.Popen(**self.cmd_args)
