@@ -3,6 +3,15 @@
 
 ---
 
+- 0.1.0
+    - set default user data dir path to home
+
+- 0.0.9
+    - fix linux test
+
+- 0.0.8
+    - add more windows default chrome path
+
 - 0.0.7
     - remove nonsense tab.get_html and tab.content, use tab.html instead.
     - fix action result of Tag object; add Tag.to_dict
