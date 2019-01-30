@@ -589,6 +589,7 @@ class Tab(object):
         except Error:
             result = None
         finally:
+            self._listener.find_future(arg)
             return callback(result) if callable(callback) else result
 
     def refresh_ws(self):
@@ -779,14 +780,15 @@ class Tab(object):
                 return None
             return []
 
-    def inject_js(self, url, timeout=None, retry=0):
+    def inject_js(self, url, timeout=None, retry=0, verify=0, **requests_kwargs):
         # js_source_code = """
         # var script=document.createElement("script");
         # script.type="text/javascript";
         # script.src="{}";
         # document.getElementsByTagName('head')[0].appendChild(script);
         # """.format(url)
-        r = self.req.get(url, verify=0, timeout=timeout, retry=retry)
+        r = self.req.get(
+            url, timeout=timeout, retry=retry, verify=verify, **requests_kwargs)
         if r.x and r.ok:
             javascript = r.text
             return self.js(javascript, mute_log=True)
