@@ -5,10 +5,10 @@ import codecs
 """
 linux:
 rm -rf "dist/*";rm -rf "build/*";python3 setup.py bdist_wheel;twine upload "dist/*;rm -rf "dist/*";rm -rf "build/*""
-win32:
+win32-git-bash:
 rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -rf dist;rm -rf build;rm -rf ichrome.egg-info
 """
-version = "0.1.0"
+version = "0.1.1"
 if sys.version_info < (3, 6):
     sys.exit("pypinfo requires Python 3.6+")
 py_version = sys.version_info
