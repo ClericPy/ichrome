@@ -101,9 +101,13 @@ Test normal usage of ichrome.
   3.2 goto new url with tab.set_url, and will stop load for timeout.
   3.3 get cookies from url
   3.4 inject the jQuery lib by a static url.
-  3.5 Network crawling from the background ajax request.
-  3.6 click some element by tab.click with css selector.
-  3.7 use querySelectorAll to get the elements.
+  3.5 auto click ok from the alert dialog.
+  3.6 remove `href` from the third `a` tag, which is selected by css path.
+  3.7 remove all `href` from the `a` tag, which is selected by css path.
+  3.8 use querySelectorAll to get the elements.
+  3.9 Network crawling from the background ajax request.
+  3.10 click some element by tab.click with css selector.
+  3.11 show html source code of the tab
 """
 
 
@@ -141,12 +145,24 @@ def example():
         logger.info(
             tab.inject_js("https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js")
         )
-        logger.info(
-            tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)")
+        logger.info(tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)"))
+        tab.js(
+            'alert("Check the links above disabled, and then input `test` to the input position.")'
         )
-        tab.js('alert("Now input `test` to the input position.")')
         # automate press accept for alert~
         tab.send("Page.handleJavaScriptDialog", accept=True)
+        # remove href of the a tag.
+        tab.click("#sc_hdu>li>a", index=3, action="removeAttribute('href')")
+        # remove href of all the 'a' tag.
+        tab.querySelectorAll(
+            "#sc_hdu>li>a", index=None, action="removeAttribute('href')"
+        )
+        # use querySelectorAll to get the elements.
+        for i in tab.querySelectorAll("#sc_hdu>li"):
+            logger.info(
+                "Tag: %s, id:%s, class:%s, text:%s"
+                % (i, i.get("id"), i.get("class"), i.text)
+            )
         # enable the Network function, otherwise will not recv Network request/response.
         logger.info(tab.send("Network.enable"))
         # here will block until input string "test" in the input position.
@@ -167,10 +183,9 @@ def example():
         logger.info("getResponseBody success %s" % resp)
         # directly click the button matched the cssselector #sb_form_go, here is the submit button.
         logger.info(tab.click("#sb_form_go"))
-        # use querySelectorAll to get the elements.
-        for i in tab.querySelectorAll("#sc_hdu>li"):
-            logger.info(i, i.get("id"), i.text)
-        chromed.run_forever()
+        # show some html source code of the tab
+        logger.info(tab.html[:100])
+        # chromed.run_forever()
 
 
 if __name__ == "__main__":
