@@ -3,6 +3,7 @@ import os
 import socket
 import subprocess
 import threading
+import platform
 import time
 import traceback
 from concurrent.futures._base import Error
@@ -12,7 +13,6 @@ import psutil
 import websocket
 from torequests import NewFuture, tPool
 from torequests.utils import quote_plus, timepass, ttime
-from torequests.versions import IS_WINDOWS
 
 from ._logs import ichrome_logger as logger
 
@@ -52,22 +52,22 @@ class ChromeDaemon(object):
     MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
 
     def __init__(
-        self,
-        chrome_path=None,
-        host="localhost",
-        port=9222,
-        headless=False,
-        user_agent=None,
-        proxy=None,
-        user_data_dir=None,
-        disable_image=False,
-        start_url="about:blank",
-        extra_config=None,
-        max_deaths=2,
-        daemon=True,
-        block=False,
-        timeout=2,
-        debug=False,
+            self,
+            chrome_path=None,
+            host="127.0.0.1",
+            port=9222,
+            headless=False,
+            user_agent=None,
+            proxy=None,
+            user_data_dir=None,
+            disable_image=False,
+            start_url="about:blank",
+            extra_config=None,
+            max_deaths=2,
+            daemon=True,
+            block=False,
+            timeout=2,
+            debug=False,
     ):
         if debug:
             logger.setLevel(10)
@@ -108,13 +108,14 @@ class ChromeDaemon(object):
 
     def _wrap_user_data_dir(self, user_data_dir):
         """refactor this function to set accurate dir."""
-        default_path = os.path.join(os.path.expanduser("~"), "ichrome_user_data")
+        default_path = os.path.join(
+            os.path.expanduser("~"), "ichrome_user_data")
         user_data_dir = default_path if user_data_dir is None else user_data_dir
-        self.user_data_dir = os.path.join(user_data_dir, "chrome_%s" % self.port)
+        self.user_data_dir = os.path.join(user_data_dir,
+                                          "chrome_%s" % self.port)
         if not os.path.isdir(self.user_data_dir):
-            logger.warning(
-                "creating user data dir at [%s]." % os.path.realpath(self.user_data_dir)
-            )
+            logger.warning("creating user data dir at [%s]." % os.path.realpath(
+                self.user_data_dir))
 
     @property
     def ok(self):
@@ -178,10 +179,12 @@ class ChromeDaemon(object):
     def launch_chrome(self):
         self.proc = subprocess.Popen(**self.cmd_args)
         if self.ok:
-            logger.info("launch_chrome success: %s, args: %s" % (self, self.proc.args))
+            logger.info(
+                "launch_chrome success: %s, args: %s" % (self, self.proc.args))
             return True
         else:
-            logger.error("launch_chrome failed: %s, args: %s" % (self, self.cmd))
+            logger.error(
+                "launch_chrome failed: %s, args: %s" % (self, self.cmd))
             return False
 
     def _ensure_port_free(self):
@@ -201,12 +204,13 @@ class ChromeDaemon(object):
 
     @staticmethod
     def _get_default_path():
-        if IS_WINDOWS:
+        current_platform = platform.system()
+        if current_platform == 'Windows':
             paths = [
                 "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
                 "C:/Program Files/Google/Chrome/Application/chrome.exe",
-                "%s\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe"
-                % os.getenv("USERPROFILE"),
+                "%s\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe" %
+                os.getenv("USERPROFILE"),
             ]
             for path in paths:
                 if not path:
@@ -214,10 +218,19 @@ class ChromeDaemon(object):
                 if os.path.isfile(path):
                     return path
         else:
-            paths = ["google-chrome", "google-chrome-stable"]
+            if current_platform == 'Linux':
+                paths = ["google-chrome", "google-chrome-stable"]
+            elif current_platform == 'Darwin':
+                paths = [
+                    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+                ]
+            else:
+                raise SystemError(
+                    "unknown platform, not found the default chrome path.")
             for path in paths:
                 try:
-                    out = subprocess.check_output([path, "--version"], timeout=2)
+                    out = subprocess.check_output([path, "--version"],
+                                                  timeout=2)
                     if not out:
                         continue
                     if out.startswith(b"Google Chrome "):
@@ -234,16 +247,13 @@ class ChromeDaemon(object):
         max_deaths = max_deaths or self.max_deaths
         while self._use_daemon:
             if self._shutdown:
-                logger.info(
-                    "%s daemon exited after shutdown(%s)."
-                    % (self, ttime(self._shutdown))
-                )
+                logger.info("%s daemon exited after shutdown(%s)." %
+                            (self, ttime(self._shutdown)))
                 break
             if deaths >= max_deaths:
                 logger.info(
-                    "%s daemon exited for number of deaths is more than %s."
-                    % (self, max_deaths)
-                )
+                    "%s daemon exited for number of deaths is more than %s." %
+                    (self, max_deaths))
                 break
             if not self.proc_ok:
                 logger.debug("%s daemon is restarting proc." % self)
@@ -258,21 +268,20 @@ class ChromeDaemon(object):
 
     def run_forever(self, block=True, interval=5, max_deaths=None):
         if self._shutdown:
-            raise IOError(
-                "%s run_forever failed after shutdown(%s)."
-                % (self, ttime(self._shutdown))
-            )
+            raise IOError("%s run_forever failed after shutdown(%s)." %
+                          (self, ttime(self._shutdown)))
         if not self._daemon_thread:
             self._daemon_thread = threading.Thread(
                 target=self._daemon,
-                kwargs={"interval": interval, "max_deaths": max_deaths},
+                kwargs={
+                    "interval": interval,
+                    "max_deaths": max_deaths
+                },
                 daemon=True,
             )
             self._daemon_thread.start()
-        logger.debug(
-            "%s run_forever(block=%s, interval=%s, max_deaths=%s)."
-            % (self, block, interval, max_deaths or self.max_deaths)
-        )
+        logger.debug("%s run_forever(block=%s, interval=%s, max_deaths=%s)." %
+                     (self, block, interval, max_deaths or self.max_deaths))
         if block:
             self._daemon_thread.join()
 
@@ -294,19 +303,14 @@ class ChromeDaemon(object):
 
     def shutdown(self):
         if self._shutdown:
-            logger.info(
-                "can not shutdown twice, %s has been shutdown at %s"
-                % (self, ttime(self._shutdown))
-            )
+            logger.info("can not shutdown twice, %s has been shutdown at %s" %
+                        (self, ttime(self._shutdown)))
             return
-        logger.info(
-            "%s shutting down, start-up: %s, duration: %s."
-            % (
-                self,
-                ttime(self.start_time),
-                timepass(time.time() - self.start_time, accuracy=3, format=1),
-            )
-        )
+        logger.info("%s shutting down, start-up: %s, duration: %s." % (
+            self,
+            ttime(self.start_time),
+            timepass(time.time() - self.start_time, accuracy=3, format=1),
+        ))
         self._shutdown = time.time()
         self.kill()
 
@@ -334,7 +338,8 @@ class ChromeDaemon(object):
             for proc in psutil.process_iter():
                 try:
                     pname = proc.name()
-                    if pname in proc_names and port_args in " ".join(proc.cmdline()):
+                    if pname in proc_names and port_args in " ".join(
+                            proc.cmdline()):
                         for cmd in proc.cmdline():
                             if port_args in cmd:
                                 logger.debug("kill %s %s" % (pname, cmd))
@@ -361,7 +366,8 @@ class ChromeDaemon(object):
 
 
 class Chrome(object):
-    def __init__(self, host="localhost", port=9222, timeout=2, retry=1):
+
+    def __init__(self, host="127.0.0.1", port=9222, timeout=2, retry=1):
         self.req = tPool()
         self.host = host
         self.port = port
@@ -386,8 +392,7 @@ class Chrome(object):
         """
         try:
             r = self.req.get(
-                self.server + "/json", timeout=self.timeout, retry=self.retry
-            )
+                self.server + "/json", timeout=self.timeout, retry=self.retry)
             return [
                 Tab(
                     tab["id"],
@@ -395,9 +400,7 @@ class Chrome(object):
                     tab["url"],
                     tab["webSocketDebuggerUrl"],
                     self,
-                )
-                for tab in r.json()
-                if tab["type"] == "page"
+                ) for tab in r.json() if tab["type"] == "page"
             ]
         except:
             traceback.print_exc()
@@ -465,8 +468,9 @@ class Chrome(object):
     @property
     def meta(self):
         r = self.req.get(
-            "%s/json/version" % self.server, retry=self.retry, timeout=self.timeout
-        )
+            "%s/json/version" % self.server,
+            retry=self.retry,
+            timeout=self.timeout)
         if r.x and r.ok:
             return r.json()
 
@@ -486,6 +490,7 @@ class Chrome(object):
 
 
 class Tab(object):
+
     def __init__(self, tab_id, title, url, websocketURL, chrome, timeout=5):
         self.tab_id = tab_id
         self.title = title
@@ -554,12 +559,17 @@ class Tab(object):
                 if f:
                     f.set_result(data_str)
             except (
-                websocket._exceptions.WebSocketConnectionClosedException,
-                ConnectionResetError,
+                    websocket._exceptions.WebSocketConnectionClosedException,
+                    ConnectionResetError,
             ):
                 break
 
-    def send(self, method, timeout=None, callback=None, mute_log=False, **kwargs):
+    def send(self,
+             method,
+             timeout=None,
+             callback=None,
+             mute_log=False,
+             **kwargs):
         try:
             timeout = self.timeout if timeout is None else timeout
             request = {"method": method, "params": kwargs}
@@ -569,11 +579,15 @@ class Tab(object):
                 logger.info("<%s> send: %s" % (self, request))
             with self.lock:
                 self.ws.send(json.dumps(request))
-            res = self.recv({"id": request["id"]}, timeout=timeout, callback=callback)
+            res = self.recv({
+                "id": request["id"]
+            },
+                            timeout=timeout,
+                            callback=callback)
             return res
         except (
-            websocket._exceptions.WebSocketTimeoutException,
-            websocket._exceptions.WebSocketConnectionClosedException,
+                websocket._exceptions.WebSocketTimeoutException,
+                websocket._exceptions.WebSocketConnectionClosedException,
         ):
             self.refresh_ws()
 
@@ -628,7 +642,8 @@ class Tab(object):
 
     @property
     def current_url(self):
-        return json.loads(self.js("window.location.href"))["result"]["result"]["value"]
+        return json.loads(
+            self.js("window.location.href"))["result"]["result"]["value"]
 
     @property
     def html(self):
@@ -642,29 +657,31 @@ class Tab(object):
             value = result["result"]["result"]["value"]
             return value
         except (KeyError, json.decoder.JSONDecodeError):
-            logger.error(
-                "tab.content error %s:\n%s" % (response, traceback.format_exc())
-            )
+            logger.error("tab.content error %s:\n%s" % (response,
+                                                        traceback.format_exc()))
             return ""
 
     def wait_loading(self, timeout=None, callback=None):
         data = self.wait_event(
-            "Page.loadEventFired", timeout=timeout, callback=callback
-        )
+            "Page.loadEventFired", timeout=timeout, callback=callback)
         return data
 
     def wait_event(
-        self,
-        event="",
-        timeout=None,
-        callback=None,
-        filter_function=None,
-        wait_seconds=None,
+            self,
+            event="",
+            timeout=None,
+            callback=None,
+            filter_function=None,
+            wait_seconds=None,
     ):
         timeout = self.timeout if timeout is None else timeout
         start_time = time.time()
         while 1:
-            result = self.recv({"method": event}, timeout=timeout, callback=callback)
+            result = self.recv({
+                "method": event
+            },
+                               timeout=timeout,
+                               callback=callback)
             if not callable(filter_function) or filter_function(result):
                 break
             if wait_seconds and time.time() - start_time > wait_seconds:
@@ -689,8 +706,10 @@ class Tab(object):
                 data = self.send("Page.navigate", url=url, timeout=timeout)
             else:
                 data = self.send(
-                    "Page.navigate", url=url, referrer=referrer, timeout=timeout
-                )
+                    "Page.navigate",
+                    url=url,
+                    referrer=referrer,
+                    timeout=timeout)
         else:
             data = self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
@@ -703,7 +722,8 @@ class Tab(object):
         """
         Evaluate JavaScript on the page
         """
-        return self.send("Runtime.evaluate", expression=javascript, mute_log=mute_log)
+        return self.send(
+            "Runtime.evaluate", expression=javascript, mute_log=mute_log)
 
     def querySelectorAll(self, cssselector, index=None, action=None):
         """
@@ -722,8 +742,8 @@ class Tab(object):
             index = int(index)
         if action:
             action = (
-                "item.result=el.%s || '';item.result=item.result.toString()" % action
-            )
+                "item.result=el.%s || '';item.result=item.result.toString()" %
+                action)
         else:
             action = ""
         javascript = """
@@ -775,12 +795,14 @@ class Tab(object):
             else:
                 return result
         except Exception as e:
-            logger.info("querySelectorAll error: %s, response: %s" % (e, response))
+            logger.info(
+                "querySelectorAll error: %s, response: %s" % (e, response))
             if isinstance(index, int):
                 return None
             return []
 
-    def inject_js(self, url, timeout=None, retry=0, verify=0, **requests_kwargs):
+    def inject_js(self, url, timeout=None, retry=0, verify=0,
+                  **requests_kwargs):
         # js_source_code = """
         # var script=document.createElement("script");
         # script.type="text/javascript";
@@ -820,7 +842,9 @@ class Tab(object):
 
 
 class Tag(object):
-    def __init__(self, tagName, innerHTML, outerHTML, textContent, attributes, result):
+
+    def __init__(self, tagName, innerHTML, outerHTML, textContent, attributes,
+                 result):
         self.tagName = tagName.lower()
         self.innerHTML = innerHTML
         self.outerHTML = outerHTML
@@ -851,6 +875,7 @@ class Tag(object):
 
 
 class Listener(object):
+
     def __init__(self, timeout=None):
         self.timeout = timeout
         self.container = []
