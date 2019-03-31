@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 import sys
 import codecs
-
+from ichrome import __version__
 """
 linux:
 rm -rf "dist/*";rm -rf "build/*";python3 setup.py bdist_wheel;twine upload "dist/*;rm -rf "dist/*";rm -rf "build/*""
 win32-git-bash:
 rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -rf dist;rm -rf build;rm -rf ichrome.egg-info
 """
-version = "0.1.1"
+version = __version__
 if sys.version_info < (3, 6):
     sys.exit("pypinfo requires Python 3.6+")
 py_version = sys.version_info

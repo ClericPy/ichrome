@@ -3,6 +3,13 @@
 
 ---
 
+- 0.1.2
+    - set default host as 127.0.0.1 instead of  localhost, avoid some bad hosts file.
+    - add default path for Darwin.
+
+- 0.1.1
+    - clear future while timeout
+
 - 0.1.0
     - set default user data dir path to home
 
