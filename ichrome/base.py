@@ -14,7 +14,7 @@ import websocket
 from torequests import NewFuture, tPool
 from torequests.utils import quote_plus, timepass, ttime
 
-from ._logs import ichrome_logger as logger
+from .logs import ichrome_logger as logger
 
 
 class ChromeDaemon(object):
@@ -42,7 +42,7 @@ class ChromeDaemon(object):
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
 
-    port_in_using = set()
+    port_in_using: set = set()
     PC_UA = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"
     MAC_OS_UA = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0_1) Version/8.0.1a Safari/728.28.19"
@@ -104,7 +104,7 @@ class ChromeDaemon(object):
         self.chrome_proc_start_time = time.time()
         self.launch_chrome()
         if self._use_daemon:
-            self.run_forever(block=block)
+            self._daemon_thread = self.run_forever(block=block)
 
     def _wrap_user_data_dir(self, user_data_dir):
         """refactor this function to set accurate dir."""
@@ -130,9 +130,9 @@ class ChromeDaemon(object):
         return False
 
     @property
-    def connection_ok(self, tries=2):
+    def connection_ok(self):
         url = self.server + "/json"
-        for _ in range(tries):
+        for _ in range(2):
             r = self.req.get(url, timeout=self._timeout)
             if r.x and r.ok:
                 self.ready = True
@@ -239,21 +239,20 @@ class ChromeDaemon(object):
                     continue
         raise FileNotFoundError("Not found executable chrome file.")
 
-    def _daemon(self, interval=5, max_deaths=None):
+    def _daemon(self, interval=5):
         """if chrome proc is killed 3 times too fast (not raise TimeoutExpired),
         will skip auto_restart."""
         return_code = None
         deaths = 0
-        max_deaths = max_deaths or self.max_deaths
         while self._use_daemon:
             if self._shutdown:
                 logger.info("%s daemon exited after shutdown(%s)." %
                             (self, ttime(self._shutdown)))
                 break
-            if deaths >= max_deaths:
+            if deaths >= self.max_deaths:
                 logger.info(
                     "%s daemon exited for number of deaths is more than %s." %
-                    (self, max_deaths))
+                    (self, self.max_deaths))
                 break
             if not self.proc_ok:
                 logger.debug("%s daemon is restarting proc." % self)
@@ -265,25 +264,24 @@ class ChromeDaemon(object):
             except subprocess.TimeoutExpired:
                 deaths = 0
         logger.info("%s daemon exited." % self)
+        return return_code
 
-    def run_forever(self, block=True, interval=5, max_deaths=None):
+    def run_forever(self, block=True, interval=5):
         if self._shutdown:
             raise IOError("%s run_forever failed after shutdown(%s)." %
                           (self, ttime(self._shutdown)))
         if not self._daemon_thread:
             self._daemon_thread = threading.Thread(
                 target=self._daemon,
-                kwargs={
-                    "interval": interval,
-                    "max_deaths": max_deaths
-                },
+                kwargs={"interval": interval},
                 daemon=True,
             )
             self._daemon_thread.start()
         logger.debug("%s run_forever(block=%s, interval=%s, max_deaths=%s)." %
-                     (self, block, interval, max_deaths or self.max_deaths))
+                     (self, block, interval, self.max_deaths))
         if block:
             self._daemon_thread.join()
+        return self._daemon_thread
 
     def kill(self, force=False):
         self.ready = False
@@ -346,11 +344,11 @@ class ChromeDaemon(object):
                                 proc.kill()
                                 if port:
                                     killed.append(port_args)
-                except:
+                except Exception:
                     pass
             if port and len(killed) >= max_deaths:
                 return
-            if max_deaths is 0:
+            if max_deaths == 0:
                 return
             if timeout and time.time() - start_time < timeout:
                 time.sleep(1)
@@ -402,7 +400,7 @@ class Chrome(object):
                     self,
                 ) for tab in r.json() if tab["type"] == "page"
             ]
-        except:
+        except Exception:
             traceback.print_exc()
             return []
 
@@ -637,7 +635,7 @@ class Tab(object):
             result = self.send("Network.getCookies", timeout=None)
         try:
             return json.loads(result)["result"]["cookies"]
-        except:
+        except Exception:
             return []
 
     @property

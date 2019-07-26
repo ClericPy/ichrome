@@ -2,6 +2,8 @@
 
 
 ---
+- 0.1.3
+    - update readme
 
 - 0.1.2
     - set default host as 127.0.0.1 instead of  localhost, avoid some bad hosts file.

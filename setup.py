@@ -1,6 +1,5 @@
 from setuptools import setup, find_packages
 import sys
-import codecs
 from ichrome import __version__
 """
 linux:
@@ -20,7 +19,8 @@ setup(
     name="ichrome",
     version=version,
     keywords=("chrome"),
-    description="toy for chrome devtools protocol. Read more: https://github.com/ClericPy/ichrome.",
+    description=
+    "toy for chrome devtools protocol. Read more: https://github.com/ClericPy/ichrome.",
     license="MIT License",
     install_requires=install_requires,
     long_description=README,
