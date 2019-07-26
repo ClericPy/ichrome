@@ -18,6 +18,6 @@ def init_logger():
 ichrome_logger = init_logger()
 
 if __name__ == "__main__":
-    # logger.setLevel(logging.INFO)
-    logger.debug(1)
-    logger.info(1)
+    # ichrome_logger.setLevel(logging.INFO)
+    ichrome_logger.debug(1)
+    ichrome_logger.info(2)

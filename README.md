@@ -25,16 +25,19 @@
 ### Chrome daemon
 
 ```python
-from ichrome import ChromeDaemon
+from ichrome import ChromeDaemon, Chrome
+
 
 def main():
     with ChromeDaemon() as chromed:
         # run_forever means auto_restart
         chromed.run_forever(0)
         chrome = Chrome()
-        tab = chrome.new_tab()
-        time.sleep(3)
+        tab = chrome.new_tab(url="https://pypi.org")
+        tab.wait_loading(3)
+        tab.js('alert("test ok")')
         tab.close()
+
 
 if __name__ == "__main__":
     main()
@@ -46,7 +49,7 @@ if __name__ == "__main__":
 from ichrome import Chrome
 
 def main():
-    chrome = Chrome()
+    chrome = Chrome(port=9222)
     print(chrome.tabs)
     # [ChromeTab("6EC65C9051697342082642D6615ECDC0", "about:blank", "about:blank", port: 9222)]
     print(chrome.tabs[0])
@@ -56,37 +59,6 @@ if __name__ == "__main__":
     main()
 ```
 
-### Operations on Tab
-
-```python
-from ichrome import Chrome
-
-import time
-
-
-def main():
-    chrome = Chrome()
-    print(chrome.tabs)
-    # [ChromeTab("6EC65C9051697342082642D6615ECDC0", "about:blank", "about:blank", port: 9222)]
-    tab = chrome.tabs[0]
-    # open a new page
-    print(tab.set_url("http://p.3.cn/1", timeout=3))  # {"id":4,"result":{}}
-    # reload page
-    print(tab.reload())  # {"id":4,"result":{}}
-    # Not recommended new_tab with url, use set_url can set a timeout to stop loading
-    # tab = chrome.new_tab()
-    # tab.set_url("http://p.3.cn", timeout=3)
-    tab = chrome.new_tab("http://p.3.cn/new")
-    time.sleep(1)
-    print("404 Not Found" in tab.get_html("u8"))  # True
-    print(tab.current_url)  # http://p.3.cn/new
-    tab.close()
-
-
-if __name__ == "__main__":
-    main()
-
-```
 
 ### Advanced Usage (Crawling a special background request.)
 
@@ -118,18 +90,16 @@ def example():
     # use local ichrome module
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     os.chdir("..")  # for reuse exiting user data dir
-    from ichrome import Chrome, Tab, ChromeDaemon, ichrome_logger as logger
+    from ichrome import Chrome, ChromeDaemon, ichrome_logger as logger
     import re
     import json
-    import time
-
     """Example for crawling a special background request."""
 
     # reset default logger level, such as DEBUG
     # import logging
     # logger.setLevel(logging.INFO)
     # launch the Chrome process and daemon process, will auto shutdown by 'with' expression.
-    with ChromeDaemon(host="127.0.0.1", port=9222) as chromed:
+    with ChromeDaemon(host="127.0.0.1", port=9222, max_deaths=1) as chromed:
         # create connection to Chrome Devtools
         chrome = Chrome(host="127.0.0.1", port=9222, timeout=3, retry=1)
         # now create a new tab without url
@@ -137,15 +107,17 @@ def example():
         # reset the url to bing.com, if loading time more than 5 seconds, will stop loading.
         # if inject js success, will alert Vue
         tab.set_url(
-            "https://www.bing.com/", referrer="https://www.github.com/", timeout=5
-        )
+            "https://www.bing.com/",
+            referrer="https://www.github.com/",
+            timeout=5)
         # get_cookies from url
         logger.info(tab.get_cookies("http://cn.bing.com"))
         # test inject_js, if success, will alert jQuery version info 3.3.1
         logger.info(
-            tab.inject_js("https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js")
-        )
-        logger.info(tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)"))
+            tab.inject_js(
+                "https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js"))
+        logger.info(
+            tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)"))
         tab.js(
             'alert("Check the links above disabled, and then input `test` to the input position.")'
         )
@@ -155,14 +127,11 @@ def example():
         tab.click("#sc_hdu>li>a", index=3, action="removeAttribute('href')")
         # remove href of all the 'a' tag.
         tab.querySelectorAll(
-            "#sc_hdu>li>a", index=None, action="removeAttribute('href')"
-        )
+            "#sc_hdu>li>a", index=None, action="removeAttribute('href')")
         # use querySelectorAll to get the elements.
         for i in tab.querySelectorAll("#sc_hdu>li"):
-            logger.info(
-                "Tag: %s, id:%s, class:%s, text:%s"
-                % (i, i.get("id"), i.get("class"), i.text)
-            )
+            logger.info("Tag: %s, id:%s, class:%s, text:%s" %
+                        (i, i.get("id"), i.get("class"), i.text))
         # enable the Network function, otherwise will not recv Network request/response.
         logger.info(tab.send("Network.enable"))
         # here will block until input string "test" in the input position.
@@ -178,14 +147,16 @@ def example():
         request_id = recv_string["params"]["requestId"]
         logger.info("requestId: %s" % request_id)
         # send request for getResponseBody
-        resp = tab.send("Network.getResponseBody", requestId=request_id, timeout=5)
+        resp = tab.send(
+            "Network.getResponseBody", requestId=request_id, timeout=5)
         # now resp is the response body result.
         logger.info("getResponseBody success %s" % resp)
         # directly click the button matched the cssselector #sb_form_go, here is the submit button.
         logger.info(tab.click("#sb_form_go"))
         # show some html source code of the tab
         logger.info(tab.html[:100])
-        # chromed.run_forever()
+        # now click close button of the chrome browser.
+        chromed.run_forever()
 
 
 if __name__ == "__main__":
@@ -197,8 +168,8 @@ if __name__ == "__main__":
 
 ```
 λ python3 -m ichrome -s 9222
-2018-11-27 23:01:59 DEBUG [ichrome] _base.py(329): kill chrome.exe --remote-debugging-port=9222
-2018-11-27 23:02:00 DEBUG [ichrome] _base.py(329): kill chrome.exe --remote-debugging-port=9222
+2018-11-27 23:01:59 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
+2018-11-27 23:02:00 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
 
 λ python3 -m ichrome -p 9222 --start_url "http://bing.com" --disable_image
 2018-11-27 23:03:57 INFO  [ichrome] __main__.py(69): ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': 'localhost', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': True, 'start_url': 'http://bing.com', 'extra_config': '', 'max_deaths': 2, 'timeout': 2}
