@@ -1,8 +1,12 @@
 # fast and stable connection
-from pyee import AsyncIOEventEmitter
-from asyncio.futures import Future, TimeoutError
-from torequests.dummy import Requests
 import asyncio
+import traceback
+from asyncio.futures import Future, TimeoutError
+
+from pyee import AsyncIOEventEmitter
+from torequests.dummy import Requests
+from torequests.utils import quote_plus
+from .logs import ichrome_logger as logger
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -51,50 +55,64 @@ class EventFuture(Future):
 
 class ChromeConnector(object):
 
-    def __init__(self, loop=None):
+    def __init__(self,
+                 host="127.0.0.1",
+                 port=9222,
+                 timeout=2,
+                 retry=1,
+                 loop=None):
         self.loop = loop
-        self.ee = AsyncIOEventEmitter(loop=loop)
-        if self.loop:
-            self.req = Requests(self.loop)
-        else:
-            self.req = property(self.lazy_req)
-
-    def lazy_req(self):
-        # lazy init Requests
-        if self._req is None:
-            self.__class__._req = Requests(self.loop)
-        else:
-            return self._req
-
-
-class Chrome(ChromeConnector):
-
-    def __init__(self, host="127.0.0.1", port=9222, timeout=2, retry=1):
-        self.req = tPool()
         self.host = host
         self.port = port
         self.timeout = timeout
         self.retry = retry
-        if not self.ok:
-            raise IOError("Can not connect to %s" % self.server)
+        self.status = 'init'
 
     @property
-    def ok(self):
+    def server(self):
+        return "http://%s:%d" % (self.host, self.port)
+
+    async def connect(self):
+        self.ee = AsyncIOEventEmitter(loop=self.loop)
+        self.req = Requests(loop=self.loop)
+        if await self.check():
+            return self
+        else:
+            return None
+
+    async def check(self):
         """
         Test connection to browser
         """
-        r = self.req.get(self.server, timeout=self.timeout, retry=self.retry)
-        if r.ok:
+        r = await self.req.get(
+            self.server, timeout=self.timeout, retry=self.retry)
+        if r:
+            self.status = 'connected'
             return True
-        return False
+        else:
+            self.status = 'disconnected'
+            return False
 
-    def _get_tabs(self):
-        """
-        Get all open browser tabs that are pages tabs
-        """
+    def __str__(self):
+        return f"<Chrome: {self.port}({self.status})>"
+
+
+class Chrome(ChromeConnector):
+
+    def __init__(self,
+                 host="127.0.0.1",
+                 port=9222,
+                 timeout=2,
+                 retry=1,
+                 loop=None):
+        super().__init__(
+            host=host, port=port, timeout=timeout, retry=retry, loop=loop)
+
+    async def _get_tabs(self):
         try:
-            r = self.req.get(
+            r = await self.req.get(
                 self.server + "/json", timeout=self.timeout, retry=self.retry)
+            return r.json()
             return [
                 Tab(
                     tab["id"],
@@ -105,24 +123,21 @@ class Chrome(ChromeConnector):
                 ) for tab in r.json() if tab["type"] == "page"
             ]
         except Exception:
-            traceback.print_exc()
+            logger.error(
+                f'fail to get_tabs {self.server}, {traceback.format_exc()}')
             return []
 
-    @property
-    def server(self):
-        return "http://%s:%d" % (self.host, self.port)
+    async def tabs(self):
+        # [{'description': '', 'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4', 'id': '30C16F9165C525A4002E827EDABD48A4', 'title': 'about:blank', 'type': 'page', 'url': 'about:blank', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4'}]
+        return await self._get_tabs()
 
-    @property
-    def tabs(self):
-        return self._get_tabs()
-
-    def new_tab(self, url=""):
-        r = self.req.get(
+    async def new_tab(self, url=""):
+        r = await self.req.get(
             "%s/json/new?%s" % (self.server, quote_plus(url)),
             retry=self.retry,
             timeout=self.timeout,
         )
-        if r.x and r.ok:
+        if r:
             rjson = r.json()
             tab_id, title, _url, websocketURL = (
                 rjson["id"],
@@ -176,11 +191,8 @@ class Chrome(ChromeConnector):
         if r.x and r.ok:
             return r.json()
 
-    def __str__(self):
-        return "[Chromote(tabs=%d)]" % len(self.tabs)
-
     def __repr__(self):
-        return "Chromote(%s)" % (self.server)
+        return "Chrome(%s)" % (self.server)
 
     def __getitem__(self, index):
         tabs = self.tabs
