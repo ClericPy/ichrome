@@ -8,10 +8,10 @@ win32-git-bash:
 rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -rf dist;rm -rf build;rm -rf ichrome.egg-info
 """
 version = __version__
-if sys.version_info < (3, 6):
-    sys.exit("pypinfo requires Python 3.6+")
+if sys.version_info < (3, 7):
+    sys.exit("pypinfo requires Python 3.7+")
 py_version = sys.version_info
-install_requires = ["psutil", "torequests", "websocket-client"]
+install_requires = ["psutil", "torequests", "websocket-client", "websockets"]
 with open("README.md", encoding="utf-8") as f:
     README = f.read()
 
@@ -20,7 +20,7 @@ setup(
     version=version,
     keywords=("chrome"),
     description=
-    "toy for chrome devtools protocol. Read more: https://github.com/ClericPy/ichrome.",
+    "A toolkit for using chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+. Read more: https://github.com/ClericPy/ichrome.",
     license="MIT License",
     install_requires=install_requires,
     long_description=README,

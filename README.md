@@ -1,6 +1,6 @@
 # [ichrome - v0.1.2](https://github.com/ClericPy/ichrome)
 
-> A toy for using chrome under the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/). For python3.6+ (who cares python2.x).
+> A toolkit for using chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+.
 
 ## Install
 
@@ -8,9 +8,9 @@
 
 ## Why?
 
-- pyppeteer/selenium is awesome, but I don't need so much...
-
-- one way to test CDP
+- pyppeteer / selenium is awesome, but I don't need so much, even I nearly forgot the spelling of pyppeteer.
+- sync way to test CDP,  which is not recommended for complex production environments.
+- async communication with Chrome remote debug port, stable choice.
 
 
 ## Features
@@ -177,12 +177,10 @@ if __name__ == "__main__":
 
 ### TODO
 
-- [ ] Concurrent support. (gevent, threading)
-
+- [ ] ~~Concurrent support. (gevent, threading, asyncio)~~
 - [x] Add auto_restart while crash.
-
 - [ ] Auto remove the zombie tabs with a lifebook.
-
 - [ ] Add some useful examples.
-
 - [ ] Coroutine support (for asyncio).
+- [ ] Standard test cases.
+- [ ] Complete document.
