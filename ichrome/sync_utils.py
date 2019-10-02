@@ -72,13 +72,13 @@ class Chrome(object):
         )
         if r.x and r.ok:
             rjson = r.json()
-            tab_id, title, _url, websocketURL = (
+            tab_id, title, _url, webSocketDebuggerUrl = (
                 rjson["id"],
                 rjson["title"],
                 rjson["url"],
                 rjson["webSocketDebuggerUrl"],
             )
-            tab = Tab(tab_id, title, _url, websocketURL, self)
+            tab = Tab(tab_id, title, _url, webSocketDebuggerUrl, self)
             tab._create_time = tab.now
             logger.info("new tab %s" % (tab))
             return tab
@@ -141,11 +141,11 @@ class Chrome(object):
 
 class Tab(object):
 
-    def __init__(self, tab_id, title, url, websocketURL, chrome, timeout=5):
+    def __init__(self, tab_id, title, url, webSocketDebuggerUrl, chrome, timeout=5):
         self.tab_id = tab_id
         self.title = title
         self._url = url
-        self.websocketURL = websocketURL
+        self.webSocketDebuggerUrl = webSocketDebuggerUrl
         self.chrome = chrome
         self.timeout = timeout
 
@@ -165,7 +165,7 @@ class Tab(object):
         return self._url
 
     def _connect(self):
-        self.ws.connect(self.websocketURL, timeout=self.timeout)
+        self.ws.connect(self.webSocketDebuggerUrl, timeout=self.timeout)
 
     def activate_tab(self):
         return self.chrome.activate_tab(self.tab_id)

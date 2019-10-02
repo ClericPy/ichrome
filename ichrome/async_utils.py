@@ -1,11 +1,14 @@
 # fast and stable connection
 import asyncio
+import json
+import time
 import traceback
 from asyncio.futures import Future, TimeoutError
 
 from pyee import AsyncIOEventEmitter
 from torequests.dummy import Requests
-from torequests.utils import quote_plus
+from torequests.utils import quote_plus, urljoin, UA
+
 from .logs import ichrome_logger as logger
 """
 Async utils for connections and operations.
@@ -53,7 +56,7 @@ class EventFuture(Future):
 # asyncio.get_event_loop().run_until_complete(test())
 
 
-class ChromeConnector(object):
+class Chrome:
 
     def __init__(self,
                  host="127.0.0.1",
@@ -61,18 +64,64 @@ class ChromeConnector(object):
                  timeout=2,
                  retry=1,
                  loop=None):
-        self.loop = loop
         self.host = host
         self.port = port
         self.timeout = timeout
         self.retry = retry
+        self.loop = loop
         self.status = 'init'
 
     @property
     def server(self):
+        """return like 'http://127.0.0.1:9222'"""
         return "http://%s:%d" % (self.host, self.port)
 
+    async def get_server(self, api=''):
+        # maybe return fail request
+        url = urljoin(self.server, api)
+        resp = await self.req.get(url, timeout=self.timeout, retry=self.retry)
+        if not resp:
+            self.status = resp.text
+        return resp
+
+    async def get_tabs(self, filt_page_type=True):
+        """`await self.get_tabs()`
+        /json"""
+        try:
+            r = await self.get_server('/json')
+            return [
+                Tab.create_tab(rjson, chrome=self)
+                for rjson in r.json()
+                if (rjson["type"] == "page" or filt_page_type is not True)
+            ]
+        except Exception:
+            logger.error(
+                f'fail to get_tabs {self.server}, {traceback.format_exc()}')
+            return []
+
+    @property
+    def tabs(self):
+        """`await self.tabs`"""
+        # [{'description': '', 'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4', 'id': '30C16F9165C525A4002E827EDABD48A4', 'title': 'about:blank', 'type': 'page', 'url': 'about:blank', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4'}]
+        return self.get_tabs()
+
+    async def get_version(self):
+        """`await self.get_version()`
+        /json/version"""
+        r = await self.get_server('/json/version')
+        if r:
+            return r.json()
+        else:
+            raise r.error
+
+    @property
+    def version(self):
+        """`await self.version`
+        {'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}"""
+        return self.get_version()
+
     async def connect(self):
+        """await self.connect()"""
         self.ee = AsyncIOEventEmitter(loop=self.loop)
         self.req = Requests(loop=self.loop)
         if await self.check():
@@ -81,11 +130,9 @@ class ChromeConnector(object):
             return None
 
     async def check(self):
+        """Test http connection to cdp. `await self.check()`
         """
-        Test connection to browser
-        """
-        r = await self.req.get(
-            self.server, timeout=self.timeout, retry=self.retry)
+        r = await self.get_server()
         if r:
             self.status = 'connected'
             return True
@@ -93,158 +140,138 @@ class ChromeConnector(object):
             self.status = 'disconnected'
             return False
 
-    def __str__(self):
-        return f"<Chrome: {self.port}({self.status})>"
-
-
-class Chrome(ChromeConnector):
-
-    def __init__(self,
-                 host="127.0.0.1",
-                 port=9222,
-                 timeout=2,
-                 retry=1,
-                 loop=None):
-        super().__init__(
-            host=host, port=port, timeout=timeout, retry=retry, loop=loop)
-
-    async def _get_tabs(self):
-        try:
-            r = await self.req.get(
-                self.server + "/json", timeout=self.timeout, retry=self.retry)
-            return r.json()
-            return [
-                Tab(
-                    tab["id"],
-                    tab["title"],
-                    tab["url"],
-                    tab["webSocketDebuggerUrl"],
-                    self,
-                ) for tab in r.json() if tab["type"] == "page"
-            ]
-        except Exception:
-            logger.error(
-                f'fail to get_tabs {self.server}, {traceback.format_exc()}')
-            return []
-
-    async def tabs(self):
-        # [{'description': '', 'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4', 'id': '30C16F9165C525A4002E827EDABD48A4', 'title': 'about:blank', 'type': 'page', 'url': 'about:blank', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4'}]
-        return await self._get_tabs()
+    @property
+    def ok(self):
+        """await self.ok"""
+        return self.check()
 
     async def new_tab(self, url=""):
-        r = await self.req.get(
-            "%s/json/new?%s" % (self.server, quote_plus(url)),
-            retry=self.retry,
-            timeout=self.timeout,
-        )
+        api = f'/json/new?{quote_plus(url)}'
+        r = await self.get_server(api)
         if r:
             rjson = r.json()
-            tab_id, title, _url, websocketURL = (
-                rjson["id"],
-                rjson["title"],
-                rjson["url"],
-                rjson["webSocketDebuggerUrl"],
-            )
-            tab = Tab(tab_id, title, _url, websocketURL, self)
-            tab._create_time = tab.now
-            logger.info("new tab %s" % (tab))
+            tab = Tab.create_tab(rjson, chrome=self)
+            tab._created_time = tab.now
+            logger.info(f"new tab {tab}")
             return tab
 
-    def activate_tab(self, tab_id):
+    async def do_tab(self, tab_id, action):
         ok = False
-        if isinstance(tab_id, Tab):
+        if isinstance(tab_id, self.__class__):
             tab_id = tab_id.tab_id
-        r = self.req.get(
-            "%s/json/activate/%s" % (self.server, tab_id),
-            retry=self.retry,
-            timeout=self.timeout,
-        )
-        if r.x and r.ok:
-            if r.text == "Target activated":
-                ok = True
-        logger.info("activate_tab %s: %s" % (tab_id, ok))
+        r = await self.get_server(f"/json/{action}/{tab_id}")
+        if r:
+            if action == 'close':
+                ok = r.text == "Target is closing"
+            elif action == 'activate':
+                ok = r.text == "Target activated"
+            else:
+                ok == r.text
+        logger.info(f"{action} tab {tab_id}: {ok}")
+        return ok
 
-    def close_tab(self, tab_id=None):
-        ok = False
-        tab_id = tab_id or self.tabs
-        if isinstance(tab_id, Tab):
-            tab_id = tab_id.tab_id
-        r = self.req.get(
-            "%s/json/close/%s" % (self.server, tab_id),
-            retry=self.retry,
-            timeout=self.timeout,
-        )
-        if r.x and r.ok:
-            if r.text == "Target is closing":
-                ok = True
-        logger.info("close tab %s: %s" % (tab_id, ok))
+    async def activate_tab(self, tab_id):
+        return await self.do_tab(tab_id, action='activate')
 
-    def close_tabs(self, tab_ids):
-        return [self.close_tab(tab_id) for tab_id in tab_ids]
+    async def close_tab(self, tab_id):
+        return await self.do_tab(tab_id, action='close')
 
-    @property
-    def meta(self):
-        r = self.req.get(
-            "%s/json/version" % self.server,
-            retry=self.retry,
-            timeout=self.timeout)
-        if r.x and r.ok:
-            return r.json()
+    async def close_tabs(self, tab_ids=None):
+        if tab_ids is None:
+            tab_ids = await self.tabs
+        return [await self.close_tab(tab_id) for tab_id in tab_ids]
 
     def __repr__(self):
-        return "Chrome(%s)" % (self.server)
+        return f"<Chrome: {self.port}({self.status})>"
 
-    def __getitem__(self, index):
-        tabs = self.tabs
-        if isinstance(index, int):
-            if len(tabs) > index:
-                return tabs[index]
-        elif isinstance(index, slice):
-            return tabs.__getitem__(index)
+    def __str__(self):
+        return f"<Chrome: {self.server}({self.status})>"
 
 
 class Tab(object):
 
-    def __init__(self, tab_id, title, url, websocketURL, chrome, timeout=5):
+    def __init__(self,
+                 tab_id,
+                 title=None,
+                 url=None,
+                 webSocketDebuggerUrl=None,
+                 json=None,
+                 chrome=None,
+                 timeout=5,
+                 loop=None):
         self.tab_id = tab_id
         self.title = title
         self._url = url
-        self.websocketURL = websocketURL
+        self.webSocketDebuggerUrl = webSocketDebuggerUrl
+        self.json = json
         self.chrome = chrome
         self.timeout = timeout
+        self.loop = loop
+        self._created_time = None
+        # self.lock = asyncio.Lock()
+        # async with lock:
 
-        self.req = tPool()
-        self._create_time = time.time()
-        self._message_id = 0
-        self._listener = Listener()
-        self.lock = threading.Lock()
-        self.ws = websocket.WebSocket()
-        self._connect()
-        for target in [self._recv_daemon]:
-            t = threading.Thread(target=target, daemon=True)
-            t.start()
+        # self.req = tPool()
+        # self._message_id = 0
+        # self._listener = Listener()
+        # self.lock = threading.Lock()
+        # self.ws = websocket.WebSocket()
+        # self._connect()
+        # for target in [self._recv_daemon]:
+        #     t = threading.Thread(target=target, daemon=True)
+        #     t.start()
+
+    @classmethod
+    def create_tab(cls, tab_json, chrome=None):
+        if isinstance(tab_json, str):
+            tab_json = json.loads(tab_json)
+        elif not isinstance(tab_json, dict):
+            raise ValueError('tab_json type should be dict / json string')
+        return cls(
+            tab_id=tab_json["id"],
+            title=tab_json["title"],
+            url=tab_json["url"],
+            webSocketDebuggerUrl=tab_json["webSocketDebuggerUrl"],
+            json=tab_json,
+            chrome=chrome,
+            loop=chrome.loop if chrome else None)
 
     @property
     def url(self):
         return self._url
 
+    async def refresh(self):
+        for tab in await self.chrome.tabs:
+            if tab.tab_id == self.tab_id:
+                self.tab_id = tab.tab_id
+                self.title = tab.title
+                self._url = tab.url
+                self.webSocketDebuggerUrl = tab.webSocketDebuggerUrl
+                self.json = tab.json
+                return True
+        return False
+
     def _connect(self):
-        self.ws.connect(self.websocketURL, timeout=self.timeout)
+        self.ws.connect(self.webSocketDebuggerUrl, timeout=self.timeout)
 
-    def activate_tab(self):
-        return self.chrome.activate_tab(self.tab_id)
+    async def activate_tab(self):
+        """activate tab with chrome http endpoint"""
+        return await self.chrome.activate_tab(self.tab_id)
 
-    def close_tab(self):
-        return self.chrome.close_tab(self.tab_id)
+    async def close_tab(self):
+        """close tab with chrome http endpoint"""
+        return await self.chrome.close_tab(self.tab_id)
 
-    def activate(self):
-        return self.send("Page.bringToFront")
+    async def activate(self):
+        """activate tab with cdp websocket"""
+        return await self.send("Page.bringToFront")
 
-    def close(self):
-        return self.send("Page.setTouchEmulationEnabled")
+    async def close(self):
+        """close tab with cdp websocket"""
+        return await self.send("Page.setTouchEmulationEnabled")
 
-    def crash(self):
-        return self.send("Page.crash")
+    async def crash(self):
+        return await self.send("Page.crash")
 
     def _recv_daemon(self):
         """
@@ -515,17 +542,25 @@ class Tab(object):
                 return None
             return []
 
-    def inject_js(self, url, timeout=None, retry=0, verify=0,
-                  **requests_kwargs):
+    async def inject_js(self,
+                        url,
+                        timeout=None,
+                        retry=0,
+                        verify=0,
+                        **requests_kwargs):
         # js_source_code = """
         # var script=document.createElement("script");
         # script.type="text/javascript";
         # script.src="{}";
         # document.getElementsByTagName('head')[0].appendChild(script);
         # """.format(url)
-        r = self.req.get(
-            url, timeout=timeout, retry=retry, verify=verify, **requests_kwargs)
-        if r.x and r.ok:
+        if self.chrome:
+            req = self.chrome.req
+        else:
+            req = Requests(loop=self.loop)
+        r = await req.get(
+            url, timeout=timeout, retry=retry, headers={'User-Agent': UA.Chrome}, verify=verify, **requests_kwargs)
+        if r:
             javascript = r.text
             return self.js(javascript, mute_log=True)
         else:
@@ -540,19 +575,14 @@ class Tab(object):
         return self.querySelectorAll(cssselector, index=index, action=action)
 
     def __str__(self):
-        return "Tab(%s)" % (self.url)
+        return f"ChromeTab({self.tab_id}, {self.title}, {self.url}, {self.chrome})"
 
     def __repr__(self):
-        return 'ChromeTab("%s", "%s", "%s", port: %s)' % (
-            self.tab_id,
-            self.title,
-            self.url,
-            self.chrome.port,
-        )
+        return f'ChromeTab({self.url})'
 
-    def __del__(self):
-        with self.lock:
-            self.ws.close()
+    # def __del__(self):
+    #     with self.lock:
+    #         self.ws.close()
 
 
 class Tag(object):
