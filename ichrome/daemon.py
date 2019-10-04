@@ -9,7 +9,7 @@ import psutil
 from torequests import tPool
 from torequests.utils import timepass, ttime
 
-from .logs import ichrome_logger as logger
+from .logs import logger
 """
 Sync / block operations for launching chrome processes.
 """
