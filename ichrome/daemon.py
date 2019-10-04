@@ -14,6 +14,7 @@ from .logs import logger
 Sync / block operations for launching chrome processes.
 """
 
+
 class ChromeDaemon(object):
     """create chrome process.
     max_deaths: max_deaths=2 means should quick shutdown chrome twice to skip auto_restart.
