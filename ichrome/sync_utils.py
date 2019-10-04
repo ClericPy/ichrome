@@ -9,7 +9,7 @@ import websocket
 from torequests import NewFuture, tPool
 from torequests.utils import quote_plus
 
-from .logs import ichrome_logger as logger
+from .logs import logger
 """
 Sync utils for connections and operations.
 """
@@ -141,7 +141,13 @@ class Chrome(object):
 
 class Tab(object):
 
-    def __init__(self, tab_id, title, url, webSocketDebuggerUrl, chrome, timeout=5):
+    def __init__(self,
+                 tab_id,
+                 title,
+                 url,
+                 webSocketDebuggerUrl,
+                 chrome,
+                 timeout=5):
         self.tab_id = tab_id
         self.title = title
         self._url = url
@@ -177,7 +183,7 @@ class Tab(object):
         return self.send("Page.bringToFront")
 
     def close(self):
-        return self.send("Page.setTouchEmulationEnabled")
+        return self.send("Page.close")
 
     def crash(self):
         return self.send("Page.crash")
@@ -379,7 +385,7 @@ class Tab(object):
         """
         tab.querySelectorAll("#sc_hdu>li>a", index=2, action="removeAttribute('href')")
         for i in tab.querySelectorAll("#sc_hdu>li"):
-        ichrome_logger.info(
+        logger.info(
                 "Tag: %s, id:%s, class:%s, text:%s"
                 % (i, i.get("id"), i.get("class"), i.text)
             )
@@ -450,6 +456,15 @@ class Tab(object):
             if isinstance(index, int):
                 return None
             return []
+
+    def inject_js_url(self,
+                      url,
+                      timeout=None,
+                      retry=0,
+                      verify=0,
+                      **requests_kwargs):
+        return self.inject_js(
+            url, timeout=timeout, retry=retry, verify=verify, **requests_kwargs)
 
     def inject_js(self, url, timeout=None, retry=0, verify=0,
                   **requests_kwargs):
@@ -526,9 +541,7 @@ class Tag(object):
 
 class Listener(object):
 
-    def __init__(self, timeout=None):
-        self.timeout = timeout
-        self.container = []
+    def __init__(self):
         self.id_futures = WeakValueDictionary()
         self.method_futures = WeakValueDictionary()
         self.other_futures = WeakValueDictionary()

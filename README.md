@@ -90,7 +90,7 @@ def example():
     # use local ichrome module
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     os.chdir("..")  # for reuse exiting user data dir
-    from ichrome import Chrome, ChromeDaemon, ichrome_logger as logger
+    from ichrome import Chrome, ChromeDaemon, logger as logger
     import re
     import json
     """Example for crawling a special background request."""

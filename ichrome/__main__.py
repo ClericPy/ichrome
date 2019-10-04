@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 
-from ichrome import ChromeDaemon, __version__, ichrome_logger
+from ichrome import ChromeDaemon, __version__, logger
 
 
 def main():
@@ -44,7 +44,7 @@ def main():
         print(__version__)
         return
     if args.shutdown:
-        ichrome_logger.setLevel(1)
+        logger.setLevel(1)
         ChromeDaemon.clear_chrome_process(args.shutdown, max_deaths=args.max_deaths)
         return
     kwargs = {"daemon": True, "block": True}
@@ -62,7 +62,7 @@ def main():
         max_deaths=args.max_deaths,
         timeout=args.timeout,
     )
-    ichrome_logger.info("ChromeDaemon cmd args: %s" % kwargs)
+    logger.info("ChromeDaemon cmd args: %s" % kwargs)
     chromed = ChromeDaemon(**kwargs)
 
 

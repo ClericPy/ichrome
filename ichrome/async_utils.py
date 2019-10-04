@@ -2,58 +2,21 @@
 import asyncio
 import json
 import time
+import inspect
 import traceback
 from asyncio.futures import Future, TimeoutError
+from weakref import WeakValueDictionary
 
-from pyee import AsyncIOEventEmitter
+from aiohttp.client_exceptions import ClientError
+from aiohttp.http import WebSocketError, WSMsgType
 from torequests.dummy import Requests
-from torequests.utils import quote_plus, urljoin, UA
+from torequests.utils import UA, quote_plus, urljoin
 
-from .logs import ichrome_logger as logger
+from .logs import logger
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
 """
-
-# 必要时候用 once 只要有任务就清掉? 或者不需要绑定时候, 等待的时候清理 https://pyee.readthedocs.io/en/latest/
-# async for message in websocket: https://websockets.readthedocs.io/en/stable/intro.html#synchronization-example
-
-# ee = AsyncIOEventEmitter()
-
-# @ee.on('event')
-# async def event_handler(abc):
-#     print(abc)
-#     print('BANG BANG')
-# ee.emit('event', abc=123342)
-
-
-class EventFuture(Future):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    async def wait_result(self, timeout=None):
-        try:
-            result = await asyncio.wait_for(self, timeout=timeout)
-        except TimeoutError as e:
-            result = e
-        return result
-
-
-# f = EventFuture()
-
-# async def fill():
-#     await asyncio.sleep(3.3)
-#     f.set_result('ok')
-
-# asyncio.ensure_future(fill())
-
-# async def test():
-#     result = await f.wait_result(1)
-#     print(result)
-#     print(isinstance(result, TimeoutError))
-
-# asyncio.get_event_loop().run_until_complete(test())
 
 
 class Chrome:
@@ -70,6 +33,7 @@ class Chrome:
         self.retry = retry
         self.loop = loop
         self.status = 'init'
+        self.req = None
 
     @property
     def server(self):
@@ -90,7 +54,7 @@ class Chrome:
         try:
             r = await self.get_server('/json')
             return [
-                Tab.create_tab(rjson, chrome=self)
+                Tab(chrome=self, **rjson)
                 for rjson in r.json()
                 if (rjson["type"] == "page" or filt_page_type is not True)
             ]
@@ -122,7 +86,6 @@ class Chrome:
 
     async def connect(self):
         """await self.connect()"""
-        self.ee = AsyncIOEventEmitter(loop=self.loop)
         self.req = Requests(loop=self.loop)
         if await self.check():
             return self
@@ -135,9 +98,11 @@ class Chrome:
         r = await self.get_server()
         if r:
             self.status = 'connected'
+            logger.debug(f'[{self.status}] {self}.')
             return True
         else:
             self.status = 'disconnected'
+            logger.debug(f'[{self.status}] {self}.')
             return False
 
     @property
@@ -150,14 +115,14 @@ class Chrome:
         r = await self.get_server(api)
         if r:
             rjson = r.json()
-            tab = Tab.create_tab(rjson, chrome=self)
+            tab = Tab(chrome=self, **rjson)
             tab._created_time = tab.now
-            logger.info(f"new tab {tab}")
+            logger.debug(f"[new_tab] {tab} {rjson}")
             return tab
 
     async def do_tab(self, tab_id, action):
         ok = False
-        if isinstance(tab_id, self.__class__):
+        if isinstance(tab_id, Tab):
             tab_id = tab_id.tab_id
         r = await self.get_server(f"/json/{action}/{tab_id}")
         if r:
@@ -167,7 +132,7 @@ class Chrome:
                 ok = r.text == "Target activated"
             else:
                 ok == r.text
-        logger.info(f"{action} tab {tab_id}: {ok}")
+        logger.debug(f"[{action}_tab] <Tab: {tab_id}>: {ok}")
         return ok
 
     async def activate_tab(self, tab_id):
@@ -182,23 +147,69 @@ class Chrome:
         return [await self.close_tab(tab_id) for tab_id in tab_ids]
 
     def __repr__(self):
-        return f"<Chrome: {self.port}({self.status})>"
+        return f"<Chrome({self.status}): {self.port}>"
 
     def __str__(self):
-        return f"<Chrome: {self.server}({self.status})>"
+        return f"<Chrome({self.status}): {self.server}>"
+
+
+
+class EventFuture(Future):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    # def __del__(self):
+    #     logger.debug('future deleted')
+
+
+class WSConnection(object):
+
+    def __init__(self, tab):
+        self.tab = tab
+        self._closed = None
+
+    async def __aenter__(self):
+        self.tab.ws = await self.tab.session.ws_connect(
+            self.tab.webSocketDebuggerUrl,
+            timeout=self.tab.timeout,
+            **self.tab.ws_kwargs)
+        asyncio.ensure_future(self.tab._recv_daemon(), loop=self.tab.loop)
+        logger.debug(f'[connected] {self.tab} websocket connection created.')
+        return self.tab.ws
+
+    async def __aexit__(
+            self,
+            exc_type,
+            exc_value,
+            traceback,
+    ):
+        await self.tab.ws.close()
+        self._closed = self.tab.ws.closed
+        self.tab.ws = None
+
+    def __del__(self):
+        logger.debug(
+            f'[disconnected] {self.tab!r} ws connection closed={self._closed}')
 
 
 class Tab(object):
 
     def __init__(self,
-                 tab_id,
+                 tab_id=None,
                  title=None,
                  url=None,
                  webSocketDebuggerUrl=None,
                  json=None,
                  chrome=None,
                  timeout=5,
-                 loop=None):
+                 ws_kwargs=None,
+                 loop=None,
+                 **kwargs):
+        tab_id = tab_id or kwargs.pop('id')
+        if not tab_id:
+            raise ValueError('tab_id should not be null')
+        self.loop = loop
         self.tab_id = tab_id
         self.title = title
         self._url = url
@@ -206,41 +217,47 @@ class Tab(object):
         self.json = json
         self.chrome = chrome
         self.timeout = timeout
-        self.loop = loop
         self._created_time = None
-        # self.lock = asyncio.Lock()
-        # async with lock:
+        self.ws_kwargs = ws_kwargs or {}
+        self._closed = False
+        self._message_id = 0
+        self.ws = None
+        if self.chrome:
+            self.req = self.chrome.req
+        else:
+            self.req = Requests(loop=self.loop)
+        self.session = self.req.session
+        self._listener = Listener()
 
-        # self.req = tPool()
-        # self._message_id = 0
-        # self._listener = Listener()
-        # self.lock = threading.Lock()
-        # self.ws = websocket.WebSocket()
-        # self._connect()
-        # for target in [self._recv_daemon]:
-        #     t = threading.Thread(target=target, daemon=True)
-        #     t.start()
+    @property
+    def status(self):
+        status = 'disconnected'
+        if self.ws and not self.ws.closed:
+            status = 'connected'
+        return status
 
-    @classmethod
-    def create_tab(cls, tab_json, chrome=None):
-        if isinstance(tab_json, str):
-            tab_json = json.loads(tab_json)
-        elif not isinstance(tab_json, dict):
-            raise ValueError('tab_json type should be dict / json string')
-        return cls(
-            tab_id=tab_json["id"],
-            title=tab_json["title"],
-            url=tab_json["url"],
-            webSocketDebuggerUrl=tab_json["webSocketDebuggerUrl"],
-            json=tab_json,
-            chrome=chrome,
-            loop=chrome.loop if chrome else None)
+    @property
+    def connect(self):
+        '''async with tab.connect:'''
+        return WSConnection(self)
+
+    def __call__(self):
+        '''async with tab():'''
+        return WSConnection(self)
+
+    @property
+    def msg_id(self):
+        self._message_id += 1
+        return self._message_id
 
     @property
     def url(self):
+        """The init url while tab created.
+        await self.current_url for the current url.
+        """
         return self._url
 
-    async def refresh(self):
+    async def refresh_tab_info(self):
         for tab in await self.chrome.tabs:
             if tab.tab_id == self.tab_id:
                 self.tab_id = tab.tab_id
@@ -251,16 +268,13 @@ class Tab(object):
                 return True
         return False
 
-    def _connect(self):
-        self.ws.connect(self.webSocketDebuggerUrl, timeout=self.timeout)
-
     async def activate_tab(self):
         """activate tab with chrome http endpoint"""
-        return await self.chrome.activate_tab(self.tab_id)
+        return await self.chrome.activate_tab(self)
 
     async def close_tab(self):
         """close tab with chrome http endpoint"""
-        return await self.chrome.close_tab(self.tab_id)
+        return await self.chrome.close_tab(self)
 
     async def activate(self):
         """activate tab with cdp websocket"""
@@ -268,12 +282,12 @@ class Tab(object):
 
     async def close(self):
         """close tab with cdp websocket"""
-        return await self.send("Page.setTouchEmulationEnabled")
+        return await self.send("Page.close")
 
     async def crash(self):
         return await self.send("Page.crash")
 
-    def _recv_daemon(self):
+    async def _recv_daemon(self):
         """
         {"id":1,"result":{}}
         {"id":3,"result":{"result":{"type":"string","value":"http://p.3.cn/"}}}
@@ -284,72 +298,81 @@ class Tab(object):
         {"method":"Page.frameStoppedLoading","params":{"frameId":"7F34509F1831E6F29351784861615D1C"}}
         {"method":"Page.domContentEventFired","params":{"timestamp":120277.623606}}
         """
-        while self.ws.connected:
-            try:
-                data_str = self.ws.recv()
-                logger.debug(data_str)
-                if not data_str:
-                    continue
-                try:
-                    data_dict = json.loads(data_str)
-                    if not isinstance(data_dict, dict):
-                        continue
-                except (TypeError, json.decoder.JSONDecodeError):
-                    continue
-                f = self._listener.find_future(data_dict)
-                if f:
-                    f.set_result(data_str)
-            except (
-                    websocket._exceptions.WebSocketConnectionClosedException,
-                    ConnectionResetError,
-            ):
+        async for msg in self.ws:
+            logger.debug(f'[recv] {self!r} {msg}')
+            if msg.type in (WSMsgType.CLOSED, WSMsgType.ERROR):
                 break
+            if msg.type != WSMsgType.TEXT:
+                continue
+            data_str = msg.data
+            if not data_str:
+                continue
+            try:
+                data_dict = json.loads(data_str)
+                # ignore non-dict type msg.data
+                if not isinstance(data_dict, dict):
+                    continue
+            except (TypeError, json.decoder.JSONDecodeError):
+                continue
+            f = self._listener.find_future(data_dict)
+            if f:
+                f.set_result(data_str)
+        logger.debug(f'[break] {self!r} _recv_daemon loop break.')
 
-    def send(self,
-             method,
-             timeout=None,
-             callback=None,
-             mute_log=False,
-             **kwargs):
+    async def send(self, method: str, timeout=None, callback=None, **kwargs):
+        request = {"method": method, "params": kwargs}
+        msg_id = self.msg_id
+        request["id"] = msg_id
+        if not self.ws or self.ws.closed:
+            logger.error(
+                f'[closed] {self} ws has been closed, ignore send {request}')
+            return None
         try:
             timeout = self.timeout if timeout is None else timeout
-            request = {"method": method, "params": kwargs}
-            self._message_id += 1
-            request["id"] = self._message_id
-            if not mute_log:
-                logger.info("<%s> send: %s" % (self, request))
-            with self.lock:
-                self.ws.send(json.dumps(request))
-            res = self.recv({
-                "id": request["id"]
-            },
-                            timeout=timeout,
-                            callback=callback)
-            return res
-        except (
-                websocket._exceptions.WebSocketTimeoutException,
-                websocket._exceptions.WebSocketConnectionClosedException,
-        ):
-            self.refresh_ws()
 
-    def recv(self, arg, timeout=None, callback=None):
-        """arg type: dict"""
-        result = None
+            logger.debug(f"[send] {self!r} {request}")
+            await self.ws.send_json(request)
+            if timeout <= 0:
+                # not care for response
+                return None
+            event = {"id": msg_id}
+            msg = await self.recv(event, timeout=timeout, callback=callback)
+            return msg
+        except (ClientError, WebSocketError) as err:
+            logger.error(f'{self} [send] msg failed for {err}')
+            return None
+
+    async def recv(self, event_dict: dict, timeout=None, callback=None) -> dict:
+        """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
+
+        :param event_dict: dict like {'id': 1} or {'method': 'Page.loadEventFired'} or other JSON serializable dict.
+        :type event_dict: dict
+        :param timeout: await seconds, None for permanent, 0 for 0 seconds.
+        :type timeout: float / None, optional
+        :param callback: event callback function with only one arg(the event json).
+        :type callback: callable, optional
+        :return: the event dict from websocket recv.
+        :rtype: dict
+        """
+        result: dict = {}
         timeout = self.timeout if timeout is None else timeout
-        if timeout == 0:
+        if timeout <= 0:
             return result
-        f = self._listener.register(arg, timeout=timeout)
+        f = self._listener.register(event_dict)
         try:
-            result = f.x
-        except Error:
-            result = None
+            result = await asyncio.wait_for(f, timeout=timeout)
+        except TimeoutError:
+            logger.debug(f'{event_dict} wait recv timeout.')
         finally:
-            self._listener.find_future(arg)
-            return callback(result) if callable(callback) else result
-
-    def refresh_ws(self):
-        self.ws.close()
-        self._connect()
+            self._listener.find_future(event_dict)
+            if callable(callback):
+                callback_result = callback(result)
+            else:
+                return result
+            if inspect.isawaitable(callback_result):
+                return await callback_result
+            else:
+                return callback_result
 
     @property
     def now(self):
@@ -409,7 +432,7 @@ class Tab(object):
 
     def wait_event(
             self,
-            event="",
+            event_name="",
             timeout=None,
             callback=None,
             filter_function=None,
@@ -419,7 +442,7 @@ class Tab(object):
         start_time = time.time()
         while 1:
             result = self.recv({
-                "method": event
+                "method": event_name
             },
                                timeout=timeout,
                                callback=callback)
@@ -459,18 +482,18 @@ class Tab(object):
             self.send("Page.stopLoading", timeout=0)
         return data
 
-    def js(self, javascript, mute_log=False):
+    def js(self, javascript):
         """
         Evaluate JavaScript on the page
         """
-        return self.send(
-            "Runtime.evaluate", expression=javascript, mute_log=mute_log)
+        logger.debug(f'{self!r} insert js {javascript[:100]} ...')
+        return self.send("Runtime.evaluate", expression=javascript)
 
     def querySelectorAll(self, cssselector, index=None, action=None):
         """
         tab.querySelectorAll("#sc_hdu>li>a", index=2, action="removeAttribute('href')")
         for i in tab.querySelectorAll("#sc_hdu>li"):
-        ichrome_logger.info(
+        logger.info(
                 "Tag: %s, id:%s, class:%s, text:%s"
                 % (i, i.get("id"), i.get("class"), i.text)
             )
@@ -524,7 +547,7 @@ class Tab(object):
         )
         response = None
         try:
-            response = self.js(javascript, mute_log=True)
+            response = self.js(javascript, log=False)
             response = json.loads(response)["result"]["result"]["value"]
             items = json.loads(response)
             result = [Tag(**kws) for kws in items]
@@ -536,35 +559,31 @@ class Tab(object):
             else:
                 return result
         except Exception as e:
-            logger.info(
+            logger.error(
                 "querySelectorAll error: %s, response: %s" % (e, response))
             if isinstance(index, int):
                 return None
             return []
 
-    async def inject_js(self,
-                        url,
-                        timeout=None,
-                        retry=0,
-                        verify=0,
-                        **requests_kwargs):
-        # js_source_code = """
-        # var script=document.createElement("script");
-        # script.type="text/javascript";
-        # script.src="{}";
-        # document.getElementsByTagName('head')[0].appendChild(script);
-        # """.format(url)
-        if self.chrome:
-            req = self.chrome.req
-        else:
-            req = Requests(loop=self.loop)
-        r = await req.get(
-            url, timeout=timeout, retry=retry, headers={'User-Agent': UA.Chrome}, verify=verify, **requests_kwargs)
+    async def inject_js_url(self,
+                            url,
+                            timeout=None,
+                            retry=0,
+                            verify=0,
+                            **requests_kwargs):
+
+        r = await self.req.get(
+            url,
+            timeout=timeout,
+            retry=retry,
+            headers={'User-Agent': UA.Chrome},
+            verify=verify,
+            **requests_kwargs)
         if r:
             javascript = r.text
-            return self.js(javascript, mute_log=True)
+            return self.js(javascript, log=False)
         else:
-            logger.info("inject_js failed for request: %s" % r.text)
+            logger.error("inject_js_url failed for request: %s" % r.text)
             return
 
     def click(self, cssselector, index=0, action="click()"):
@@ -575,14 +594,15 @@ class Tab(object):
         return self.querySelectorAll(cssselector, index=index, action=action)
 
     def __str__(self):
-        return f"ChromeTab({self.tab_id}, {self.title}, {self.url}, {self.chrome})"
+        return f"<Tab({self.status}{self.chrome!r}): {self.tab_id}>"
 
     def __repr__(self):
-        return f'ChromeTab({self.url})'
+        return f"<Tab({self.status}): {self.tab_id}>"
 
-    # def __del__(self):
-    #     with self.lock:
-    #         self.ws.close()
+    def __del__(self):
+        if self.ws:
+            logger.error('WSConnection is not closed')
+            asyncio.ensure_future(self.ws.close())
 
 
 class Tag(object):
@@ -620,12 +640,8 @@ class Tag(object):
 
 class Listener(object):
 
-    def __init__(self, timeout=None):
-        self.timeout = timeout
-        self.container = []
-        self.id_futures = WeakValueDictionary()
-        self.method_futures = WeakValueDictionary()
-        self.other_futures = WeakValueDictionary()
+    def __init__(self):
+        self._registered_futures = WeakValueDictionary()
 
     @staticmethod
     def _normalize_dict(dict_obj):
@@ -642,32 +658,28 @@ class Listener(object):
             result.append((key, value))
         return tuple(result)
 
-    def register(self, arg, timeout=None):
-        """
-        arg type: dict.
-        """
-        if not isinstance(arg, dict):
-            raise TypeError(
-                "Listener should register a dict arg, such as {'id': 1} or {'method': 'Page.loadEventFired'}"
+    def _arg_to_key(self, event_dict):
+        if not isinstance(event_dict, dict):
+            logger.error(
+                "Listener event_dict should be dict type, such as {'id': 1} or {'method': 'Page.loadEventFired'}"
             )
-        f = NewFuture(timeout=timeout)
-        if "id" in arg:
+        if "id" in event_dict:
             # id is unique
-            self.id_futures[arg["id"]] = f
-        elif "method" in arg:
+            key = f'id={event_dict["id"]}'
+        elif "method" in event_dict:
             # method may be duplicate
-            self.method_futures[arg["method"]] = f
+            key = f'method={event_dict["method"]}'
         else:
-            self.other_futures[self._normalize_dict(arg)] = f
+            key = f'json={self._normalize_dict(event_dict)}'
+        return key
+
+    def register(self, event_dict: dict):
+        '''Listener will register a event_dict, such as {'id': 1} or {'method': 'Page.loadEventFired'}, maybe the dict doesn't has key [method].'''
+        f = EventFuture()
+        key = self._arg_to_key(event_dict)
+        self._registered_futures[key] = f
         return f
 
-    def find_future(self, arg):
-        if "id" in arg:
-            # id is unique
-            f = self.id_futures.pop(arg["id"], None)
-        elif "method" in arg:
-            # method may be duplicate
-            f = self.method_futures.pop(arg["method"], None)
-        else:
-            f = self.other_futures.pop(self._normalize_dict(arg), None)
-        return f
+    def find_future(self, event_dict):
+        key = self._arg_to_key(event_dict)
+        return self._registered_futures.get(key)
