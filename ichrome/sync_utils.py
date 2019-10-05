@@ -235,11 +235,8 @@ class Tab(object):
                 logger.info("<%s> send: %s" % (self, request))
             with self.lock:
                 self.ws.send(json.dumps(request))
-            res = self.recv({
-                "id": request["id"]
-            },
-                            timeout=timeout,
-                            callback=callback)
+            request = {"id": request["id"]}
+            res = self.recv(request, timeout=timeout, callback=callback)
             return res
         except (
                 websocket._exceptions.WebSocketTimeoutException,
@@ -277,10 +274,10 @@ class Tab(object):
         return self.send(
             "Network.deleteCookies",
             name=name,
-            url=None,
-            domain=None,
-            path=None,
-            timeout=None,
+            url=url,
+            domain=domain,
+            path=path,
+            timeout=timeout,
         )
 
     def get_cookies(self, urls=None, timeout=None):
@@ -288,9 +285,9 @@ class Tab(object):
             if isinstance(urls, str):
                 urls = [urls]
             urls = list(urls)
-            result = self.send("Network.getCookies", urls=urls, timeout=None)
+            result = self.send("Network.getCookies", urls=urls, timeout=timeout)
         else:
-            result = self.send("Network.getCookies", timeout=None)
+            result = self.send("Network.getCookies", timeout=timeout)
         try:
             return json.loads(result)["result"]["cookies"]
         except Exception:
@@ -333,11 +330,8 @@ class Tab(object):
         timeout = self.timeout if timeout is None else timeout
         start_time = time.time()
         while 1:
-            result = self.recv({
-                "method": event
-            },
-                               timeout=timeout,
-                               callback=callback)
+            request = {"method": event}
+            result = self.recv(request, timeout=timeout, callback=callback)
             if not callable(filter_function) or filter_function(result):
                 break
             if wait_seconds and time.time() - start_time > wait_seconds:
