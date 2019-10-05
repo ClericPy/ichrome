@@ -73,7 +73,7 @@ def test_example():
         # tab is waiting for the event Network.responseReceived which accord with the given filter_function.
         recv_string = tab.wait_event(
             "Network.responseReceived",
-            filter_function=lambda r: re.search("&\w+=test", r or ""),
+            filter_function=lambda r: re.search(r"&\w+=test", r or ""),
             wait_seconds=None,
         )
         # now catching the "Network.responseReceived" event string, load the json.
