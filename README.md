@@ -341,6 +341,7 @@ if __name__ == "__main__":
 - [x] Add some useful examples.
 - [x] Coroutine support (for asyncio).
 - [x] Standard test cases.
+- [ ] HTTP apis server [fastapi].
 - [ ] Complete document.
 
 ## Documentary

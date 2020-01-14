@@ -11,7 +11,7 @@ version = __version__
 if sys.version_info < (3, 7):
     sys.exit("pypinfo requires Python 3.7+")
 py_version = sys.version_info
-install_requires = ["psutil", "torequests", "websocket-client"]
+install_requires = ["psutil", "torequests>=4.8.20", "websocket-client"]
 with open("README.md", encoding="utf-8") as f:
     README = f.read()
 
