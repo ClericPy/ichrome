@@ -511,13 +511,19 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def wait_response(
             self,
             filter_function: Optional[Callable] = None,
-            timeout: Union[int, float] = None) -> Union[str, None]:
+            callback_function: Optional[Callable] = None,
+            timeout: Union[int, float] = None) -> Union[str, None, Any]:
         '''wait a special response filted by function'''
         await self.enable('Network')
         request_dict = await self.wait_event(
             "Network.responseReceived",
             filter_function=filter_function,
             timeout=timeout)
+        if request_dict and callback_function:
+            if asyncio.iscoroutinefunction(callback_function):
+                return await callback_function(request_dict)
+            elif callable(callback_function):
+                return callback_function(request_dict)
         return request_dict
 
     async def get_response(self,
