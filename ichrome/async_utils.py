@@ -55,7 +55,8 @@ class _WSConnection(object):
     async def connect(self):
         """Connect to websocket, and set tab.ws as aiohttp.client_ws.ClientWebSocketResponse."""
         try:
-            self.tab.ws = await self.tab.session.ws_connect(
+            session = await self.tab.req.session
+            self.tab.ws = await session.ws_connect(
                 self.tab.webSocketDebuggerUrl,
                 timeout=self.tab.timeout,
                 **self.tab.ws_kwargs)
@@ -118,7 +119,6 @@ class Tab(object):
             self.req = self.chrome.req
         else:
             self.req = Requests(loop=self.loop)
-        self.session = self.req.session
         self._listener = Listener()
         self._enabled_methods = set()
 
@@ -474,12 +474,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         """`await tab.html`. return html from `document.documentElement.outerHTML`"""
         return self.get_html()
 
-    async def wait_loading(
-            self,
-            timeout: Union[int, float] = None,
-            callback: Optional[Callable] = None) -> Union[dict, None]:
+    async def wait_loading(self,
+                           timeout: Union[int, float] = None,
+                           callback: Optional[Callable] = None,
+                           timeout_stop_loading=False) -> Union[dict, None]:
         data = await self.wait_event(
             "Page.loadEventFired", timeout=timeout, callback=callback)
+        if data is None and timeout_stop_loading:
+            await self.send("Page.stopLoading", timeout=0)
         return data
 
     async def wait_event(
@@ -566,8 +568,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             data = await self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
         real_timeout = max((timeout - time_passed, 0))
-        if (await self.wait_loading(timeout=real_timeout)) is None:
-            await self.send("Page.stopLoading", timeout=0)
+        await self.wait_loading(timeout=real_timeout, timeout_stop_loading=True)
         return data
 
     async def js(self, javascript: str,
