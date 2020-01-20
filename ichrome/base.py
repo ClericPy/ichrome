@@ -32,7 +32,7 @@ class Tag(object):
         }
 
     def __str__(self):
-        return "Tag(%s)" % self.tagName
+        return f"Tag({self.tagName})"
 
     def __repr__(self):
         return self.__str__()

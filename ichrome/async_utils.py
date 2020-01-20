@@ -5,21 +5,33 @@ import json
 import re
 import time
 import traceback
-from asyncio.futures import _PENDING, Future, TimeoutError
-from typing import Any, Callable, Coroutine, List, Optional, Union
+from asyncio.base_futures import _PENDING
+from asyncio.futures import Future, TimeoutError
+from typing import Any, Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
 
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
-from torequests.dummy import NewResponse, Requests
+from torequests.dummy import NewResponse, Requests, Pool
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import Tag
+from .base import ChromeDaemon, Tag
 from .logs import logger
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
 """
+
+
+async def ensure_awaitable_result(callback_function, result):
+    if callable(callback_function):
+        callback_result = callback_function(result)
+    else:
+        return result
+    if inspect.isawaitable(callback_result):
+        return await callback_result
+    else:
+        return callback_result
 
 
 class _TabConnectionManager(object):
@@ -258,7 +270,7 @@ class Tab(object):
     async def send(self,
                    method: str,
                    timeout: Union[int, float] = None,
-                   callback: Optional[Callable] = None,
+                   callback_function: Optional[Callable] = None,
                    check_duplicated_on_off: bool = False,
                    **kwargs) -> Union[None, dict]:
         request = {"method": method, "params": kwargs}
@@ -280,7 +292,8 @@ class Tab(object):
                 # not care for response
                 return None
             event = {"id": request["id"]}
-            msg = await self.recv(event, timeout=timeout, callback=callback)
+            msg = await self.recv(
+                event, timeout=timeout, callback_function=callback_function)
             return msg
         except (ClientError, WebSocketError) as err:
             logger.error(f'{self} [send] msg failed for {err}')
@@ -289,15 +302,15 @@ class Tab(object):
     async def recv(self,
                    event_dict: dict,
                    timeout: Union[int, float] = None,
-                   callback=None) -> Union[dict, None]:
+                   callback_function=None) -> Union[dict, None]:
         """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
 
         :param event_dict: dict like {'id': 1} or {'method': 'Page.loadEventFired'} or other JSON serializable dict.
         :type event_dict: dict
         :param timeout: await seconds, None for permanent, 0 for 0 seconds.
         :type timeout: float / None, optional
-        :param callback: event callback function accept only one arg(the event dict).
-        :type callback: callable, optional
+        :param callback_function: event callback_function function accept only one arg(the event dict).
+        :type callback_function: callable, optional
         :return: the event dict from websocket recv.
         :rtype: dict
         """
@@ -311,14 +324,7 @@ class Tab(object):
         except TimeoutError:
             logger.debug(f'[timeout] {event_dict} [recv] timeout.')
         finally:
-            if callable(callback):
-                callback_result = callback(result)
-            else:
-                return result
-            if inspect.isawaitable(callback_result):
-                return await callback_result
-            else:
-                return callback_result
+            return await ensure_awaitable_result(callback_function, result)
 
     @property
     def now(self) -> int:
@@ -427,7 +433,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.send(
             "Network.setCookie",
             timeout=timeout or self.timeout,
-            callback=None,
+            callback_function=None,
             check_duplicated_on_off=False,
             **kwargs)
 
@@ -452,7 +458,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return title
 
     @property
-    def current_title(self):
+    def current_title(self) -> Awaitable[str]:
         return self.get_current_title()
 
     async def get_html(self) -> str:
@@ -465,21 +471,23 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             value = response["result"]["result"]["value"]
             return value
         except (KeyError, json.decoder.JSONDecodeError):
-            logger.error("tab.content error %s:\n%s" % (response,
-                                                        traceback.format_exc()))
+            logger.error(
+                f"tab.content error {response}:\n{traceback.format_exc()}")
             return ""
 
     @property
-    def html(self) -> Coroutine[Any, Any, str]:
+    def html(self) -> Awaitable[str]:
         """`await tab.html`. return html from `document.documentElement.outerHTML`"""
         return self.get_html()
 
     async def wait_loading(self,
                            timeout: Union[int, float] = None,
-                           callback: Optional[Callable] = None,
+                           callback_function: Optional[Callable] = None,
                            timeout_stop_loading=False) -> Union[dict, None]:
         data = await self.wait_event(
-            "Page.loadEventFired", timeout=timeout, callback=callback)
+            "Page.loadEventFired",
+            timeout=timeout,
+            callback_function=callback_function)
         if data is None and timeout_stop_loading:
             await self.send("Page.stopLoading", timeout=0)
         return data
@@ -488,7 +496,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             self,
             event_name: str,
             timeout: Union[int, float] = None,
-            callback: Optional[Callable] = None,
+            callback_function: Optional[Callable] = None,
             filter_function: Optional[Callable] = None) -> Union[dict, None]:
         """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
         timeout = self.timeout if timeout is None else timeout
@@ -498,22 +506,24 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 break
             # avoid same method but different event occured, use filter_function
             event = {"method": event_name}
-            result = await self.recv(event, timeout=timeout, callback=callback)
+            result = await self.recv(event, timeout=timeout)
             if filter_function:
                 try:
-                    if filter_function(result):
-                        return result
+                    ok = await ensure_awaitable_result(filter_function, result)
+                    if ok:
+                        break
                 except Exception:
                     continue
-
-        return result
+            elif result:
+                break
+        return await ensure_awaitable_result(callback_function, result)
 
     async def wait_response(
             self,
             filter_function: Optional[Callable] = None,
             callback_function: Optional[Callable] = None,
             timeout: Union[int, float] = None) -> Union[str, None, Any]:
-        '''wait a special response filted by function'''
+        '''wait a special response filted by function, then run the callback_function'''
         await self.enable('Network')
         request_dict = await self.wait_event(
             "Network.responseReceived",
@@ -526,10 +536,11 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 return callback_function(request_dict)
         return request_dict
 
-    async def get_response(self,
-                           request_dict: dict,
-                           timeout: Union[int, float] = None
-                          ) -> Union[dict, None]:
+    async def get_response(
+            self,
+            request_dict: dict,
+            timeout: Union[int, float] = None,
+    ) -> Union[dict, None]:
         '''{'id': 30, 'result': {'body': 'xxxxxxxxx', 'base64Encoded': False}}'''
         if request_dict is None:
             return None
@@ -546,6 +557,33 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if timeout is None:
             timeout = self.timeout
         return await self.set_url(timeout=timeout)
+
+    async def set_headers(self,
+                          headers: dict,
+                          timeout: Union[float, int] = None):
+        '''
+        # if 'Referer' in headers or 'referer' in headers:
+        #     logger.warning('`Referer` is not valid header, please use the `referrer` arg of set_url')'''
+        logger.info(f'[set_headers] {self!r} headers => {headers}')
+        await self.enable('Network')
+        data = await self.send(
+            'Network.setExtraHTTPHeaders', headers=headers, timeout=timeout)
+        return data
+
+    async def set_ua(self,
+                     userAgent: str,
+                     acceptLanguage: Optional[str] = '',
+                     platform: Optional[str] = '',
+                     timeout: Union[float, int] = None):
+        logger.info(f'[set_ua] {self!r} userAgent => {userAgent}')
+        await self.enable('Network')
+        data = await self.send(
+            'Network.setUserAgentOverride',
+            userAgent=userAgent,
+            acceptLanguage=acceptLanguage,
+            platform=platform,
+            timeout=timeout)
+        return data
 
     async def set_url(self,
                       url: Optional[str] = None,
@@ -610,9 +648,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         else:
             index = int(index)
         if action:
-            action = (
-                "item.result=el.%s || '';item.result=item.result.toString()" %
-                action)
+            action = f"item.result=el.{action} || '';item.result=item.result.toString()"
+
         else:
             action = ""
         javascript = """
@@ -664,8 +701,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             else:
                 return result
         except Exception as e:
-            logger.error(
-                "querySelectorAll error: %s, response: %s" % (e, response))
+            logger.error(f"querySelectorAll error: {e}, response: {response}")
             if isinstance(index, int):
                 return None
             return []
@@ -688,7 +724,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             javascript = r.text
             return await self.js(javascript, timeout=timeout)
         else:
-            logger.error("inject_js_url failed for request: %s" % r.text)
+            logger.error(f"inject_js_url failed for request: {r.text}")
             return None
 
     async def click(
@@ -714,6 +750,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if self.ws and not self.ws.closed:
             logger.debug('[unclosed] WSConnection is not closed.')
             asyncio.ensure_future(self.ws.close(), loop=self.loop)
+
+    async def close_browser(self):
+        await self.send('Browser.close')
 
 
 class Listener(object):
@@ -770,6 +809,9 @@ class InvalidRequests(object):
             'Chrome has not connected. `await chrome.connect()` before request.'
         )
 
+    def __bool__(self):
+        return False
+
 
 class Chrome:
 
@@ -778,7 +820,7 @@ class Chrome:
                  port: int = 9222,
                  timeout: int = 2,
                  retry: int = 1,
-                 loop: Any = None):
+                 loop: Optional[asyncio.AbstractEventLoop] = None):
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -787,10 +829,22 @@ class Chrome:
         self.status = 'init'
         self.req = InvalidRequests()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.__del__()
+
+    async def __aenter__(self):
+        await self.connect()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+
     @property
     def server(self) -> str:
         """return like 'http://127.0.0.1:9222'"""
-        return "http://%s:%d" % (self.host, self.port)
+        return f"http://{self.host}:{self.port}"
 
     async def get_version(self) -> dict:
         """`await self.get_version()`
@@ -802,7 +856,7 @@ class Chrome:
             raise resp.error
 
     @property
-    def version(self) -> Coroutine[Any, Any, dict]:
+    def version(self) -> Awaitable[dict]:
         """`await self.version`
         {'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}"""
         return self.get_version()
@@ -857,11 +911,32 @@ class Chrome:
                 f'fail to get_tabs {self.server}, {traceback.format_exc()}')
         return []
 
+    async def get_tab(self, index: int = 0) -> Union[Tab, None]:
+        """`await self.get_tab(1)` <=> await `(await self.get_tabs())[1]`
+        If not exist, return None
+        cdp url: /json"""
+        tabs = await self.get_tabs()
+        try:
+            return tabs[index]
+        except IndexError:
+            return None
+
     @property
-    def tabs(self) -> Coroutine[Any, Any, List[Tab]]:
+    def tabs(self) -> Awaitable[List[Tab]]:
         """`await self.tabs`"""
         # [{'description': '', 'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4', 'id': '30C16F9165C525A4002E827EDABD48A4', 'title': 'about:blank', 'type': 'page', 'url': 'about:blank', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4'}]
         return self.get_tabs()
+
+    async def kill(self, timeout: Union[int, float] = None,
+                   max_deaths: int = 1) -> None:
+        if self.req:
+            loop = self.req.loop
+            await self.req.close()
+        else:
+            loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            Pool(1), ChromeDaemon.clear_chrome_process, self.port, timeout,
+            max_deaths)
 
     async def new_tab(self, url: str = "") -> Union[Tab, None]:
         api = f'/json/new?{quote_plus(url)}'
@@ -922,3 +997,11 @@ class Chrome:
 
     def __str__(self):
         return f"<Chrome({self.status}): {self.server}>"
+
+    async def close(self):
+        if self.req:
+            await self.req.close()
+        self.status = 'closed'
+
+    def __del__(self):
+        asyncio.ensure_future(self.close())

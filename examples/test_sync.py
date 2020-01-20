@@ -35,6 +35,7 @@ def test_example():
     # logger.setLevel(logging.INFO)
     # launch the Chrome process and daemon process, will auto shutdown by 'with' expression.
     with ChromeDaemon(host="127.0.0.1", port=9222, max_deaths=1) as chromed:
+        logger.info(chromed)
         # create connection to Chrome Devtools
         chrome = Chrome(host="127.0.0.1", port=9222, timeout=3, retry=1)
         # now create a new tab without url
@@ -88,10 +89,12 @@ def test_example():
         logger.info("getResponseBody success %s" % resp)
         # directly click the button matched the cssselector #sb_form_go, here is the submit button.
         logger.info(tab.click("#sb_form_go"))
+        tab.wait_loading(3)
         # show some html source code of the tab
         logger.info(tab.html[:100])
-        # now click close button of the chrome browser.
-        chromed.run_forever()
+        tab.send('Browser.close')
+        # # now click close button of the chrome browser.
+        # chromed.run_forever()
 
 
 if __name__ == "__main__":
