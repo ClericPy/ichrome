@@ -23,6 +23,17 @@ Async utils for connections and operations.
 """
 
 
+async def ensure_awaitable_result(callback_function, result):
+    if callable(callback_function):
+        callback_result = callback_function(result)
+    else:
+        return result
+    if inspect.isawaitable(callback_result):
+        return await callback_result
+    else:
+        return callback_result
+
+
 class _TabConnectionManager(object):
 
     def __init__(self, tabs):
@@ -259,7 +270,7 @@ class Tab(object):
     async def send(self,
                    method: str,
                    timeout: Union[int, float] = None,
-                   callback: Optional[Callable] = None,
+                   callback_function: Optional[Callable] = None,
                    check_duplicated_on_off: bool = False,
                    **kwargs) -> Union[None, dict]:
         request = {"method": method, "params": kwargs}
@@ -281,7 +292,8 @@ class Tab(object):
                 # not care for response
                 return None
             event = {"id": request["id"]}
-            msg = await self.recv(event, timeout=timeout, callback=callback)
+            msg = await self.recv(
+                event, timeout=timeout, callback_function=callback_function)
             return msg
         except (ClientError, WebSocketError) as err:
             logger.error(f'{self} [send] msg failed for {err}')
@@ -290,15 +302,15 @@ class Tab(object):
     async def recv(self,
                    event_dict: dict,
                    timeout: Union[int, float] = None,
-                   callback=None) -> Union[dict, None]:
+                   callback_function=None) -> Union[dict, None]:
         """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
 
         :param event_dict: dict like {'id': 1} or {'method': 'Page.loadEventFired'} or other JSON serializable dict.
         :type event_dict: dict
         :param timeout: await seconds, None for permanent, 0 for 0 seconds.
         :type timeout: float / None, optional
-        :param callback: event callback function accept only one arg(the event dict).
-        :type callback: callable, optional
+        :param callback_function: event callback_function function accept only one arg(the event dict).
+        :type callback_function: callable, optional
         :return: the event dict from websocket recv.
         :rtype: dict
         """
@@ -312,14 +324,7 @@ class Tab(object):
         except TimeoutError:
             logger.debug(f'[timeout] {event_dict} [recv] timeout.')
         finally:
-            if callable(callback):
-                callback_result = callback(result)
-            else:
-                return result
-            if inspect.isawaitable(callback_result):
-                return await callback_result
-            else:
-                return callback_result
+            return await ensure_awaitable_result(callback_function, result)
 
     @property
     def now(self) -> int:
@@ -428,7 +433,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.send(
             "Network.setCookie",
             timeout=timeout or self.timeout,
-            callback=None,
+            callback_function=None,
             check_duplicated_on_off=False,
             **kwargs)
 
@@ -466,8 +471,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             value = response["result"]["result"]["value"]
             return value
         except (KeyError, json.decoder.JSONDecodeError):
-            logger.error("tab.content error %s:\n%s" % (response,
-                                                        traceback.format_exc()))
+            logger.error(
+                f"tab.content error {response}:\n{traceback.format_exc()}")
             return ""
 
     @property
@@ -477,10 +482,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def wait_loading(self,
                            timeout: Union[int, float] = None,
-                           callback: Optional[Callable] = None,
+                           callback_function: Optional[Callable] = None,
                            timeout_stop_loading=False) -> Union[dict, None]:
         data = await self.wait_event(
-            "Page.loadEventFired", timeout=timeout, callback=callback)
+            "Page.loadEventFired",
+            timeout=timeout,
+            callback_function=callback_function)
         if data is None and timeout_stop_loading:
             await self.send("Page.stopLoading", timeout=0)
         return data
@@ -489,10 +496,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             self,
             event_name: str,
             timeout: Union[int, float] = None,
-            callback: Optional[Callable] = None,
+            callback_function: Optional[Callable] = None,
             filter_function: Optional[Callable] = None) -> Union[dict, None]:
-        """Similar to self.recv, but has the filter_function to distinct duplicated method of event.
-        WARNING: callback will be called before filter_function"""
+        """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
         timeout = self.timeout if timeout is None else timeout
         start_time = time.time()
         while 1:
@@ -500,24 +506,24 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 break
             # avoid same method but different event occured, use filter_function
             event = {"method": event_name}
-            result = await self.recv(event, timeout=timeout, callback=callback)
+            result = await self.recv(event, timeout=timeout)
             if filter_function:
                 try:
-                    if filter_function(result):
-                        return result
+                    ok = await ensure_awaitable_result(filter_function, result)
+                    if ok:
+                        break
                 except Exception:
                     continue
             elif result:
                 break
-
-        return result
+        return await ensure_awaitable_result(callback_function, result)
 
     async def wait_response(
             self,
             filter_function: Optional[Callable] = None,
             callback_function: Optional[Callable] = None,
             timeout: Union[int, float] = None) -> Union[str, None, Any]:
-        '''wait a special response filted by function'''
+        '''wait a special response filted by function, then run the callback_function'''
         await self.enable('Network')
         request_dict = await self.wait_event(
             "Network.responseReceived",
@@ -642,9 +648,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         else:
             index = int(index)
         if action:
-            action = (
-                "item.result=el.%s || '';item.result=item.result.toString()" %
-                action)
+            action = f"item.result=el.{action} || '';item.result=item.result.toString()"
+
         else:
             action = ""
         javascript = """
@@ -696,8 +701,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             else:
                 return result
         except Exception as e:
-            logger.error(
-                "querySelectorAll error: %s, response: %s" % (e, response))
+            logger.error(f"querySelectorAll error: {e}, response: {response}")
             if isinstance(index, int):
                 return None
             return []
@@ -720,7 +724,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             javascript = r.text
             return await self.js(javascript, timeout=timeout)
         else:
-            logger.error("inject_js_url failed for request: %s" % r.text)
+            logger.error(f"inject_js_url failed for request: {r.text}")
             return None
 
     async def click(
@@ -840,7 +844,7 @@ class Chrome:
     @property
     def server(self) -> str:
         """return like 'http://127.0.0.1:9222'"""
-        return "http://%s:%d" % (self.host, self.port)
+        return f"http://{self.host}:{self.port}"
 
     async def get_version(self) -> dict:
         """`await self.get_version()`

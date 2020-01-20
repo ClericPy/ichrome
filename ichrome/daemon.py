@@ -80,7 +80,7 @@ class ChromeDaemon(object):
         self.proc = None
         self.host = host
         self.port = port
-        self.server = "http://%s:%s" % (self.host, self.port)
+        self.server = f"http://{self.host}:{self.port}"
         self.chrome_path = chrome_path or self._get_default_path()
         self.req = tPool()
         self._ensure_port_free()
@@ -109,11 +109,11 @@ class ChromeDaemon(object):
         default_path = os.path.join(
             os.path.expanduser("~"), "ichrome_user_data")
         user_data_dir = default_path if user_data_dir is None else user_data_dir
-        self.user_data_dir = os.path.join(user_data_dir,
-                                          "chrome_%s" % self.port)
+        self.user_data_dir = os.path.join(user_data_dir, f"chrome_{self.port}")
         if not os.path.isdir(self.user_data_dir):
-            logger.warning("creating user data dir at [%s]." % os.path.realpath(
-                self.user_data_dir))
+            logger.warning(
+                f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
+            )
 
     @property
     def ok(self):
@@ -143,18 +143,18 @@ class ChromeDaemon(object):
     def cmd(self):
         args = [
             self.chrome_path,
-            "--remote-debugging-address=%s" % self.host,
-            "--remote-debugging-port=%s" % self.port,
+            f"--remote-debugging-address={self.host}",
+            f"--remote-debugging-port={self.port}",
         ]
         if self.headless:
             args.append("--headless")
             args.append("--hide-scrollbars")
         if self.user_data_dir:
-            args.append("--user-data-dir=%s" % self.user_data_dir)
+            args.append(f"--user-data-dir={self.user_data_dir}")
         if self.UA:
-            args.append("--user-agent=%s" % self.UA)
+            args.append(f"--user-agent={self.UA}")
         if self.proxy:
-            args.append("--proxy-server=%s" % self.proxy)
+            args.append(f"--proxy-server={self.proxy}")
         if self.disable_image:
             args.append("--blink-settings=imagesEnabled=false")
         if self.extra_config:
@@ -167,7 +167,7 @@ class ChromeDaemon(object):
     def cmd_args(self):
         # list2cmdline for linux use args list failed...
         cmd_string = subprocess.list2cmdline(self.cmd)
-        logger.debug("running with: %s" % cmd_string)
+        logger.debug(f"running with: {cmd_string}")
         kwargs = {"args": cmd_string, "shell": True}
         if not self.debug:
             kwargs["stdout"] = subprocess.DEVNULL
@@ -178,11 +178,10 @@ class ChromeDaemon(object):
         self.proc = subprocess.Popen(**self.cmd_args)
         if self.ok:
             logger.info(
-                "launch_chrome success: %s, args: %s" % (self, self.proc.args))
+                f"launch_chrome success: {self}, args: {self.proc.args}")
             return True
         else:
-            logger.error(
-                "launch_chrome failed: %s, args: %s" % (self, self.cmd))
+            logger.error(f"launch_chrome failed: {self}, args: {self.cmd}")
             return False
 
     def _ensure_port_free(self):
@@ -190,7 +189,7 @@ class ChromeDaemon(object):
             try:
                 sock = socket.socket()
                 sock.connect((self.host, self.port))
-                logger.info("shutting down chrome using port %s" % self.port)
+                logger.info(f"shutting down chrome using port {self.port}")
                 self.kill(True)
                 continue
             except ConnectionRefusedError:
@@ -207,8 +206,7 @@ class ChromeDaemon(object):
             paths = [
                 "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
                 "C:/Program Files/Google/Chrome/Application/chrome.exe",
-                "%s\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe" %
-                os.getenv("USERPROFILE"),
+                f"{os.getenv('USERPROFILE')}\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
             ]
             for path in paths:
                 if not path:
@@ -245,15 +243,17 @@ class ChromeDaemon(object):
         deaths = 0
         while self._use_daemon:
             if self._shutdown:
-                logger.info("%s daemon break after shutdown(%s)." %
-                            (self, ttime(self._shutdown)))
+                logger.info(
+                    f"{self} daemon break after shutdown({ttime(self._shutdown)})."
+                )
                 break
             if deaths >= self.max_deaths:
-                logger.info("%s daemon break for deaths is more than %s times."
-                            % (self, self.max_deaths))
+                logger.info(
+                    f"{self} daemon break for deaths is more than {self.max_deaths} times."
+                )
                 break
             if not self.proc_ok:
-                logger.debug("%s daemon is restarting proc." % self)
+                logger.debug(f"{self} daemon is restarting proc.")
                 self.restart()
                 continue
             try:
@@ -261,14 +261,15 @@ class ChromeDaemon(object):
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
-        logger.info("%s daemon exited." % self)
+        logger.info(f"{self} daemon exited.")
         self._shutdown = time.time()
         return return_code
 
     def run_forever(self, block=True, interval=5):
         if self._shutdown:
-            raise IOError("%s run_forever failed after shutdown(%s)." %
-                          (self, ttime(self._shutdown)))
+            raise IOError(
+                f"{self} run_forever failed after shutdown({ttime(self._shutdown)})."
+            )
         if not self._daemon_thread:
             self._daemon_thread = threading.Thread(
                 target=self._daemon,
@@ -276,8 +277,9 @@ class ChromeDaemon(object):
                 daemon=True,
             )
             self._daemon_thread.start()
-        logger.debug("%s run_forever(block=%s, interval=%s, max_deaths=%s)." %
-                     (self, block, interval, self.max_deaths))
+        logger.debug(
+            f"{self} run_forever(block={block}, interval={interval}, max_deaths={self.max_deaths})."
+        )
         if block:
             self._daemon_thread.join()
         return self._daemon_thread
@@ -294,20 +296,17 @@ class ChromeDaemon(object):
         self.port_in_using.discard(self.port)
 
     def restart(self):
-        logger.info("restarting %s" % self)
+        logger.info(f"restarting {self}")
         self.kill()
         return self.launch_chrome()
 
     def shutdown(self):
         if self._shutdown:
-            logger.info("can not shutdown twice, %s has been shutdown at %s" %
-                        (self, ttime(self._shutdown)))
+            logger.info(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
-        logger.info("%s shutting down, start-up: %s, duration: %s." % (
-            self,
-            ttime(self.start_time),
-            timepass(time.time() - self.start_time, accuracy=3, format=1),
-        ))
+        logger.info(
+            f"{self} shutting down, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
+        )
         self._shutdown = time.time()
         self.kill()
 
@@ -319,7 +318,7 @@ class ChromeDaemon(object):
 
     @staticmethod
     def get_proc(port):
-        port_args = "--remote-debugging-port=%s" % port
+        port_args = f"--remote-debugging-port={port}"
         # win32 and linux chrome proc_names
         proc_names = {"chrome.exe", "chrome"}
         procs = []
@@ -351,7 +350,7 @@ class ChromeDaemon(object):
         while 1:
             procs = cls.get_proc(port)
             for proc in procs:
-                logger.debug("kill %s, port: %s" % (proc, port))
+                logger.debug(f"killing {proc}, port: {port}")
                 proc.kill()
             if port:
                 if procs:
@@ -370,7 +369,7 @@ class ChromeDaemon(object):
             self.shutdown()
 
     def __str__(self):
-        return "%s(%s:%s)" % (self.__class__.__name__, self.host, self.port)
+        return f"{self.__class__.__name__}({self.host}:{self.port})"
 
 
 def main():
