@@ -9,6 +9,7 @@ import websocket
 from torequests import NewFuture, tPool
 from torequests.utils import quote_plus
 
+from .base import ChromeDaemon
 from .logs import logger
 """
 Sync utils for connections and operations.
@@ -115,6 +116,10 @@ class Chrome(object):
     def close_tabs(self, tab_ids):
         return [self.close_tab(tab_id) for tab_id in tab_ids]
 
+    def kill(self, timeout=None, max_deaths=1):
+        ChromeDaemon.clear_chrome_process(
+            self.port, timeout=timeout, max_deaths=max_deaths)
+
     @property
     def meta(self):
         r = self.req.get(
@@ -165,6 +170,9 @@ class Tab(object):
         for target in [self._recv_daemon]:
             t = threading.Thread(target=target, daemon=True)
             t.start()
+
+    def close_browser(self):
+        return self.send('Browser.close')
 
     @property
     def url(self):
@@ -332,7 +340,8 @@ class Tab(object):
         while 1:
             request = {"method": event}
             result = self.recv(request, timeout=timeout, callback=callback)
-            if result and not callable(filter_function) or filter_function(result):
+            if result and not callable(filter_function) or filter_function(
+                    result):
                 break
             if wait_seconds and time.time() - start_time > wait_seconds:
                 break
