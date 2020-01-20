@@ -5,8 +5,9 @@ import json
 import re
 import time
 import traceback
-from asyncio.futures import _PENDING, Future, TimeoutError
-from typing import Any, Callable, Coroutine, List, Optional, Union
+from asyncio.base_futures import _PENDING
+from asyncio.futures import Future, TimeoutError
+from typing import Any, Awaitable, Callable, List, Optional, Union, Dict
 from weakref import WeakValueDictionary
 
 from aiohttp.client_exceptions import ClientError
@@ -452,7 +453,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return title
 
     @property
-    def current_title(self):
+    def current_title(self) -> Awaitable[str]:
         return self.get_current_title()
 
     async def get_html(self) -> str:
@@ -470,7 +471,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             return ""
 
     @property
-    def html(self) -> Coroutine[Any, Any, str]:
+    def html(self) -> Awaitable[str]:
         """`await tab.html`. return html from `document.documentElement.outerHTML`"""
         return self.get_html()
 
@@ -490,7 +491,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             timeout: Union[int, float] = None,
             callback: Optional[Callable] = None,
             filter_function: Optional[Callable] = None) -> Union[dict, None]:
-        """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
+        """Similar to self.recv, but has the filter_function to distinct duplicated method of event.
+        WARNING: callback will be called before filter_function"""
         timeout = self.timeout if timeout is None else timeout
         start_time = time.time()
         while 1:
@@ -505,6 +507,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                         return result
                 except Exception:
                     continue
+            elif result:
+                break
 
         return result
 
@@ -526,10 +530,11 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 return callback_function(request_dict)
         return request_dict
 
-    async def get_response(self,
-                           request_dict: dict,
-                           timeout: Union[int, float] = None
-                          ) -> Union[dict, None]:
+    async def get_response(
+            self,
+            request_dict: dict,
+            timeout: Union[int, float] = None,
+    ) -> Union[dict, None]:
         '''{'id': 30, 'result': {'body': 'xxxxxxxxx', 'base64Encoded': False}}'''
         if request_dict is None:
             return None
@@ -546,6 +551,33 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if timeout is None:
             timeout = self.timeout
         return await self.set_url(timeout=timeout)
+
+    async def set_headers(self,
+                          headers: Dict,
+                          timeout: Union[float, int] = None):
+        '''
+        # if 'Referer' in headers or 'referer' in headers:
+        #     logger.warning('`Referer` is not valid header, please use the `referrer` arg of set_url')'''
+        logger.info(f'[set_headers] {self!r} headers => {headers}')
+        await self.enable('Network')
+        data = await self.send(
+            'Network.setExtraHTTPHeaders', headers=headers, timeout=timeout)
+        return data
+
+    async def set_ua(self,
+                     userAgent: str,
+                     acceptLanguage: Optional[str] = '',
+                     platform: Optional[str] = '',
+                     timeout: Union[float, int] = None):
+        logger.info(f'[set_ua] {self!r} userAgent => {userAgent}')
+        await self.enable('Network')
+        data = await self.send(
+            'Network.setUserAgentOverride',
+            userAgent=userAgent,
+            acceptLanguage=acceptLanguage,
+            platform=platform,
+            timeout=timeout)
+        return data
 
     async def set_url(self,
                       url: Optional[str] = None,
@@ -802,7 +834,7 @@ class Chrome:
             raise resp.error
 
     @property
-    def version(self) -> Coroutine[Any, Any, dict]:
+    def version(self) -> Awaitable[dict]:
         """`await self.version`
         {'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}"""
         return self.get_version()
@@ -857,8 +889,18 @@ class Chrome:
                 f'fail to get_tabs {self.server}, {traceback.format_exc()}')
         return []
 
+    async def get_tab(self, index: int = 0) -> Union[Tab, None]:
+        """`await self.get_tab(1)` <=> await `(await self.get_tabs())[1]`
+        If not exist, return None
+        cdp url: /json"""
+        tabs = await self.get_tabs()
+        try:
+            return tabs[index]
+        except IndexError:
+            return None
+
     @property
-    def tabs(self) -> Coroutine[Any, Any, List[Tab]]:
+    def tabs(self) -> Awaitable[List[Tab]]:
         """`await self.tabs`"""
         # [{'description': '', 'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4', 'id': '30C16F9165C525A4002E827EDABD48A4', 'title': 'about:blank', 'type': 'page', 'url': 'about:blank', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4'}]
         return self.get_tabs()

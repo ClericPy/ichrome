@@ -46,11 +46,11 @@ async def test_examples():
     assert ok is True
     resp = await chrome.get_server('json')
     assert isinstance(resp.json(), list)
-    tabs1 = await chrome.get_tabs()
-    tabs2 = await chrome.tabs
+    tabs1: Tab = await chrome.get_tabs()
+    tabs2: Tab = await chrome.tabs
     assert tabs1 == tabs2
-    tab0 = tabs1[0]
-    tab1 = await chrome.new_tab()
+    tab0: Tab = tabs1[0]
+    tab1: Tab = await chrome.new_tab()
     assert isinstance(tab1, Tab)
     await asyncio.sleep(1)
     await chrome.activate_tab(tab0)
@@ -61,12 +61,13 @@ async def test_examples():
         assert await tab0.current_url == 'about:blank'
     await chrome.close_tab(tab1)
     # ===================== Tab Test Cases =====================
-    tab = await chrome.new_tab()
+    tab: Tab = await chrome.new_tab()
     assert tab.ws is None
     async with tab():
         assert tab.ws
     assert tab.ws is None
-    async with tab.connect():
+    # also work: async with tab.connect():
+    async with tab():
         assert tab.status == 'connected'
         assert tab.msg_id == tab.msg_id - 1
         assert await tab.refresh_tab_info()
@@ -149,8 +150,21 @@ async def test_examples():
         # {'method': 'Network.responseReceived', 'params': {'requestId': '2FAFC4FC410A6DEDE88553B1836C530B', 'loaderId': '2FAFC4FC410A6DEDE88553B1836C530B', 'timestamp': 212239.182469, 'type': 'Document', 'response': {'url': 'https://www.python.org/downloads/', 'status': 200, 'statusText': '', 'headers': {'status': '200', 'server': 'nginx', 'content-type': 'text/html; charset=utf-8', 'x-frame-options': 'DENY', 'cache-control': 'max-age=604800, public', 'via': '1.1 vegur\n1.1 varnish\n1.1 varnish', 'accept-ranges': 'bytes', 'date': 'Sat, 05 Oct 2019 10:51:48 GMT', 'age': '282488', 'x-served-by': 'cache-iad2139-IAD, cache-hnd18720-HND', 'x-cache': 'MISS, HIT', 'x-cache-hits': '0, 119', 'x-timer': 'S1570272708.444646,VS0,VE0', 'content-length': '113779'}, 'mimeType': 'text/html', 'connectionReused': False, 'connectionId': 0, 'remoteIPAddress': '123.23.54.43', 'remotePort': 443, 'fromDiskCache': True, 'fromServiceWorker': False, 'fromPrefetchCache': False, 'encodedDataLength': 0, 'timing': {'requestTime': 212239.179388, 'proxyStart': -1, 'proxyEnd': -1, 'dnsStart': -1, 'dnsEnd': -1, 'connectStart': -1, 'connectEnd': -1, 'sslStart': -1, 'sslEnd': -1, 'workerStart': -1, 'workerReady': -1, 'sendStart': 0.392, 'sendEnd': 0.392, 'pushStart': 0, 'pushEnd': 0, 'receiveHeadersEnd': 0.975}, 'protocol': 'h2', 'securityState': 'secure', 'securityDetails': {'protocol': 'TLS 1.2', 'keyExchange': 'ECDHE_RSA', 'keyExchangeGroup': 'X25519', 'cipher': 'AES_128_GCM', 'certificateId': 0, 'subjectName': 'www.python.org', 'sanList': ['www.python.org', 'docs.python.org', 'bugs.python.org', 'wiki.python.org', 'hg.python.org', 'mail.python.org', 'pypi.python.org', 'packaging.python.org', 'login.python.org', 'discuss.python.org', 'us.pycon.org', 'pypi.io', 'docs.pypi.io', 'pypi.org', 'docs.pypi.org', 'donate.pypi.org', 'devguide.python.org', 'www.bugs.python.org', 'python.org'], 'issuer': 'DigiCert SHA2 Extended Validation Server CA', 'validFrom': 1537228800, 'validTo': 1602676800, 'signedCertificateTimestampList': [], 'certificateTransparencyCompliance': 'unknown'}}, 'frameId': '882CFDEEA07EB00A5E7510ADD2A39F22'}}
         # response
         # {'id': 30, 'result': {'body': '<!doctype html>\n<!--[if lt IE 7]>   <html class="no-js ie6 lt-ie...', 'base64Encoded': False}}
+        # test set_ua
+        await tab.set_ua('Test UA')
+        await tab.set_url('http://httpbin.org/get')
+        html = await tab.get_html()
+        assert '"User-Agent": "Test UA"' in html
+        # test set_headers
+        await tab.set_headers({'A': '1', 'B': '2'})
+        await tab.set_url('http://httpbin.org/get')
+        html = await tab.get_html()
+        assert '"A": "1"' in html and '"B": "2"' in html
+        # close tab
         await tab.close()
     ChromeDaemon.clear_chrome_process(port)
+    sep = f'\n{"*" * 80}\n'
+    logger.critical(f'{sep}Congratulations, all test cases succeed.{sep}')
 
 
 if __name__ == "__main__":
