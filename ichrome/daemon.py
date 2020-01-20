@@ -238,19 +238,19 @@ class ChromeDaemon(object):
         raise FileNotFoundError("Not found executable chrome file.")
 
     def _daemon(self, interval=5):
-        """if chrome proc is killed 3 times too fast (not raise TimeoutExpired),
-        will skip auto_restart."""
+        """if chrome proc is killed self.max_deaths times too fast (not raise TimeoutExpired),
+        will skip auto_restart.
+        check alive every `interval` seconds."""
         return_code = None
         deaths = 0
         while self._use_daemon:
             if self._shutdown:
-                logger.info("%s daemon exited after shutdown(%s)." %
+                logger.info("%s daemon break after shutdown(%s)." %
                             (self, ttime(self._shutdown)))
                 break
             if deaths >= self.max_deaths:
-                logger.info(
-                    "%s daemon exited for number of deaths is more than %s." %
-                    (self, self.max_deaths))
+                logger.info("%s daemon break for deaths is more than %s times."
+                            % (self, self.max_deaths))
                 break
             if not self.proc_ok:
                 logger.debug("%s daemon is restarting proc." % self)
@@ -262,6 +262,7 @@ class ChromeDaemon(object):
             except subprocess.TimeoutExpired:
                 deaths = 0
         logger.info("%s daemon exited." % self)
+        self._shutdown = time.time()
         return return_code
 
     def run_forever(self, block=True, interval=5):
@@ -317,39 +318,50 @@ class ChromeDaemon(object):
         self.shutdown()
 
     @staticmethod
-    def clear_chrome_process(port=None, timeout=None, max_deaths=2):
+    def get_proc(port):
+        port_args = "--remote-debugging-port=%s" % port
+        # win32 and linux chrome proc_names
+        proc_names = {"chrome.exe", "chrome"}
+        procs = []
+        for proc in psutil.process_iter():
+            try:
+                pname = proc.name()
+                if pname in proc_names and port_args in ' '.join(
+                        proc.cmdline()):
+                    procs.append(proc)
+            except Exception:
+                pass
+        return procs
+
+    @classmethod
+    def clear_chrome_process(cls,
+                             port=None,
+                             timeout=None,
+                             max_deaths=1,
+                             interval=0.5):
         """kill chrome processes, if port is not set, kill all chrome with --remote-debugging-port.
         set timeout to avoid running forever.
         set max_deaths and port, will return before timeout.
         """
         port = port or ""
-        # win32 and linux chrome proc_names
-        proc_names = {"chrome.exe", "chrome"}
-        killed = []
-        port_args = "--remote-debugging-port=%s" % port
+        killed_count = 0
         start_time = time.time()
         if timeout is None:
             timeout = max_deaths or 3
         while 1:
-            for proc in psutil.process_iter():
-                try:
-                    pname = proc.name()
-                    if pname in proc_names and port_args in " ".join(
-                            proc.cmdline()):
-                        for cmd in proc.cmdline():
-                            if port_args in cmd:
-                                logger.debug("kill %s %s" % (pname, cmd))
-                                proc.kill()
-                                if port:
-                                    killed.append(port_args)
-                except Exception:
-                    pass
-            if port and len(killed) >= max_deaths:
-                return
+            procs = cls.get_proc(port)
+            for proc in procs:
+                logger.debug("kill %s, port: %s" % (proc, port))
+                proc.kill()
+            if port:
+                if procs:
+                    killed_count += 1
+                if killed_count >= max_deaths:
+                    return
             if max_deaths == 0:
                 return
             if timeout and time.time() - start_time < timeout:
-                time.sleep(1)
+                time.sleep(interval)
                 continue
             return
 
