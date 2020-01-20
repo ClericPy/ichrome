@@ -9,6 +9,7 @@ import websocket
 from torequests import NewFuture, tPool
 from torequests.utils import quote_plus
 
+from .base import ChromeDaemon
 from .logs import logger
 """
 Sync utils for connections and operations.
@@ -24,7 +25,7 @@ class Chrome(object):
         self.timeout = timeout
         self.retry = retry
         if not self.ok:
-            raise IOError("Can not connect to %s" % self.server)
+            raise IOError(f"Can not connect to {self.server}")
 
     @property
     def ok(self):
@@ -58,7 +59,7 @@ class Chrome(object):
 
     @property
     def server(self):
-        return "http://%s:%d" % (self.host, self.port)
+        return f"http://{self.host}:{self.port}"
 
     @property
     def tabs(self):
@@ -66,7 +67,7 @@ class Chrome(object):
 
     def new_tab(self, url=""):
         r = self.req.get(
-            "%s/json/new?%s" % (self.server, quote_plus(url)),
+            f"{self.server}/json/new?{quote_plus(url)}",
             retry=self.retry,
             timeout=self.timeout,
         )
@@ -80,7 +81,7 @@ class Chrome(object):
             )
             tab = Tab(tab_id, title, _url, webSocketDebuggerUrl, self)
             tab._create_time = tab.now
-            logger.info("new tab %s" % (tab))
+            logger.info(f"new tab {tab}")
             return tab
 
     def activate_tab(self, tab_id):
@@ -88,14 +89,14 @@ class Chrome(object):
         if isinstance(tab_id, Tab):
             tab_id = tab_id.tab_id
         r = self.req.get(
-            "%s/json/activate/%s" % (self.server, tab_id),
+            f"{self.server}/json/activate/{tab_id}",
             retry=self.retry,
             timeout=self.timeout,
         )
         if r.x and r.ok:
             if r.text == "Target activated":
                 ok = True
-        logger.info("activate_tab %s: %s" % (tab_id, ok))
+        logger.info(f"activate_tab {tab_id}: {ok}")
 
     def close_tab(self, tab_id=None):
         ok = False
@@ -103,22 +104,26 @@ class Chrome(object):
         if isinstance(tab_id, Tab):
             tab_id = tab_id.tab_id
         r = self.req.get(
-            "%s/json/close/%s" % (self.server, tab_id),
+            f"{self.server}/json/close/{tab_id}",
             retry=self.retry,
             timeout=self.timeout,
         )
         if r.x and r.ok:
             if r.text == "Target is closing":
                 ok = True
-        logger.info("close tab %s: %s" % (tab_id, ok))
+        logger.info(f"close tab {tab_id}: {ok}")
 
     def close_tabs(self, tab_ids):
         return [self.close_tab(tab_id) for tab_id in tab_ids]
 
+    def kill(self, timeout=None, max_deaths=1):
+        ChromeDaemon.clear_chrome_process(
+            self.port, timeout=timeout, max_deaths=max_deaths)
+
     @property
     def meta(self):
         r = self.req.get(
-            "%s/json/version" % self.server,
+            f"{self.server}/json/version",
             retry=self.retry,
             timeout=self.timeout)
         if r.x and r.ok:
@@ -128,7 +133,7 @@ class Chrome(object):
         return "[Chromote(tabs=%d)]" % len(self.tabs)
 
     def __repr__(self):
-        return "Chromote(%s)" % (self.server)
+        return f"Chromote({self.server})"
 
     def __getitem__(self, index):
         tabs = self.tabs
@@ -165,6 +170,9 @@ class Tab(object):
         for target in [self._recv_daemon]:
             t = threading.Thread(target=target, daemon=True)
             t.start()
+
+    def close_browser(self):
+        return self.send('Browser.close')
 
     @property
     def url(self):
@@ -232,7 +240,7 @@ class Tab(object):
             self._message_id += 1
             request["id"] = self._message_id
             if not mute_log:
-                logger.info("<%s> send: %s" % (self, request))
+                logger.info(f"<{self}> send: {request}")
             with self.lock:
                 self.ws.send(json.dumps(request))
             request = {"id": request["id"]}
@@ -310,8 +318,8 @@ class Tab(object):
             value = result["result"]["result"]["value"]
             return value
         except (KeyError, json.decoder.JSONDecodeError):
-            logger.error("tab.content error %s:\n%s" % (response,
-                                                        traceback.format_exc()))
+            logger.error(
+                f"tab.content error {response}:\n{traceback.format_exc()}")
             return ""
 
     def wait_loading(self, timeout=None, callback=None):
@@ -332,7 +340,8 @@ class Tab(object):
         while 1:
             request = {"method": event}
             result = self.recv(request, timeout=timeout, callback=callback)
-            if not callable(filter_function) or filter_function(result):
+            if result and not callable(filter_function) or filter_function(
+                    result):
                 break
             if wait_seconds and time.time() - start_time > wait_seconds:
                 break
@@ -392,8 +401,8 @@ class Tab(object):
             index = int(index)
         if action:
             action = (
-                "item.result=el.%s || '';item.result=item.result.toString()" %
-                action)
+                f"item.result=el.{action} || '';item.result=item.result.toString()"
+            )
         else:
             action = ""
         javascript = """
@@ -445,8 +454,7 @@ class Tab(object):
             else:
                 return result
         except Exception as e:
-            logger.info(
-                "querySelectorAll error: %s, response: %s" % (e, response))
+            logger.info(f"querySelectorAll error: {e}, response: {response}")
             if isinstance(index, int):
                 return None
             return []
@@ -474,7 +482,7 @@ class Tab(object):
             javascript = r.text
             return self.js(javascript, mute_log=True)
         else:
-            logger.info("inject_js failed for request: %s" % r.text)
+            logger.info(f"inject_js failed for request: {r.text}")
             return
 
     def click(self, cssselector, index=0, action="click()"):
@@ -485,15 +493,10 @@ class Tab(object):
         return self.querySelectorAll(cssselector, index=index, action=action)
 
     def __str__(self):
-        return "Tab(%s)" % (self.url)
+        return f"Tab({self.url})"
 
     def __repr__(self):
-        return 'ChromeTab("%s", "%s", "%s", port: %s)' % (
-            self.tab_id,
-            self.title,
-            self.url,
-            self.chrome.port,
-        )
+        return f'ChromeTab("{self.tab_id}", "{self.title}", "{self.url}", port: {self.chrome.port})'
 
     def __del__(self):
         with self.lock:
@@ -527,7 +530,7 @@ class Tag(object):
         }
 
     def __str__(self):
-        return "Tag(%s)" % self.tagName
+        return f"Tag({self.tagName})"
 
     def __repr__(self):
         return self.__str__()
