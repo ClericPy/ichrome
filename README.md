@@ -23,8 +23,9 @@
 
 ## Examples
 
-
 ### Chrome daemon
+
+> Start the daemon via Python.
 
 ```python
 from ichrome import ChromeDaemon, Chrome
@@ -47,6 +48,8 @@ if __name__ == "__main__":
 
 ### Command Line Usage
 
+> For interactive debugging the raw protocols.
+
 ```
 λ python3 -m ichrome -s 9222
 2018-11-27 23:01:59 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
@@ -58,7 +61,7 @@ if __name__ == "__main__":
 
 ### [Async] Operation with asyncio
 
-> Use in production environment.
+> For interactive debugging the raw protocols.
 
 ```python
 import asyncio
@@ -238,9 +241,9 @@ if __name__ == "__main__":
 
 ```
 
-
-
 ### [Sync] Connect to existing debug port
+
+> Connect directly to a remote address.
 
 ```python
 from ichrome import Chrome
@@ -258,7 +261,9 @@ if __name__ == "__main__":
 
 ### [Sync] Advanced Usage (Crawling a special background request.)
 
-> For interactive debugging the raw protocols.
+> [Archived]
+>
+> Interactive debugging of the original protocol.
 
 ```python
 """

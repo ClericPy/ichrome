@@ -12,6 +12,7 @@ from torequests.utils import quote_plus
 from .base import ChromeDaemon
 from .logs import logger
 """
+[Archived]: will not update except bugs.
 Sync utils for connections and operations.
 """
 
