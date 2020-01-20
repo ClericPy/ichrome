@@ -58,6 +58,8 @@ if __name__ == "__main__":
 
 ### [Async] Operation with asyncio
 
+> Use in production environment.
+
 ```python
 import asyncio
 
@@ -254,8 +256,9 @@ if __name__ == "__main__":
     main()
 ```
 
-
 ### [Sync] Advanced Usage (Crawling a special background request.)
+
+> For interactive debugging the raw protocols.
 
 ```python
 """
