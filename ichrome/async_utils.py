@@ -7,15 +7,15 @@ import time
 import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future, TimeoutError
-from typing import Any, Awaitable, Callable, List, Optional, Union, Dict
+from typing import Any, Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
 
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
-from torequests.dummy import NewResponse, Requests
+from torequests.dummy import NewResponse, Requests, Pool
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import Tag
+from .base import ChromeDaemon, Tag
 from .logs import logger
 """
 Async utils for connections and operations.
@@ -553,7 +553,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.set_url(timeout=timeout)
 
     async def set_headers(self,
-                          headers: Dict,
+                          headers: dict,
                           timeout: Union[float, int] = None):
         '''
         # if 'Referer' in headers or 'referer' in headers:
@@ -747,6 +747,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             logger.debug('[unclosed] WSConnection is not closed.')
             asyncio.ensure_future(self.ws.close(), loop=self.loop)
 
+    async def close_browser(self):
+        await self.send('Browser.close')
+
 
 class Listener(object):
 
@@ -802,6 +805,9 @@ class InvalidRequests(object):
             'Chrome has not connected. `await chrome.connect()` before request.'
         )
 
+    def __bool__(self):
+        return False
+
 
 class Chrome:
 
@@ -810,7 +816,7 @@ class Chrome:
                  port: int = 9222,
                  timeout: int = 2,
                  retry: int = 1,
-                 loop: Any = None):
+                 loop: Optional[asyncio.AbstractEventLoop] = None):
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -818,6 +824,18 @@ class Chrome:
         self.loop = loop
         self.status = 'init'
         self.req = InvalidRequests()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.__del__()
+
+    async def __aenter__(self):
+        await self.connect()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
 
     @property
     def server(self) -> str:
@@ -905,6 +923,17 @@ class Chrome:
         # [{'description': '', 'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4', 'id': '30C16F9165C525A4002E827EDABD48A4', 'title': 'about:blank', 'type': 'page', 'url': 'about:blank', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4'}]
         return self.get_tabs()
 
+    async def kill(self, timeout: Union[int, float] = None,
+                   max_deaths: int = 1) -> None:
+        if self.req:
+            loop = self.req.loop
+            await self.req.close()
+        else:
+            loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            Pool(1), ChromeDaemon.clear_chrome_process, self.port, timeout,
+            max_deaths)
+
     async def new_tab(self, url: str = "") -> Union[Tab, None]:
         api = f'/json/new?{quote_plus(url)}'
         r = await self.get_server(api)
@@ -964,3 +993,11 @@ class Chrome:
 
     def __str__(self):
         return f"<Chrome({self.status}): {self.server}>"
+
+    async def close(self):
+        if self.req:
+            await self.req.close()
+        self.status = 'closed'
+
+    def __del__(self):
+        asyncio.ensure_future(self.close())
