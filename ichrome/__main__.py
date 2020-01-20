@@ -17,7 +17,7 @@ def main():
     disable_image=False,
     start_url="about:blank",
     extra_config=None,
-    max_deaths=2,
+    max_deaths=1,
     timeout=2
     """
     parser = argparse.ArgumentParser()
@@ -37,7 +37,7 @@ def main():
     parser.add_argument("--disable_image", help="disable_image", action="store_true")
     parser.add_argument("--start_url", help="start_url", default="about:blank")
     parser.add_argument("--extra_config", help="extra_config", default="")
-    parser.add_argument("--max_deaths", help="max_deaths", default=2, type=int)
+    parser.add_argument("--max_deaths", help="max_deaths", default=1, type=int)
     parser.add_argument("--timeout", help="timeout", default=2, type=int)
     args = parser.parse_args()
     if args.version:
