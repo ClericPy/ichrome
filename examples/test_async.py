@@ -23,7 +23,7 @@ async def test_examples():
                     host="127.0.0.1", port=port, max_deaths=1) as chromed:
                 chromed.run_forever()
 
-        threading.Thread(target=chrome_daemon).start()
+        threading.Thread(target=chrome_daemon, daemon=False).start()
 
     async_run_chromed()
     # ===================== Chrome Test Cases =====================
@@ -94,11 +94,11 @@ async def test_examples():
         # disable Network
         assert await tab.disable('Network')
         # set new url for this tab, timeout will stop loading
-        assert await tab.set_url('http://python.org', timeout=3)
+        assert await tab.set_url('http://python.org', timeout=2)
         # reload the page
-        assert await tab.reload(timeout=3)
+        assert await tab.reload(timeout=2)
         # here should be press OK by human in 10 secs, get the returned result
-        js_result = await tab.js('document.title', timeout=10)
+        js_result = await tab.js('document.title', timeout=3)
         # {'id': 18, 'result': {'result': {'type': 'string', 'value': 'Welcome to Python.org'}}}
         assert 'result' in js_result
         # inject JS timeout return None
@@ -118,10 +118,13 @@ async def test_examples():
         # {'id': 22, 'result': {'result': {'type': 'undefined'}}}
         assert 'undefined' in str(vue_obj)
         assert await tab.inject_js_url(
-            'https://cdn.staticfile.org/vue/2.6.10/vue.min.js', timeout=5)
+            'https://cdn.staticfile.org/vue/2.6.10/vue.min.js', timeout=3)
         vue_obj = await tab.js('window.Vue')
         # {'id': 23, 'result': {'result': {'type': 'function', 'className': 'Function', 'description': 'function wn(e){this._init(e)}', 'objectId': '{"injectedScriptId":1,"id":1}'}}}
         assert 'Function' in str(vue_obj)
+
+        # update title
+        await tab.js("document.title = 'Press about'")
 
         # wait_response by filter_function
         # {'method': 'Network.responseReceived', 'params': {'requestId': '1000003000.69', 'loaderId': 'D7814CD633EDF3E699523AF0C4E9DB2C', 'timestamp': 207483.974238, 'type': 'Script', 'response': {'url': 'https://www.python.org/static/js/libs/masonry.pkgd.min.js', 'status': 200, 'statusText': '', 'headers': {'date': 'Sat, 05 Oct 2019 08:18:34 GMT', 'via': '1.1 vegur, 1.1 varnish, 1.1 varnish', 'last-modified': 'Tue, 24 Sep 2019 18:31:03 GMT', 'server': 'nginx', 'age': '290358', 'etag': '"5d8a60e7-6643"', 'x-served-by': 'cache-iad2137-IAD, cache-tyo19928-TYO', 'x-cache': 'HIT, HIT', 'content-type': 'application/x-javascript', 'status': '200', 'cache-control': 'max-age=604800, public', 'accept-ranges': 'bytes', 'x-timer': 'S1570263515.866582,VS0,VE0', 'content-length': '26179', 'x-cache-hits': '1, 170'}, 'mimeType': 'application/x-javascript', 'connectionReused': False, 'connectionId': 0, 'remoteIPAddress': '151.101.108.223', 'remotePort': 443, 'fromDiskCache': True, 'fromServiceWorker': False, 'fromPrefetchCache': False, 'encodedDataLength': 0, 'timing': {'requestTime': 207482.696803, 'proxyStart': -1, 'proxyEnd': -1, 'dnsStart': -1, 'dnsEnd': -1, 'connectStart': -1, 'connectEnd': -1, 'sslStart': -1, 'sslEnd': -1, 'workerStart': -1, 'workerReady': -1, 'sendStart': 0.079, 'sendEnd': 0.079, 'pushStart': 0, 'pushEnd': 0, 'receiveHeadersEnd': 0.836}, 'protocol': 'h2', 'securityState': 'unknown'}, 'frameId': 'A2971702DE69F008914F18EAE6514DD5'}}
@@ -130,16 +133,22 @@ async def test_examples():
                 await tab.wait_loading(5)
                 ok = 'These are some' in (
                     await tab.get_response(request))['result']['body']
-                logger.warning(ok)
+                logger.warning(
+                    f'check wait_response callback, get_response {ok}')
                 assert ok
+            else:
+                raise ValueError
 
-        # update title
-        await tab.js("document.title = 'Press about'")
         # listening response
+        def filter_function(r):
+            ok = r['params']['response'][
+                'url'] == 'https://www.python.org/about/'
+            return print('get response url:', r['params']['response']['url'],
+                         ok) or ok
+
         task = asyncio.ensure_future(
             tab.wait_response(
-                filter_function=
-                lambda r: print(r['params']['response']['url']) or r['params']['response']['url'] == 'https://www.python.org/about/',
+                filter_function=filter_function,
                 callback_function=cb,
                 timeout=10),
             loop=tab.loop)
@@ -162,9 +171,9 @@ async def test_examples():
         assert '"A": "1"' in html and '"B": "2"' in html
         # close tab
         await tab.close()
-    ChromeDaemon.clear_chrome_process(port)
-    sep = f'\n{"*" * 80}\n'
-    logger.critical(f'{sep}Congratulations, all test cases succeed.{sep}')
+    await chrome.kill()
+    sep = f'\n{"=" * 80}\n'
+    logger.critical(f'{sep}Congratulations, all test cases passed.{sep}')
 
 
 if __name__ == "__main__":
