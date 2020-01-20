@@ -1,4 +1,4 @@
-# [ichrome - v0.2.0](https://github.com/ClericPy/ichrome)
+# [ichrome - v0.2.3](https://github.com/ClericPy/ichrome)
 
 > A toolkit for using chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+.
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 2018-11-27 23:02:00 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
 
 λ python3 -m ichrome -p 9222 --start_url "http://bing.com" --disable_image
-2018-11-27 23:03:57 INFO  [ichrome] __main__.py(69): ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': 'localhost', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': True, 'start_url': 'http://bing.com', 'extra_config': '', 'max_deaths': 2, 'timeout': 2}
+2018-11-27 23:03:57 INFO  [ichrome] __main__.py(69): ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': 'localhost', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': True, 'start_url': 'http://bing.com', 'extra_config': '', 'max_deaths': 1, 'timeout': 2}
 ```
 
 ### [Async] Operation with asyncio
