@@ -231,7 +231,7 @@ class Tab(object):
     def send(self,
              method,
              timeout=None,
-             callback=None,
+             callback_function=None,
              mute_log=False,
              **kwargs):
         try:
@@ -244,7 +244,8 @@ class Tab(object):
             with self.lock:
                 self.ws.send(json.dumps(request))
             request = {"id": request["id"]}
-            res = self.recv(request, timeout=timeout, callback=callback)
+            res = self.recv(
+                request, timeout=timeout, callback_function=callback_function)
             return res
         except (
                 websocket._exceptions.WebSocketTimeoutException,
@@ -252,7 +253,7 @@ class Tab(object):
         ):
             self.refresh_ws()
 
-    def recv(self, arg, timeout=None, callback=None):
+    def recv(self, arg, timeout=None, callback_function=None):
         """arg type: dict"""
         result = None
         timeout = self.timeout if timeout is None else timeout
@@ -265,7 +266,8 @@ class Tab(object):
             result = None
         finally:
             self._listener.find_future(arg)
-            return callback(result) if callable(callback) else result
+            return callback_function(result) if callable(
+                callback_function) else result
 
     def refresh_ws(self):
         self.ws.close()
@@ -322,30 +324,48 @@ class Tab(object):
                 f"tab.content error {response}:\n{traceback.format_exc()}")
             return ""
 
-    def wait_loading(self, timeout=None, callback=None):
+    def enable(self, name: str):
+        return self.send(f'{name}.enable', timeout=0)
+
+    def disable(self, name: str):
+        return self.send(f'{name}.disable', timeout=0)
+
+    def wait_loading(self, wait_seconds=None, timeout=1,
+                     callback_function=None):
+        self.enable('Page')
         data = self.wait_event(
-            "Page.loadEventFired", timeout=timeout, callback=callback)
+            "Page.loadEventFired",
+            timeout=timeout,
+            wait_seconds=wait_seconds,
+            callback_function=callback_function)
         return data
 
     def wait_event(
             self,
             event="",
             timeout=None,
-            callback=None,
+            callback_function=None,
             filter_function=None,
             wait_seconds=None,
     ):
+        """ensure enable the method first, or will not listen any event."""
         timeout = self.timeout if timeout is None else timeout
         start_time = time.time()
         while 1:
             request = {"method": event}
-            result = self.recv(request, timeout=timeout, callback=callback)
-            if result and not callable(filter_function) or filter_function(
-                    result):
+            result = self.recv(request, timeout=timeout)
+            timeout_break = wait_seconds and time.time(
+            ) - start_time > wait_seconds
+            if timeout_break:
                 break
-            if wait_seconds and time.time() - start_time > wait_seconds:
-                break
-        return result
+            if result:
+                if callable(filter_function):
+                    if filter_function(result):
+                        break
+                else:
+                    break
+        return callback_function(result) if callable(
+            callback_function) else result
 
     def reload(self, timeout=5):
         """
@@ -357,7 +377,7 @@ class Tab(object):
         """
         Navigate the tab to the URL
         """
-        self.send("Page.enable", timeout=0)
+        self.enable('Page')
         start_load_ts = self.now
         if url:
             self._url = url
