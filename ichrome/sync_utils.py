@@ -332,7 +332,7 @@ class Tab(object):
         while 1:
             request = {"method": event}
             result = self.recv(request, timeout=timeout, callback=callback)
-            if not callable(filter_function) or filter_function(result):
+            if result and not callable(filter_function) or filter_function(result):
                 break
             if wait_seconds and time.time() - start_time > wait_seconds:
                 break
