@@ -5,8 +5,8 @@ import json
 import re
 import time
 import traceback
-from asyncio.base_futures import _PENDING
-from asyncio.futures import Future, TimeoutError
+from asyncio.base_futures import _PENDING, TimeoutError
+from asyncio.futures import Future
 from typing import Any, Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
 

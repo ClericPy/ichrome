@@ -1,4 +1,4 @@
-# [ichrome - v0.2.4](https://github.com/ClericPy/ichrome)
+# [ichrome - v0.2.5](https://github.com/ClericPy/ichrome)
 
 > A toolkit for using chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+.
 
