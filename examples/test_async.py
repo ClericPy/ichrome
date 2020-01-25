@@ -36,7 +36,12 @@ async def test_examples():
         assert str(
             e
         ) == 'Chrome has not connected. `await chrome.connect()` before request.'
-    connected = await chrome.connect()
+    # waiting chrome launching
+    for _ in range(5):
+        connected = await chrome.connect()
+        if connected:
+            break
+        await asyncio.sleep(1)
     assert connected is True
     version = await chrome.version
     assert isinstance(version, dict) and 'Browser' in version
