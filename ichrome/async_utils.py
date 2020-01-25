@@ -5,7 +5,7 @@ import json
 import re
 import time
 import traceback
-from asyncio.base_futures import _PENDING, TimeoutError
+from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
 from typing import Any, Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
@@ -21,6 +21,12 @@ from .logs import logger
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
 """
+
+try:
+    from asyncio.futures import TimeoutError
+except ImportError:
+    # for python 3.8
+    from asyncio.exceptions import TimeoutError
 
 
 async def ensure_awaitable_result(callback_function, result):
