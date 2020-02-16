@@ -716,15 +716,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                             url,
                             timeout=None,
                             retry=0,
-                            verify=0,
+                            verify=False,
                             **requests_kwargs) -> Union[dict, None]:
-
         r = await self.req.get(
             url,
             timeout=timeout,
             retry=retry,
             headers={'User-Agent': UA.Chrome},
-            verify=verify,
+            ssl=verify,
             **requests_kwargs)
         if r:
             javascript = r.text
@@ -843,6 +842,7 @@ class Chrome:
 
     async def __aenter__(self):
         await self.connect()
+        return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
