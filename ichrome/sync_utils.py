@@ -225,6 +225,7 @@ class Tab(object):
                     f.set_result(data_str)
             except (
                     websocket._exceptions.WebSocketConnectionClosedException,
+                    websocket._exceptions.WebSocketTimeoutException,
                     ConnectionResetError,
             ):
                 break
