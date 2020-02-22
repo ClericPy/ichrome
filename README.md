@@ -267,11 +267,11 @@ if __name__ == "__main__":
 </details>
 
 
-### [Sync] Advanced Usage (Crawling a special background request.)
+### [Sync] Advanced Usage
 
-> [Archived]
+> [Archived] Sync utils will be hardly maintained, only for simple test usage.
 >
-> Interactive debugging of the original protocol.
+> Listening a special request sent in background.
 
 <details>
     <summary>Code</summary>
