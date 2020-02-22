@@ -7,16 +7,18 @@ import time
 import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
+from functools import partial
 from typing import Any, Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
 
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
-from torequests.dummy import NewResponse, Requests, Pool
+from torequests.dummy import NewResponse, Pool, Requests
 from torequests.utils import UA, quote_plus, urljoin
 
 from .base import ChromeDaemon, Tag
 from .logs import logger
+
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -27,6 +29,23 @@ try:
 except ImportError:
     # for python 3.8
     from asyncio.exceptions import TimeoutError
+
+
+class AsyncChromeDaemon:
+
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    async def __aenter__(self):
+        loop = asyncio.get_running_loop()
+        self.daemon = await loop.run_in_executor(
+            None, partial(ChromeDaemon, *self.args, **self.kwargs))
+        return self.daemon
+
+    async def __aexit__(self, *args, **kwargs):
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.daemon.__exit__)
 
 
 async def ensure_awaitable_result(callback_function, result):
@@ -85,7 +104,7 @@ class _WSConnection(object):
             # tab missing(closed)
             logger.error(f'[missing] {self.tab} missing ws connection. {err}')
         # start the daemon background.
-        return self.tab.ws
+        return self.tab
 
     async def shutdown(self):
         if self.tab.ws and not self.tab.ws.closed:
@@ -846,6 +865,12 @@ class Chrome:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
+
+    async def close_browser(self):
+        tab0 = await self.get_tab(0)
+        if tab0:
+            async with tab0():
+                await tab0.send('Browser.close')
 
     @property
     def server(self) -> str:

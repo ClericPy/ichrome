@@ -10,13 +10,12 @@ os.chdir("..")  # for reuse exiting user data dir
 async def test_examples():
     from ichrome import AsyncChrome as Chrome
     from ichrome import AsyncTab as Tab
-    from ichrome import ChromeDaemon, Tag, logger
+    from ichrome import AsyncChromeDaemon, Tag, logger
     logger.setLevel('DEBUG')
     # Tab._log_all_recv = True
     port = 9222
 
-    with ChromeDaemon(host="127.0.0.1", port=port, max_deaths=1) as chromed:
-        chromed.run_forever(0)
+    async with AsyncChromeDaemon(host="127.0.0.1", port=port, max_deaths=1):
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
             assert str(chrome) == '<Chrome(connected): http://127.0.0.1:9222>'
@@ -172,7 +171,9 @@ async def test_examples():
                 assert '"A": "1"' in html and '"B": "2"' in html
                 # close tab
                 await tab.close()
-            await chrome.kill()
+            # close_browser gracefully, I have no more need of chrome instance
+            await chrome.close_browser()
+            # await chrome.kill()
             sep = f'\n{"=" * 80}\n'
             logger.critical(
                 f'{sep}Congratulations, all test cases passed.{sep}')
