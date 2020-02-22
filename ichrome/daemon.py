@@ -351,7 +351,10 @@ class ChromeDaemon(object):
             procs = cls.get_proc(port)
             for proc in procs:
                 logger.debug(f"killing {proc}, port: {port}")
-                proc.kill()
+                try:
+                    proc.kill()
+                except psutil._exceptions.NoSuchProcess:
+                    continue
             if port:
                 if procs:
                     killed_count += 1

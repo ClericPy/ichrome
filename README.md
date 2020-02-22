@@ -25,7 +25,10 @@
 
 ### Quick Start
 
-> Start the daemon via Python.
+> 1. Start a new chrome daemon process with headless=False
+> 2. Create the connection to exist chrome browser
+> 3. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
+> 4. Close the browser GRACEFULLY instead of killing process
 
 ```python
 from ichrome import AsyncChromeDaemon, AsyncChrome
@@ -35,17 +38,19 @@ import asyncio
 async def main():
     # async with AsyncChromeDaemon() as chromed:
     # If there is no operation for chromed, it can be omitted for short
-    async with AsyncChromeDaemon():
+    async with AsyncChromeDaemon(headless=False):
         # connect to an opened chrome
         async with AsyncChrome() as chrome:
-            tab = await chrome.new_tab(url="https://pypi.org")
+            tab = await chrome.new_tab(url="https://github.com/ClericPy")
             # async with tab() as tab:
             # and `as tab` can be omitted
             async with tab():
-                await tab.wait_loading(3)
-                await tab.js(
-                    "document.write('<h1>Press OK to close the alert.</h1>')")
-                await tab.js('alert("test ok")')
+                await tab.wait_loading(2)
+                await tab.js("document.write('<h1>Document updated.</h1>')")
+                await asyncio.sleep(1)
+                # await tab.js('alert("test ok")')
+                print('output:', await tab.html)
+                # output: <html><head></head><body><h1>Document updated.</h1></body></html>
                 await tab.close()
             # close_browser gracefully, I have no more need of chrome instance
             await chrome.close_browser()
@@ -75,7 +80,7 @@ if __name__ == "__main__":
 > For interactive debugging the raw protocols.
 
 <details>
-    <summary>Demo</summary>
+    <summary>Code</summary>
 
 ```python
 import asyncio
@@ -269,7 +274,7 @@ if __name__ == "__main__":
 > Interactive debugging of the original protocol.
 
 <details>
-    <summary>Demo</summary>
+    <summary>Code</summary>
 
 ```python
 """
