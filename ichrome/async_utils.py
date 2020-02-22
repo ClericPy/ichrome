@@ -18,7 +18,6 @@ from torequests.utils import UA, quote_plus, urljoin
 
 from .base import ChromeDaemon, Tag
 from .logs import logger
-
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -32,15 +31,48 @@ except ImportError:
 
 
 class AsyncChromeDaemon:
+    __doc__ = ChromeDaemon.__doc__
 
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(
+            self,
+            chrome_path=None,
+            host="127.0.0.1",
+            port=9222,
+            headless=False,
+            user_agent=None,
+            proxy=None,
+            user_data_dir=None,
+            disable_image=False,
+            start_url="about:blank",
+            extra_config=None,
+            max_deaths=1,
+            daemon=True,
+            block=False,
+            timeout=2,
+            debug=False,
+    ):
+        self.kwargs = dict(
+            chrome_path=chrome_path,
+            host=host,
+            port=port,
+            headless=headless,
+            user_agent=user_agent,
+            proxy=proxy,
+            user_data_dir=user_data_dir,
+            disable_image=disable_image,
+            start_url=start_url,
+            extra_config=extra_config,
+            max_deaths=max_deaths,
+            daemon=daemon,
+            block=block,
+            timeout=timeout,
+            debug=debug,
+        )
 
     async def __aenter__(self):
         loop = asyncio.get_running_loop()
         self.daemon = await loop.run_in_executor(
-            None, partial(ChromeDaemon, *self.args, **self.kwargs))
+            None, partial(ChromeDaemon, **self.kwargs))
         return self.daemon
 
     async def __aexit__(self, *args, **kwargs):
