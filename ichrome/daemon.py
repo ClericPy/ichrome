@@ -1,8 +1,8 @@
 import os
+import platform
 import socket
 import subprocess
 import threading
-import platform
 import time
 
 import psutil
