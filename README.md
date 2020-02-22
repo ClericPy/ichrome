@@ -1,4 +1,4 @@
-# [ichrome](https://github.com/ClericPy/ichrome) [![PyPI version](https://badge.fury.io/py/ichrome.svg)](https://badge.fury.io/py/ichrome)[![Downloads](https://pepy.tech/badge/ichrome)](https://pepy.tech/project/ichrome)
+# [ichrome](https://github.com/ClericPy/ichrome) [![PyPI](https://img.shields.io/pypi/v/ichrome?style=plastic)](https://pypi.org/project/ichrome/)![PyPI - Wheel](https://img.shields.io/pypi/wheel/ichrome?style=plastic)![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ichrome?style=plastic)![PyPI - Downloads](https://img.shields.io/pypi/dm/ichrome?style=plastic)![PyPI - License](https://img.shields.io/pypi/l/ichrome?style=plastic)
 
 > A toolkit for using chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+.
 
