@@ -23,34 +23,45 @@
 
 ## Examples
 
-### Chrome daemon
+### Quick Start
 
 > Start the daemon via Python.
 
 ```python
-from ichrome import ChromeDaemon, Chrome
+from ichrome import AsyncChromeDaemon, AsyncChrome
+import asyncio
 
 
-def main():
-    with ChromeDaemon() as chromed:
-        # run_forever means auto_restart
-        chromed.run_forever(0)
-        chrome = Chrome()
-        tab = chrome.new_tab(url="https://pypi.org")
-        tab.wait_loading(3)
-        tab.js('alert("test ok")')
-        tab.close()
+async def main():
+    # async with AsyncChromeDaemon() as chromed:
+    # If there is no operation for chromed, it can be omitted for short
+    async with AsyncChromeDaemon():
+        # connect to an opened chrome
+        async with AsyncChrome() as chrome:
+            tab = await chrome.new_tab(url="https://pypi.org")
+            # async with tab() as tab:
+            # and `as tab` can be omitted
+            async with tab():
+                await tab.wait_loading(3)
+                await tab.js(
+                    "document.write('<h1>Press OK to close the alert.</h1>')")
+                await tab.js('alert("test ok")')
+                await tab.close()
+            # close_browser gracefully, I have no more need of chrome instance
+            await chrome.close_browser()
 
 
 if __name__ == "__main__":
-    main()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+
 ```
 
 ### Command Line Usage
 
 > For interactive debugging the raw protocols.
 
-```
+```bash
 λ python3 -m ichrome -s 9222
 2018-11-27 23:01:59 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
 2018-11-27 23:02:00 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
@@ -63,26 +74,22 @@ if __name__ == "__main__":
 
 > For interactive debugging the raw protocols.
 
+<details>
+    <summary>Demo</summary>
+
 ```python
 import asyncio
-import os
-import sys
-
-# use local ichrome module
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-os.chdir("..")  # for reuse exiting user data dir
 
 
 async def test_examples():
     from ichrome import AsyncChrome as Chrome
     from ichrome import AsyncTab as Tab
-    from ichrome import ChromeDaemon, Tag, logger
+    from ichrome import AsyncChromeDaemon, Tag, logger
     logger.setLevel('DEBUG')
     # Tab._log_all_recv = True
     port = 9222
 
-    with ChromeDaemon(host="127.0.0.1", port=port, max_deaths=1) as chromed:
-        chromed.run_forever(0)
+    async with AsyncChromeDaemon(host="127.0.0.1", port=port, max_deaths=1):
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
             assert str(chrome) == '<Chrome(connected): http://127.0.0.1:9222>'
@@ -238,7 +245,9 @@ async def test_examples():
                 assert '"A": "1"' in html and '"B": "2"' in html
                 # close tab
                 await tab.close()
-            await chrome.kill()
+            # close_browser gracefully, I have no more need of chrome instance
+            await chrome.close_browser()
+            # await chrome.kill()
             sep = f'\n{"=" * 80}\n'
             logger.critical(
                 f'{sep}Congratulations, all test cases passed.{sep}')
@@ -247,31 +256,20 @@ async def test_examples():
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(test_examples())
+
 ```
 
-### [Sync] Connect to existing debug port
+</details>
 
-> Connect directly to a remote address.
-
-```python
-from ichrome import Chrome
-
-def main():
-    chrome = Chrome(port=9222)
-    print(chrome.tabs)
-    # [ChromeTab("6EC65C9051697342082642D6615ECDC0", "about:blank", "about:blank", port: 9222)]
-    print(chrome.tabs[0])
-    # Tab(about:blank)
-
-if __name__ == "__main__":
-    main()
-```
 
 ### [Sync] Advanced Usage (Crawling a special background request.)
 
 > [Archived]
 >
 > Interactive debugging of the original protocol.
+
+<details>
+    <summary>Demo</summary>
 
 ```python
 """
@@ -372,17 +370,19 @@ if __name__ == "__main__":
 
 ```
 
+</details>
+
 ### TODO
 
-- [ ] ~~Concurrent support. (gevent, threading, asyncio)~~
+- [x] ~~Concurrent support. (gevent, threading, asyncio)~~
 - [x] Add auto_restart while crash.
 - [ ] Auto remove the zombie tabs with a lifebook.
 - [x] Add some useful examples.
 - [x] Coroutine support (for asyncio).
 - [x] Standard test cases.
-- [ ] HTTP apis server [fastapi].
+- [ ] HTTP apis server console [fastapi].
 - [ ] Complete document.
 
 ## Documentary
 
-- ~~Doc is cheap, read the code... no time to finish it.~~
+- On the way...
