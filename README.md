@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
 ### [Async] Operation with asyncio
 
-> For interactive debugging the raw protocols.
+> For interactive debugging the raw protocols. Stable choice.
 
 <details>
     <summary>Code</summary>
@@ -267,7 +267,7 @@ if __name__ == "__main__":
 </details>
 
 
-### [Sync] Advanced Usage
+### [Sync] Simple Usage
 
 > [Archived] Sync utils will be hardly maintained, only for simple test usage.
 >
