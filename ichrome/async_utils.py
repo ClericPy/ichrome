@@ -7,10 +7,12 @@ import time
 import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
+from base64 import b64decode
 from functools import partial
 from typing import Any, Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
 
+from aiofiles import open as aopen
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.dummy import NewResponse, Pool, Requests
@@ -30,9 +32,11 @@ except ImportError:
     from asyncio.exceptions import TimeoutError
 
 
-def get_value(item, default=None):
+def get_value(item, default=None, path: str = 'result.result.value'):
     try:
-        return item["result"]["result"]["value"]
+        for key in path.split('.'):
+            item = item.__getitem__(key)
+        return item
     except (KeyError, TypeError):
         return default
 
@@ -203,6 +207,20 @@ class Tab(object):
 
     def __eq__(self, other):
         return self.__hash__() == other.__hash__()
+
+    def __str__(self):
+        return f"<Tab({self.status}{self.chrome!r}): {self.tab_id}>"
+
+    def __repr__(self):
+        return f"<Tab({self.status}): {self.tab_id}>"
+
+    def __del__(self):
+        if self.ws and not self.ws.closed:
+            logger.debug('[unclosed] WSConnection is not closed.')
+            asyncio.ensure_future(self.ws.close(), loop=self.loop)
+
+    async def close_browser(self):
+        return await self.send('Browser.close')
 
     @property
     def status(self) -> str:
@@ -816,19 +834,65 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.querySelectorAll(
             cssselector, index=index, action=action, timeout=timeout)
 
-    def __str__(self):
-        return f"<Tab({self.status}{self.chrome!r}): {self.tab_id}>"
+    async def get_element_clip(self, cssselector: str, scale=1):
+        """Element.getBoundingClientRect"""
+        rect = get_value(await
+                         self.js('JSON.stringify(document.querySelector(`' +
+                                 cssselector + '`).getBoundingClientRect())'))
+        if rect:
+            rect = json.loads(rect)
+            rect['scale'] = scale
+            return rect
 
-    def __repr__(self):
-        return f"<Tab({self.status}): {self.tab_id}>"
+    async def screenshot_element(self,
+                                 cssselector: str,
+                                 scale=1,
+                                 format: str = 'png',
+                                 quality: int = 100,
+                                 fromSurface: bool = True,
+                                 save_path=None):
+        clip = await self.get_element_clip(cssselector, scale=scale)
+        return await self.screenshot(
+            format=format,
+            quality=quality,
+            clip=clip,
+            fromSurface=fromSurface,
+            save_path=save_path)
 
-    def __del__(self):
-        if self.ws and not self.ws.closed:
-            logger.debug('[unclosed] WSConnection is not closed.')
-            asyncio.ensure_future(self.ws.close(), loop=self.loop)
+    async def screenshot(self,
+                         format: str = 'png',
+                         quality: int = 100,
+                         clip: dict = None,
+                         fromSurface: bool = True,
+                         save_path=None,
+                         timeout=None):
+        """Page.captureScreenshot.
 
-    async def close_browser(self):
-        await self.send('Browser.close')
+        :param format: Image compression format (defaults to png)., defaults to 'png'
+        :type format: str, optional
+        :param quality: Compression quality from range [0..100], defaults to None. (jpeg only).
+        :type quality: int, optional
+        :param clip: Capture the screenshot of a given region only. defaults to None, means whole page.
+        :type clip: dict, optional
+        :param fromSurface: Capture the screenshot from the surface, rather than the view. Defaults to true.
+        :type fromSurface: bool, optional
+
+        clip's keys: x, y, width, height, scale"""
+        await self.enable('Page')
+        kwargs = dict(format=format, quality=quality, fromSurface=fromSurface)
+        if clip:
+            kwargs['clip'] = clip
+        result = await self.send(
+            'Page.captureScreenshot',
+            timeout=timeout,
+            callback_function=None,
+            check_duplicated_on_off=False,
+            **kwargs)
+        base64_img = get_value(result, None, path='result.data')
+        if save_path and base64_img:
+            async with aopen(save_path, 'wb') as f:
+                await f.write(b64decode(base64_img))
+        return base64_img
 
 
 class Listener(object):
