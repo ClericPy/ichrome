@@ -1,5 +1,4 @@
 import argparse
-import os
 import sys
 
 from ichrome import ChromeDaemon, __version__, logger
@@ -22,19 +21,21 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-V", "--version", help="show ichrome version info", action="store_true"
-    )
+        "-V",
+        "--version",
+        help="show ichrome version info",
+        action="store_true")
     parser.add_argument("-c", "--chrome_path", help="chrome_path", default="")
     parser.add_argument("--host", help="host", default="localhost")
     parser.add_argument("-p", "--port", help="port", default=9222, type=int)
     parser.add_argument(
-        "--headless", help="is_headless", default=False, action="store_true"
-    )
-    parser.add_argument("-s", "--shutdown",help="shutdown the port", type=int)
+        "--headless", help="is_headless", default=False, action="store_true")
+    parser.add_argument("-s", "--shutdown", help="shutdown the port", type=int)
     parser.add_argument("--user_agent", help="user_agent", default="")
     parser.add_argument("--proxy", help="proxy", default="")
     parser.add_argument("--user_data_dir", help="user_data_dir", default=None)
-    parser.add_argument("--disable_image", help="disable_image", action="store_true")
+    parser.add_argument(
+        "--disable_image", help="disable_image", action="store_true")
     parser.add_argument("--start_url", help="start_url", default="about:blank")
     parser.add_argument("--extra_config", help="extra_config", default="")
     parser.add_argument("--max_deaths", help="max_deaths", default=1, type=int)
@@ -45,7 +46,8 @@ def main():
         return
     if args.shutdown:
         logger.setLevel(1)
-        ChromeDaemon.clear_chrome_process(args.shutdown, max_deaths=args.max_deaths)
+        ChromeDaemon.clear_chrome_process(
+            args.shutdown, max_deaths=args.max_deaths)
         return
     kwargs = {"daemon": True, "block": True}
     kwargs.update(
@@ -63,7 +65,7 @@ def main():
         timeout=args.timeout,
     )
     logger.info("ChromeDaemon cmd args: %s" % kwargs)
-    chromed = ChromeDaemon(**kwargs)
+    ChromeDaemon(**kwargs)
 
 
 if __name__ == "__main__":
