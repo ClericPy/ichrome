@@ -169,6 +169,14 @@ async def test_examples():
                 await tab.set_url('http://httpbin.org/get')
                 html = await tab.get_html()
                 assert '"A": "1"' in html and '"B": "2"' in html
+                # screenshot
+                await tab.set_url('http://python.org')
+                await tab.wait_loading(1)
+                screen = await tab.screenshot()
+                part = await tab.screenshot_element('.site-headline')
+                assert screen
+                assert part
+                assert len(screen) > len(part)
                 # close tab
                 await tab.close()
             # close_browser gracefully, I have no more need of chrome instance
