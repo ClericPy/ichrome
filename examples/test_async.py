@@ -163,10 +163,20 @@ async def test_examples():
                 # test set_ua
                 await tab.set_ua('Test UA')
                 await tab.add_js_onload(source='window.title=123456789')
-                await tab.set_url('http://httpbin.org/get')
+                await tab.set_url('http://httpbin.org/forms/post')
                 assert (await tab.get_variable('window.title')) == 123456789
                 html = await tab.get_html()
-                assert '"User-Agent": "Test UA"' in html
+                assert 'Customer name:' in html
+                # test double click some positions. test keyboard_send input
+                rect = await tab.get_bounding_client_rect('[type="email"]')
+                await tab.mouse_click(rect['left'], rect['top'], count=1)
+                await tab.keyboard_send(text='1')
+                await tab.keyboard_send(text='2')
+                await tab.keyboard_send(text='3')
+                await tab.mouse_click(rect['left'], rect['top'], count=2)
+                selection = await tab.get_variable(
+                    'window.getSelection().toString()')
+                assert selection == '123'
                 # test set_headers
                 await tab.set_headers({'A': '1', 'B': '2'})
                 await tab.set_url('http://httpbin.org/get')

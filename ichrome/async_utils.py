@@ -839,6 +839,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             except (TypeError, KeyError, json.JSONDecodeError):
                 pass
 
+    async def get_bounding_client_rect(self, cssselector: str, scale=1):
+        return await self.get_element_clip(cssselector=cssselector, scale=scale)
+
     async def screenshot_element(self,
                                  cssselector: str,
                                  scale=1,
@@ -896,13 +899,87 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def get_variable(self, name: str):
         # using JSON to keep value type
-        result = get_value(await self.js(
-            'JSON.stringify({"%s": %s})' % (name.replace('"', '\\"'), name)))
-        if result:
+        result = await self.js('JSON.stringify({"%s": %s})' % ('key', name))
+        value = get_value(result)
+        if value:
             try:
-                return json.loads(result)[name]
+                return json.loads(value)['key']
             except (TypeError, KeyError, json.JSONDecodeError):
-                pass
+                logger.debug(f'get_variable failed: {result}')
+
+    async def mouse_move(self, x, y, timeout=None):
+        await self.enable('Input')
+        return await self.send(
+            'Input.dispatchMouseEvent',
+            type="mouseMoved",
+            x=x,
+            y=y,
+            timeout=timeout)
+
+    async def mouse_click(self, x, y, button='left', count=1, timeout=None):
+        await self.mouse_press(
+            x=x, y=y, button=button, count=count, timeout=timeout)
+        return await self.mouse_release(
+            x=x, y=y, button=button, count=1, timeout=timeout)
+
+    async def mouse_press(self, x, y, button='left', count=0, timeout=None):
+        return await self.send(
+            'Input.dispatchMouseEvent',
+            type="mousePressed",
+            x=x,
+            y=y,
+            button=button,
+            clickCount=count,
+            timeout=timeout)
+
+    async def mouse_release(self, x, y, button='left', count=0, timeout=None):
+        return await self.send(
+            'Input.dispatchMouseEvent',
+            type="mouseReleased",
+            x=x,
+            y=y,
+            button=button,
+            clickCount=count,
+            timeout=timeout)
+
+    async def drag(self,
+                   start_x,
+                   start_y,
+                   target_x,
+                   target_y,
+                   button='left',
+                   timeout=None):
+        await self.enable('Input')
+        await self.mouse_press(start_x, start_y, button=button, timeout=timeout)
+        await self.mouse_move(
+            target_x, target_y, button=button, timeout=timeout)
+        await self.mouse_release(
+            target_x, target_y, button=button, timeout=timeout)
+
+    async def drag_rel(self,
+                       start_x,
+                       start_y,
+                       offset_x,
+                       offset_y,
+                       button='left',
+                       timeout=None):
+        return await self.drag(
+            start_x,
+            start_y,
+            start_x + offset_x,
+            start_y + offset_y,
+            button=button,
+            timeout=timeout)
+
+    async def keyboard_send(self, type='char', timeout=None, **kwargs):
+        '''type: keyDown, keyUp, rawKeyDown, char.
+
+        kwargs:
+            text, unmodifiedText, keyIdentifier, code, key...
+
+        https://chromedevtools.github.io/devtools-protocol/tot/Input#method-dispatchMouseEvent'''
+        return await self.send(
+            'Input.dispatchKeyEvent', type=type, timeout=timeout, **kwargs)
 
 
 class Listener(object):
@@ -1081,7 +1158,7 @@ class Chrome:
 
     @property
     def tabs(self) -> Awaitable[List[Tab]]:
-        """`await self.tabs`"""
+        """`await self.tabs`. tabs[0] is the current activated tab"""
         # [{'description': '', 'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4', 'id': '30C16F9165C525A4002E827EDABD48A4', 'title': 'about:blank', 'type': 'page', 'url': 'about:blank', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4'}]
         return self.get_tabs()
 
