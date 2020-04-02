@@ -1,4 +1,4 @@
 psutil
-torequests
+torequests>=4.8.20
 websocket-client
 aiofiles
