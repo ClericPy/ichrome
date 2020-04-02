@@ -832,9 +832,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                          self.js('JSON.stringify(document.querySelector(`' +
                                  cssselector + '`).getBoundingClientRect())'))
         if rect:
-            rect = json.loads(rect)
-            rect['scale'] = scale
-            return rect
+            try:
+                rect = json.loads(rect)
+                rect['scale'] = scale
+                return rect
+            except (TypeError, KeyError, json.JSONDecodeError):
+                pass
 
     async def screenshot_element(self,
                                  cssselector: str,
@@ -896,7 +899,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         result = get_value(await self.js(
             'JSON.stringify({"%s": %s})' % (name.replace('"', '\\"'), name)))
         if result:
-            return json.loads(result)[name]
+            try:
+                return json.loads(result)[name]
+            except (TypeError, KeyError, json.JSONDecodeError):
+                pass
 
 
 class Listener(object):
