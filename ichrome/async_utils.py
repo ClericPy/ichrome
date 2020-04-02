@@ -167,6 +167,7 @@ class _WSConnection(object):
 
 class Tab(object):
     _log_all_recv = False
+    get_value = get_value
 
     def __init__(self,
                  tab_id=None,
@@ -367,7 +368,6 @@ class Tab(object):
             return None
         try:
             timeout = self.timeout if timeout is None else timeout
-
             logger.debug(f"[send] {self!r} {request}")
             await self.ws.send_json(request)
             if timeout <= 0:
@@ -434,6 +434,11 @@ class Tab(object):
         """clearBrowserCookies"""
         await self.enable('Network')
         return await self.send("Network.clearBrowserCookies", timeout=timeout)
+
+    async def clear_browser_cache(self, timeout: Union[int, float] = None):
+        """clearBrowserCache"""
+        await self.enable('Network')
+        return await self.send("Network.clearBrowserCache", timeout=timeout)
 
     async def delete_cookies(self,
                              name: str,
@@ -543,6 +548,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     def current_title(self) -> Awaitable[str]:
         return self.get_current_title()
 
+    @property
+    def current_html(self) -> Awaitable[str]:
+        return self.html
+
     async def get_html(self) -> str:
         """return html from `document.documentElement.outerHTML`"""
         response = None
@@ -599,11 +608,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 break
         return await ensure_awaitable_result(callback_function, result)
 
-    async def wait_response(
-            self,
-            filter_function: Optional[Callable] = None,
-            callback_function: Optional[Callable] = None,
-            timeout: Union[int, float] = None) -> Union[str, None, Any]:
+    async def wait_response(self,
+                            filter_function: Optional[Callable] = None,
+                            callback_function: Optional[Callable] = None,
+                            timeout: Union[int, float] = None):
         '''wait a special response filted by function, then run the callback_function'''
         await self.enable('Network')
         request_dict = await self.wait_event(
@@ -617,9 +625,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 return callback_function(request_dict)
         return request_dict
 
-    async def wait_request(self,
-                           request_dict: dict,
-                           timeout: Union[int, float] = None):
+    async def wait_request_loading(self,
+                                   request_dict: dict,
+                                   timeout: Union[int, float] = None):
 
         def request_id_filter(event):
             return event["params"]["requestId"] == request_id
@@ -636,7 +644,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             timeout: Union[int, float] = None,
     ) -> Union[dict, None]:
         '''{'id': 30, 'result': {'body': 'xxxxxxxxx', 'base64Encoded': False}}.
-        WARNING: some ajax request need to wait_request before loadingFinished.'''
+        WARNING: some ajax request need to wait_request_loading before loadingFinished.'''
         if request_dict is None:
             return None
         await self.enable('Network')
@@ -894,6 +902,18 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 await f.write(b64decode(base64_img))
         return base64_img
 
+    async def add_js_onload(self, source, **kwargs):
+        '''Page.addScriptToEvaluateOnNewDocument'''
+        return await self.send(
+            'Page.addScriptToEvaluateOnNewDocument', source=source, **kwargs)
+
+    async def get_variable(self, name: str):
+        # using JSON to keep value type
+        result = get_value(await self.js(
+            'JSON.stringify({"%s": %s})' % (name.replace('"', '\\"'), name)))
+        if result:
+            return json.loads(result)[name]
+
 
 class Listener(object):
 
@@ -954,6 +974,7 @@ class InvalidRequests(object):
 
 
 class Chrome:
+    get_value = get_value
 
     def __init__(self,
                  host: str = "127.0.0.1",
