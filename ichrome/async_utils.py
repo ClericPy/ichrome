@@ -7,10 +7,12 @@ import time
 import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
+from base64 import b64decode
 from functools import partial
 from typing import Any, Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
 
+from aiofiles import open as aopen
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.dummy import NewResponse, Pool, Requests
@@ -28,6 +30,15 @@ try:
 except ImportError:
     # for python 3.8
     from asyncio.exceptions import TimeoutError
+
+
+def get_value(item, default=None, path: str = 'result.result.value'):
+    try:
+        for key in path.split('.'):
+            item = item.__getitem__(key)
+        return item
+    except (KeyError, TypeError):
+        return default
 
 
 class AsyncChromeDaemon:
@@ -156,6 +167,7 @@ class _WSConnection(object):
 
 class Tab(object):
     _log_all_recv = False
+    get_value = get_value
 
     def __init__(self,
                  tab_id=None,
@@ -196,6 +208,20 @@ class Tab(object):
 
     def __eq__(self, other):
         return self.__hash__() == other.__hash__()
+
+    def __str__(self):
+        return f"<Tab({self.status}{self.chrome!r}): {self.tab_id}>"
+
+    def __repr__(self):
+        return f"<Tab({self.status}): {self.tab_id}>"
+
+    def __del__(self):
+        if self.ws and not self.ws.closed:
+            logger.debug('[unclosed] WSConnection is not closed.')
+            asyncio.ensure_future(self.ws.close(), loop=self.loop)
+
+    async def close_browser(self):
+        return await self.send('Browser.close')
 
     @property
     def status(self) -> str:
@@ -342,7 +368,6 @@ class Tab(object):
             return None
         try:
             timeout = self.timeout if timeout is None else timeout
-
             logger.debug(f"[send] {self!r} {request}")
             await self.ws.send_json(request)
             if timeout <= 0:
@@ -409,6 +434,11 @@ class Tab(object):
         """clearBrowserCookies"""
         await self.enable('Network')
         return await self.send("Network.clearBrowserCookies", timeout=timeout)
+
+    async def clear_browser_cache(self, timeout: Union[int, float] = None):
+        """clearBrowserCache"""
+        await self.enable('Network')
+        return await self.send("Network.clearBrowserCache", timeout=timeout)
 
     async def delete_cookies(self,
                              name: str,
@@ -495,42 +525,29 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             **kwargs)
 
     async def get_current_url(self) -> str:
-        result = await self.js("window.location.href")
-        if result:
-            url = result["result"]["result"]["value"]
-        else:
-            url = ''
-        return url
+        url = await self.get_variable("window.location.href")
+        return url or ""
 
     @property
     def current_url(self):
         return self.get_current_url()
 
     async def get_current_title(self) -> str:
-        result = await self.js("document.title")
-        if result:
-            title = result["result"]["result"]["value"]
-        else:
-            title = ''
-        return title
+        title = await self.get_variable("document.title")
+        return title or ""
 
     @property
     def current_title(self) -> Awaitable[str]:
         return self.get_current_title()
 
+    @property
+    def current_html(self) -> Awaitable[str]:
+        return self.html
+
     async def get_html(self) -> str:
         """return html from `document.documentElement.outerHTML`"""
-        response = None
-        try:
-            response = await self.js("document.documentElement.outerHTML")
-            if not response:
-                return ""
-            value = response["result"]["result"]["value"]
-            return value
-        except (KeyError, json.decoder.JSONDecodeError):
-            logger.error(
-                f"tab.content error {response}:\n{traceback.format_exc()}")
-            return ""
+        html = await self.get_variable('document.documentElement.outerHTML')
+        return html or ""
 
     @property
     def html(self) -> Awaitable[str]:
@@ -575,11 +592,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 break
         return await ensure_awaitable_result(callback_function, result)
 
-    async def wait_response(
-            self,
-            filter_function: Optional[Callable] = None,
-            callback_function: Optional[Callable] = None,
-            timeout: Union[int, float] = None) -> Union[str, None, Any]:
+    async def wait_response(self,
+                            filter_function: Optional[Callable] = None,
+                            callback_function: Optional[Callable] = None,
+                            timeout: Union[int, float] = None):
         '''wait a special response filted by function, then run the callback_function'''
         await self.enable('Network')
         request_dict = await self.wait_event(
@@ -593,12 +609,26 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 return callback_function(request_dict)
         return request_dict
 
+    async def wait_request_loading(self,
+                                   request_dict: dict,
+                                   timeout: Union[int, float] = None):
+
+        def request_id_filter(event):
+            return event["params"]["requestId"] == request_id
+
+        request_id = request_dict["params"]["requestId"]
+        return await self.wait_event(
+            'Network.loadingFinished',
+            timeout=timeout,
+            filter_function=request_id_filter)
+
     async def get_response(
             self,
             request_dict: dict,
             timeout: Union[int, float] = None,
     ) -> Union[dict, None]:
-        '''{'id': 30, 'result': {'body': 'xxxxxxxxx', 'base64Encoded': False}}'''
+        '''{'id': 30, 'result': {'body': 'xxxxxxxxx', 'base64Encoded': False}}.
+        WARNING: some ajax request need to wait_request_loading before loadingFinished.'''
         if request_dict is None:
             return None
         await self.enable('Network')
@@ -747,7 +777,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         response = None
         try:
             response = (await self.js(javascript, timeout=timeout)) or {}
-            response_items_str = response["result"]["result"]["value"]
+            response_items_str = get_value(response, '')
             items = json.loads(response_items_str)
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
@@ -796,19 +826,77 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.querySelectorAll(
             cssselector, index=index, action=action, timeout=timeout)
 
-    def __str__(self):
-        return f"<Tab({self.status}{self.chrome!r}): {self.tab_id}>"
+    async def get_element_clip(self, cssselector: str, scale=1):
+        """Element.getBoundingClientRect"""
+        rect = get_value(await
+                         self.js('JSON.stringify(document.querySelector(`' +
+                                 cssselector + '`).getBoundingClientRect())'))
+        if rect:
+            rect = json.loads(rect)
+            rect['scale'] = scale
+            return rect
 
-    def __repr__(self):
-        return f"<Tab({self.status}): {self.tab_id}>"
+    async def screenshot_element(self,
+                                 cssselector: str,
+                                 scale=1,
+                                 format: str = 'png',
+                                 quality: int = 100,
+                                 fromSurface: bool = True,
+                                 save_path=None):
+        clip = await self.get_element_clip(cssselector, scale=scale)
+        return await self.screenshot(
+            format=format,
+            quality=quality,
+            clip=clip,
+            fromSurface=fromSurface,
+            save_path=save_path)
 
-    def __del__(self):
-        if self.ws and not self.ws.closed:
-            logger.debug('[unclosed] WSConnection is not closed.')
-            asyncio.ensure_future(self.ws.close(), loop=self.loop)
+    async def screenshot(self,
+                         format: str = 'png',
+                         quality: int = 100,
+                         clip: dict = None,
+                         fromSurface: bool = True,
+                         save_path=None,
+                         timeout=None):
+        """Page.captureScreenshot.
 
-    async def close_browser(self):
-        await self.send('Browser.close')
+        :param format: Image compression format (defaults to png)., defaults to 'png'
+        :type format: str, optional
+        :param quality: Compression quality from range [0..100], defaults to None. (jpeg only).
+        :type quality: int, optional
+        :param clip: Capture the screenshot of a given region only. defaults to None, means whole page.
+        :type clip: dict, optional
+        :param fromSurface: Capture the screenshot from the surface, rather than the view. Defaults to true.
+        :type fromSurface: bool, optional
+
+        clip's keys: x, y, width, height, scale"""
+        await self.enable('Page')
+        kwargs = dict(format=format, quality=quality, fromSurface=fromSurface)
+        if clip:
+            kwargs['clip'] = clip
+        result = await self.send(
+            'Page.captureScreenshot',
+            timeout=timeout,
+            callback_function=None,
+            check_duplicated_on_off=False,
+            **kwargs)
+        base64_img = get_value(result, None, path='result.data')
+        if save_path and base64_img:
+            async with aopen(save_path, 'wb') as f:
+                await f.write(b64decode(base64_img))
+        return base64_img
+
+    async def add_js_onload(self, source, **kwargs):
+        '''Page.addScriptToEvaluateOnNewDocument'''
+        return await self.send(
+            'Page.addScriptToEvaluateOnNewDocument', source=source, **kwargs)
+
+    async def get_variable(self, name: str):
+        # using JSON to keep value type
+        result = get_value(await self.js(
+            'JSON.stringify({"%s": %s})' % (name.replace('"', '\\"'), name)))
+        if result:
+            return json.loads(result)[name]
 
 
 class Listener(object):
@@ -870,6 +958,7 @@ class InvalidRequests(object):
 
 
 class Chrome:
+    get_value = get_value
 
     def __init__(self,
                  host: str = "127.0.0.1",

@@ -125,13 +125,14 @@ async def test_examples():
 
                 # update title
                 await tab.js("document.title = 'Press about'")
+                assert (await tab.current_title) == 'Press about'
 
                 # wait_response by filter_function
                 # {'method': 'Network.responseReceived', 'params': {'requestId': '1000003000.69', 'loaderId': 'D7814CD633EDF3E699523AF0C4E9DB2C', 'timestamp': 207483.974238, 'type': 'Script', 'response': {'url': 'https://www.python.org/static/js/libs/masonry.pkgd.min.js', 'status': 200, 'statusText': '', 'headers': {'date': 'Sat, 05 Oct 2019 08:18:34 GMT', 'via': '1.1 vegur, 1.1 varnish, 1.1 varnish', 'last-modified': 'Tue, 24 Sep 2019 18:31:03 GMT', 'server': 'nginx', 'age': '290358', 'etag': '"5d8a60e7-6643"', 'x-served-by': 'cache-iad2137-IAD, cache-tyo19928-TYO', 'x-cache': 'HIT, HIT', 'content-type': 'application/x-javascript', 'status': '200', 'cache-control': 'max-age=604800, public', 'accept-ranges': 'bytes', 'x-timer': 'S1570263515.866582,VS0,VE0', 'content-length': '26179', 'x-cache-hits': '1, 170'}, 'mimeType': 'application/x-javascript', 'connectionReused': False, 'connectionId': 0, 'remoteIPAddress': '151.101.108.223', 'remotePort': 443, 'fromDiskCache': True, 'fromServiceWorker': False, 'fromPrefetchCache': False, 'encodedDataLength': 0, 'timing': {'requestTime': 207482.696803, 'proxyStart': -1, 'proxyEnd': -1, 'dnsStart': -1, 'dnsEnd': -1, 'connectStart': -1, 'connectEnd': -1, 'sslStart': -1, 'sslEnd': -1, 'workerStart': -1, 'workerReady': -1, 'sendStart': 0.079, 'sendEnd': 0.079, 'pushStart': 0, 'pushEnd': 0, 'receiveHeadersEnd': 0.836}, 'protocol': 'h2', 'securityState': 'unknown'}, 'frameId': 'A2971702DE69F008914F18EAE6514DD5'}}
                 async def cb(request):
                     if request:
-                        await tab.wait_loading(5)
-                        ok = 'These are some' in (
+                        await tab.wait_request_loading(request, 5)
+                        ok = 'Masonry PACKAGED' in (
                             await tab.get_response(request))['result']['body']
                         logger.warning(
                             f'check wait_response callback, get_response {ok}')
@@ -141,8 +142,8 @@ async def test_examples():
 
                 # listening response
                 def filter_function(r):
-                    ok = r['params']['response'][
-                        'url'] == 'https://www.python.org/about/'
+                    ok = 'www.python.org/static/js/libs/masonry.pkgd.min.js' in r[
+                        'params']['response']['url']
                     return print('get response url:',
                                  r['params']['response']['url'], ok) or ok
 
@@ -161,7 +162,9 @@ async def test_examples():
                 # {'id': 30, 'result': {'body': '<!doctype html>\n<!--[if lt IE 7]>   <html class="no-js ie6 lt-ie...', 'base64Encoded': False}}
                 # test set_ua
                 await tab.set_ua('Test UA')
+                await tab.add_js_onload(source='window.title=123456789')
                 await tab.set_url('http://httpbin.org/get')
+                assert (await tab.get_variable('window.title')) == 123456789
                 html = await tab.get_html()
                 assert '"User-Agent": "Test UA"' in html
                 # test set_headers
@@ -169,6 +172,16 @@ async def test_examples():
                 await tab.set_url('http://httpbin.org/get')
                 html = await tab.get_html()
                 assert '"A": "1"' in html and '"B": "2"' in html
+                # screenshot
+                await tab.set_url('http://python.org')
+                await tab.wait_loading(1)
+                screen = await tab.screenshot()
+                part = await tab.screenshot_element('.site-headline')
+                assert screen
+                assert part
+                assert len(screen) > len(part)
+                # clear cache
+                assert await tab.clear_browser_cache()
                 # close tab
                 await tab.close()
             # close_browser gracefully, I have no more need of chrome instance
