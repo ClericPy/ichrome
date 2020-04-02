@@ -30,6 +30,13 @@ except ImportError:
     from asyncio.exceptions import TimeoutError
 
 
+def get_value(item, default=None):
+    try:
+        return item["result"]["result"]["value"]
+    except (KeyError, TypeError):
+        return default
+
+
 class AsyncChromeDaemon:
     __doc__ = ChromeDaemon.__doc__
 
@@ -497,7 +504,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def get_current_url(self) -> str:
         result = await self.js("window.location.href")
         if result:
-            url = result["result"]["result"]["value"]
+            url = get_value(result, '')
         else:
             url = ''
         return url
@@ -509,7 +516,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def get_current_title(self) -> str:
         result = await self.js("document.title")
         if result:
-            title = result["result"]["result"]["value"]
+            title = get_value(result, '')
         else:
             title = ''
         return title
@@ -525,8 +532,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             response = await self.js("document.documentElement.outerHTML")
             if not response:
                 return ""
-            value = response["result"]["result"]["value"]
-            return value
+            return get_value(response, '')
         except (KeyError, json.decoder.JSONDecodeError):
             logger.error(
                 f"tab.content error {response}:\n{traceback.format_exc()}")
@@ -593,12 +599,26 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 return callback_function(request_dict)
         return request_dict
 
+    async def wait_request(self,
+                           request_dict: dict,
+                           timeout: Union[int, float] = None):
+
+        def request_id_filter(event):
+            return event["params"]["requestId"] == request_id
+
+        request_id = request_dict["params"]["requestId"]
+        return await self.wait_event(
+            'Network.loadingFinished',
+            timeout=timeout,
+            filter_function=request_id_filter)
+
     async def get_response(
             self,
             request_dict: dict,
             timeout: Union[int, float] = None,
     ) -> Union[dict, None]:
-        '''{'id': 30, 'result': {'body': 'xxxxxxxxx', 'base64Encoded': False}}'''
+        '''{'id': 30, 'result': {'body': 'xxxxxxxxx', 'base64Encoded': False}}.
+        WARNING: some ajax request need to wait_request before loadingFinished.'''
         if request_dict is None:
             return None
         await self.enable('Network')
@@ -747,7 +767,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         response = None
         try:
             response = (await self.js(javascript, timeout=timeout)) or {}
-            response_items_str = response["result"]["result"]["value"]
+            response_items_str = get_value(response, '')
             items = json.loads(response_items_str)
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
