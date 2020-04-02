@@ -525,24 +525,16 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             **kwargs)
 
     async def get_current_url(self) -> str:
-        result = await self.js("window.location.href")
-        if result:
-            url = get_value(result, '')
-        else:
-            url = ''
-        return url
+        url = await self.get_variable("window.location.href")
+        return url or ""
 
     @property
     def current_url(self):
         return self.get_current_url()
 
     async def get_current_title(self) -> str:
-        result = await self.js("document.title")
-        if result:
-            title = get_value(result, '')
-        else:
-            title = ''
-        return title
+        title = await self.get_variable("document.title")
+        return title or ""
 
     @property
     def current_title(self) -> Awaitable[str]:
@@ -554,16 +546,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def get_html(self) -> str:
         """return html from `document.documentElement.outerHTML`"""
-        response = None
-        try:
-            response = await self.js("document.documentElement.outerHTML")
-            if not response:
-                return ""
-            return get_value(response, '')
-        except (KeyError, json.decoder.JSONDecodeError):
-            logger.error(
-                f"tab.content error {response}:\n{traceback.format_exc()}")
-            return ""
+        html = await self.get_variable('document.documentElement.outerHTML')
+        return html or ""
 
     @property
     def html(self) -> Awaitable[str]:
