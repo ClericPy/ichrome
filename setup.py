@@ -5,7 +5,8 @@ from ichrome import __version__
 linux:
 rm -rf "dist/*";rm -rf "build/*";python3 setup.py bdist_wheel;twine upload "dist/*;rm -rf "dist/*";rm -rf "build/*""
 win32-git-bash:
-rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -rf dist;rm -rf build;rm -rf ichrome.egg-info
+rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*"
+rm -rf dist;rm -rf build;rm -rf ichrome.egg-info
 """
 version = __version__
 if sys.version_info < (3, 7):
