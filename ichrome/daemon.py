@@ -270,19 +270,20 @@ class ChromeDaemon(object):
             raise IOError(
                 f"{self} run_forever failed after shutdown({ttime(self._shutdown)})."
             )
-        if not self._daemon_thread:
-            self._daemon_thread = threading.Thread(
-                target=self._daemon,
-                kwargs={"interval": interval},
-                daemon=True,
-            )
-            self._daemon_thread.start()
         logger.debug(
             f"{self} run_forever(block={block}, interval={interval}, max_deaths={self.max_deaths})."
         )
         if block:
-            self._daemon_thread.join()
-        return self._daemon_thread
+            return self._daemon(interval=interval)
+        else:
+            if not self._daemon_thread:
+                self._daemon_thread = threading.Thread(
+                    target=self._daemon,
+                    kwargs={"interval": interval},
+                    daemon=True,
+                )
+                self._daemon_thread.start()
+            return self._daemon_thread
 
     def kill(self, force=False):
         self.ready = False
