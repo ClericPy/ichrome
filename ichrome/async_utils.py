@@ -32,7 +32,9 @@ except ImportError:
     from asyncio.exceptions import TimeoutError
 
 
-def get_value(item, default=None, path: str = 'result.result.value'):
+def get_data_value(item, default=None, path: str = 'result.result.value'):
+    if not item:
+        return None
     try:
         for key in path.split('.'):
             item = item.__getitem__(key)
@@ -167,7 +169,7 @@ class _WSConnection(object):
 
 class Tab(object):
     _log_all_recv = False
-    get_value = get_value
+    get_data_value = get_data_value
 
     def __init__(self,
                  tab_id=None,
@@ -377,7 +379,7 @@ class Tab(object):
             msg = await self.recv(
                 event, timeout=timeout, callback_function=callback_function)
             return msg
-        except (ClientError, WebSocketError) as err:
+        except (ClientError, WebSocketError, TypeError) as err:
             logger.error(f'{self} [send] msg failed for {err}')
             return None
 
@@ -575,20 +577,23 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
         timeout = self.timeout if timeout is None else timeout
         start_time = time.time()
+        result = None
         while 1:
             if time.time() - start_time > timeout:
                 break
             # avoid same method but different event occured, use filter_function
             event = {"method": event_name}
-            result = await self.recv(event, timeout=timeout)
+            _result = await self.recv(event, timeout=timeout)
             if filter_function:
                 try:
-                    ok = await ensure_awaitable_result(filter_function, result)
+                    ok = await ensure_awaitable_result(filter_function, _result)
                     if ok:
+                        result = _result
                         break
                 except Exception:
                     continue
-            elif result:
+            elif _result:
+                result = _result
                 break
         return await ensure_awaitable_result(callback_function, result)
 
@@ -602,12 +607,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             "Network.responseReceived",
             filter_function=filter_function,
             timeout=timeout)
-        if request_dict and callback_function:
-            if asyncio.iscoroutinefunction(callback_function):
-                return await callback_function(request_dict)
-            elif callable(callback_function):
-                return callback_function(request_dict)
-        return request_dict
+        return await ensure_awaitable_result(callback_function, request_dict)
 
     async def wait_request_loading(self,
                                    request_dict: dict,
@@ -777,7 +777,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         response = None
         try:
             response = (await self.js(javascript, timeout=timeout)) or {}
-            response_items_str = get_value(response, '')
+            response_items_str = get_data_value(response, '')
             items = json.loads(response_items_str)
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
@@ -828,9 +828,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def get_element_clip(self, cssselector: str, scale=1):
         """Element.getBoundingClientRect"""
-        rect = get_value(await
-                         self.js('JSON.stringify(document.querySelector(`' +
-                                 cssselector + '`).getBoundingClientRect())'))
+        rect = get_data_value(
+            await self.js('JSON.stringify(document.querySelector(`' +
+                          cssselector + '`).getBoundingClientRect())'))
         if rect:
             try:
                 rect = json.loads(rect)
@@ -886,7 +886,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             callback_function=None,
             check_duplicated_on_off=False,
             **kwargs)
-        base64_img = get_value(result, None, path='result.data')
+        base64_img = get_data_value(result, None, path='result.data')
         if save_path and base64_img:
             async with aopen(save_path, 'wb') as f:
                 await f.write(b64decode(base64_img))
@@ -897,24 +897,29 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.send(
             'Page.addScriptToEvaluateOnNewDocument', source=source, **kwargs)
 
+    async def get_value(self, name: str):
+        """name or expression"""
+        return await self.get_variable(name)
+
     async def get_variable(self, name: str):
+        """name or expression"""
         # using JSON to keep value type
         result = await self.js('JSON.stringify({"%s": %s})' % ('key', name))
-        value = get_value(result)
+        value = get_data_value(result)
         if value:
             try:
                 return json.loads(value)['key']
             except (TypeError, KeyError, json.JSONDecodeError):
                 logger.debug(f'get_variable failed: {result}')
 
-    async def mouse_move(self, x, y, timeout=None):
-        await self.enable('Input')
-        return await self.send(
-            'Input.dispatchMouseEvent',
-            type="mouseMoved",
-            x=x,
-            y=y,
-            timeout=timeout)
+    async def get_screen_size(self):
+        return await self.get_value(
+            '[window.screen.width, window.screen.height]')
+
+    async def get_page_size(self):
+        return await self.get_value(
+            "[window.innerWidth||document.documentElement.clientWidth||document.querySelector('body').clientWidth,window.innerHeight||document.documentElement.clientHeight||document.querySelector('body').clientHeight]"
+        )
 
     async def mouse_click(self, x, y, button='left', count=1, timeout=None):
         await self.mouse_press(
@@ -942,17 +947,117 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             clickCount=count,
             timeout=timeout)
 
+    @staticmethod
+    def get_smooth_steps(target_x, target_y, start_x, start_y, steps_count=30):
+
+        def getPointOnLine(x1, y1, x2, y2, n):
+            """Returns the (x, y) tuple of the point that has progressed a proportion
+            n along the line defined by the two x, y coordinates.
+
+            Copied from pyautogui & pytweening module.
+            """
+            x = ((x2 - x1) * n) + x1
+            y = ((y2 - y1) * n) + y1
+            return (x, y)
+
+        steps = []
+        steps.extend([
+            getPointOnLine(start_x, start_y, target_x, target_y,
+                           n / steps_count) for n in range(steps_count)
+        ])
+        # steps = [(int(a), int(b)) for a, b in steps]
+        steps.append((target_x, target_y))
+        return steps
+
+    async def mouse_move(self,
+                         target_x,
+                         target_y,
+                         start_x=None,
+                         start_y=None,
+                         duration=0,
+                         timeout=None):
+        # move mouse smoothly only if duration > 0.
+        await self.enable('Input')
+        if start_x is None:
+            start_x = 0.8 * target_x
+        if start_y is None:
+            start_y = 0.8 * target_y
+        if duration:
+            size = await self.get_page_size()
+            if size:
+                steps_count = int(max(size))
+            else:
+                steps_count = int(
+                    max([abs(target_x - start_x),
+                         abs(target_y - start_y)]))
+            steps_count = steps_count or 30
+            interval = duration / steps_count
+            if interval < 0.05:
+                steps_count = int(duration / 0.05)
+                interval = duration / steps_count
+            steps = self.get_smooth_steps(
+                target_x, target_y, start_x, start_y, steps_count=steps_count)
+        else:
+            steps = [(target_x, target_y)]
+        for x, y in steps:
+            await self.send(
+                'Input.dispatchMouseEvent',
+                type="mouseMoved",
+                x=x,
+                y=y,
+                timeout=timeout)
+            if duration:
+                await asyncio.sleep(interval)
+        return partial(
+            self.mouse_move,
+            start_x=target_x,
+            start_y=target_y,
+            duration=duration,
+            timeout=timeout)
+
+    async def mouse_move_rel(self,
+                             offset_x,
+                             offset_y,
+                             start_x,
+                             start_y,
+                             duration=0,
+                             timeout=None):
+        '''
+        Tips, you can call move rel one by one like this:
+            temp = await (await tab.mouse_move_rel(1, 1, 100, 100))
+            for _ in range(10):
+                await temp(-1, -1)
+                await asyncio.sleep(1)
+                await temp(1, 1)
+        '''
+        target_x = start_x + offset_x
+        target_y = start_y + offset_y
+        await self.mouse_move(
+            start_x=start_x,
+            start_y=start_y,
+            target_x=target_x,
+            target_y=target_y,
+            duration=duration,
+            timeout=timeout)
+        return partial(
+            self.mouse_move_rel,
+            start_x=target_x,
+            start_y=target_y,
+            duration=duration,
+            timeout=timeout)
+
     async def drag(self,
                    start_x,
                    start_y,
                    target_x,
                    target_y,
                    button='left',
+                   duration=0,
                    timeout=None):
         await self.enable('Input')
         await self.mouse_press(start_x, start_y, button=button, timeout=timeout)
         await self.mouse_move(
-            target_x, target_y, button=button, timeout=timeout)
+            target_x, target_y, duration=duration, timeout=timeout)
         await self.mouse_release(
             target_x, target_y, button=button, timeout=timeout)
 
@@ -1041,7 +1146,7 @@ class InvalidRequests(object):
 
 
 class Chrome:
-    get_value = get_value
+    get_data_value = get_data_value
 
     def __init__(self,
                  host: str = "127.0.0.1",
