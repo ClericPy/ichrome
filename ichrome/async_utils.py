@@ -921,6 +921,16 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             "[window.innerWidth||document.documentElement.clientWidth||document.querySelector('body').clientWidth,window.innerHeight||document.documentElement.clientHeight||document.querySelector('body').clientHeight]"
         )
 
+    async def keyboard_send(self, type='char', timeout=None, **kwargs):
+        '''type: keyDown, keyUp, rawKeyDown, char.
+
+        kwargs:
+            text, unmodifiedText, keyIdentifier, code, key...
+
+        https://chromedevtools.github.io/devtools-protocol/tot/Input#method-dispatchMouseEvent'''
+        return await self.send(
+            'Input.dispatchKeyEvent', type=type, timeout=timeout, **kwargs)
+
     async def mouse_click(self, x, y, button='left', count=1, timeout=None):
         await self.mouse_press(
             x=x, y=y, button=button, count=count, timeout=timeout)
@@ -960,11 +970,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             y = ((y2 - y1) * n) + y1
             return (x, y)
 
-        steps = []
-        steps.extend([
+        steps = [
             getPointOnLine(start_x, start_y, target_x, target_y,
                            n / steps_count) for n in range(steps_count)
-        ])
+        ]
         # steps = [(int(a), int(b)) for a, b in steps]
         steps.append((target_x, target_y))
         return steps
@@ -992,28 +1001,23 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                          abs(target_y - start_y)]))
             steps_count = steps_count or 30
             interval = duration / steps_count
-            if interval < 0.05:
-                steps_count = int(duration / 0.05)
+            if interval < 0.01:
+                steps_count = int(duration / 0.01)
                 interval = duration / steps_count
             steps = self.get_smooth_steps(
                 target_x, target_y, start_x, start_y, steps_count=steps_count)
         else:
             steps = [(target_x, target_y)]
         for x, y in steps:
+            if duration:
+                await asyncio.sleep(interval)
             await self.send(
                 'Input.dispatchMouseEvent',
                 type="mouseMoved",
-                x=x,
-                y=y,
+                x=int(round(x)),
+                y=int(round(y)),
                 timeout=timeout)
-            if duration:
-                await asyncio.sleep(interval)
-        return partial(
-            self.mouse_move,
-            start_x=target_x,
-            start_y=target_y,
-            duration=duration,
-            timeout=timeout)
+        return (target_x, target_y)
 
     async def mouse_move_rel(self,
                              offset_x,
@@ -1022,14 +1026,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                              start_y,
                              duration=0,
                              timeout=None):
-        '''
-        Tips, you can call move rel one by one like this:
-            temp = await (await tab.mouse_move_rel(1, 1, 100, 100))
-            for _ in range(10):
-                await temp(-1, -1)
-                await asyncio.sleep(1)
-                await temp(1, 1)
-        '''
+        '''Move mouse with offset.
+
+        Example::
+
+                await tab.mouse_move_rel(x + 15, 3, start_x, start_y, duration=0.3)
+'''
         target_x = start_x + offset_x
         target_y = start_y + offset_y
         await self.mouse_move(
@@ -1039,10 +1041,28 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             target_y=target_y,
             duration=duration,
             timeout=timeout)
-        return partial(
-            self.mouse_move_rel,
-            start_x=target_x,
-            start_y=target_y,
+        return (target_x, target_y)
+
+    def mouse_move_rel_chain(self,
+                             offset_x,
+                             offset_y,
+                             start_x,
+                             start_y,
+                             duration=0,
+                             timeout=None):
+        """Move with offset continuously.
+
+        Example::
+
+            walker = await tab.mouse_move_rel_chain(x + 15, 3, start_x, start_y, duration=0.3).move(-20, -5, 0.2).move(5, 1, 0.2)
+            walker = await walker.move(-10, 0, 0.2).move(10, 0, 0.5)
+"""
+        return OffsetWalker(
+            offset_x,
+            offset_y,
+            start_x,
+            start_y,
+            tab=self,
             duration=duration,
             timeout=timeout)
 
@@ -1060,6 +1080,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             target_x, target_y, duration=duration, timeout=timeout)
         await self.mouse_release(
             target_x, target_y, button=button, timeout=timeout)
+        return (target_x, target_y)
 
     async def drag_rel(self,
                        start_x,
@@ -1067,6 +1088,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                        offset_x,
                        offset_y,
                        button='left',
+                       duration=0,
                        timeout=None):
         return await self.drag(
             start_x,
@@ -1074,17 +1096,47 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             start_x + offset_x,
             start_y + offset_y,
             button=button,
+            duration=duration,
             timeout=timeout)
 
-    async def keyboard_send(self, type='char', timeout=None, **kwargs):
-        '''type: keyDown, keyUp, rawKeyDown, char.
 
-        kwargs:
-            text, unmodifiedText, keyIdentifier, code, key...
+class OffsetWalker(object):
+    __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
 
-        https://chromedevtools.github.io/devtools-protocol/tot/Input#method-dispatchMouseEvent'''
-        return await self.send(
-            'Input.dispatchKeyEvent', type=type, timeout=timeout, **kwargs)
+    def __init__(self,
+                 offset_x,
+                 offset_y,
+                 start_x,
+                 start_y,
+                 tab: Tab,
+                 duration=0,
+                 timeout=None):
+        self.tab = tab
+        self.timeout = timeout
+        self.start_x = start_x
+        self.start_y = start_y
+        self.path = [(offset_x, offset_y, duration)]
+
+    def move(self, offset_x, offset_y, duration=0):
+        self.path.append((offset_x, offset_y, duration))
+        return self
+
+    async def start(self):
+        while self.path:
+            x, y, duration = self.path.pop(0)
+            await self.tab.mouse_move_rel(
+                x,
+                y,
+                self.start_x,
+                self.start_y,
+                duration=duration,
+                timeout=self.timeout)
+            self.start_x = self.start_x + x
+            self.start_y = self.start_y + y
+        return self
+
+    def __await__(self):
+        return self.start().__await__()
 
 
 class Listener(object):
