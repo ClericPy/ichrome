@@ -1091,6 +1091,15 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                              start_y,
                              button='left',
                              timeout=None):
+        '''Drag with offset continuously.
+
+        Demo::
+
+                await tab.set_url('https://draw.yunser.com/')
+                walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(
+                    0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)
+                await walker.move(50 * 1.414, 50 * 1.414, 0.2)
+        '''
         return OffsetDragWalker(
             start_x, start_y, tab=self, button=button, timeout=timeout)
 

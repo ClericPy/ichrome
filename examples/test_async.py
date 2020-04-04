@@ -192,8 +192,9 @@ async def test_examples():
                 assert len(screen) > len(part)
                 # draw
                 await tab.set_url('https://draw.yunser.com/')
-                await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 1).move(
-                    0, 50, 1).move(-50, 0, 1).move(0, -50, 1)
+                walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(
+                    0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)
+                await walker.move(50 * 1.414, 50 * 1.414, 0.2)
                 # clear cache
                 assert await tab.clear_browser_cache()
                 # close tab
