@@ -1043,37 +1043,24 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             timeout=timeout)
         return (target_x, target_y)
 
-    def mouse_move_rel_chain(self,
-                             offset_x,
-                             offset_y,
-                             start_x,
-                             start_y,
-                             duration=0,
-                             timeout=None):
+    def mouse_move_rel_chain(self, start_x, start_y, timeout=None):
         """Move with offset continuously.
 
         Example::
 
-            walker = await tab.mouse_move_rel_chain(x + 15, 3, start_x, start_y, duration=0.3).move(-20, -5, 0.2).move(5, 1, 0.2)
+            walker = await tab.mouse_move_rel_chain(start_x, start_y).move(-20, -5, 0.2).move(5, 1, 0.2)
             walker = await walker.move(-10, 0, 0.2).move(10, 0, 0.5)
 """
-        return OffsetWalker(
-            offset_x,
-            offset_y,
-            start_x,
-            start_y,
-            tab=self,
-            duration=duration,
-            timeout=timeout)
+        return OffsetMoveWalker(start_x, start_y, tab=self, timeout=timeout)
 
-    async def drag(self,
-                   start_x,
-                   start_y,
-                   target_x,
-                   target_y,
-                   button='left',
-                   duration=0,
-                   timeout=None):
+    async def mouse_drag(self,
+                         start_x,
+                         start_y,
+                         target_x,
+                         target_y,
+                         button='left',
+                         duration=0,
+                         timeout=None):
         await self.enable('Input')
         await self.mouse_press(start_x, start_y, button=button, timeout=timeout)
         await self.mouse_move(
@@ -1082,15 +1069,15 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             target_x, target_y, button=button, timeout=timeout)
         return (target_x, target_y)
 
-    async def drag_rel(self,
-                       start_x,
-                       start_y,
-                       offset_x,
-                       offset_y,
-                       button='left',
-                       duration=0,
-                       timeout=None):
-        return await self.drag(
+    async def mouse_drag_rel(self,
+                             start_x,
+                             start_y,
+                             offset_x,
+                             offset_y,
+                             button='left',
+                             duration=0,
+                             timeout=None):
+        return await self.mouse_drag(
             start_x,
             start_y,
             start_x + offset_x,
@@ -1099,23 +1086,24 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             duration=duration,
             timeout=timeout)
 
+    def mouse_drag_rel_chain(self,
+                             start_x,
+                             start_y,
+                             button='left',
+                             timeout=None):
+        return OffsetDragWalker(
+            start_x, start_y, tab=self, button=button, timeout=timeout)
 
-class OffsetWalker(object):
+
+class OffsetMoveWalker(object):
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
 
-    def __init__(self,
-                 offset_x,
-                 offset_y,
-                 start_x,
-                 start_y,
-                 tab: Tab,
-                 duration=0,
-                 timeout=None):
+    def __init__(self, start_x, start_y, tab: Tab, timeout=None):
         self.tab = tab
         self.timeout = timeout
         self.start_x = start_x
         self.start_y = start_y
-        self.path = [(offset_x, offset_y, duration)]
+        self.path: List[tuple] = []
 
     def move(self, offset_x, offset_y, duration=0):
         self.path.append((offset_x, offset_y, duration))
@@ -1131,12 +1119,44 @@ class OffsetWalker(object):
                 self.start_y,
                 duration=duration,
                 timeout=self.timeout)
-            self.start_x = self.start_x + x
-            self.start_y = self.start_y + y
+            self.start_x += x
+            self.start_y += y
         return self
 
     def __await__(self):
         return self.start().__await__()
+
+
+class OffsetDragWalker(OffsetMoveWalker):
+    __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout', 'button')
+
+    def __init__(self, start_x, start_y, tab: Tab, button='left', timeout=None):
+        super().__init__(start_x, start_y, tab=tab, timeout=timeout)
+        self.button = button
+
+    async def start(self):
+        await self.tab.mouse_press(
+            self.start_x,
+            self.start_y,
+            button=self.button,
+            timeout=self.timeout)
+        while self.path:
+            x, y, duration = self.path.pop(0)
+            await self.tab.mouse_move_rel(
+                x,
+                y,
+                self.start_x,
+                self.start_y,
+                duration=duration,
+                timeout=self.timeout)
+            self.start_x += x
+            self.start_y += y
+        await self.tab.mouse_release(
+            self.start_x,
+            self.start_y,
+            button=self.button,
+            timeout=self.timeout)
+        return self
 
 
 class Listener(object):

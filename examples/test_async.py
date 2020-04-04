@@ -69,9 +69,9 @@ async def test_examples():
 
                 # watch the tabs switch
                 await tab.activate_tab()
-                await asyncio.sleep(.5)
+                await asyncio.sleep(.2)
                 await tab0.activate_tab()
-                await asyncio.sleep(.5)
+                await asyncio.sleep(.2)
                 await tab.activate_tab()
 
                 assert await tab.send('Network.enable') == {
@@ -190,6 +190,10 @@ async def test_examples():
                 assert screen
                 assert part
                 assert len(screen) > len(part)
+                # draw
+                await tab.set_url('https://draw.yunser.com/')
+                await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 1).move(
+                    0, 50, 1).move(-50, 0, 1).move(0, -50, 1)
                 # clear cache
                 assert await tab.clear_browser_cache()
                 # close tab
