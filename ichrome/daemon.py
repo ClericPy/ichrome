@@ -36,6 +36,8 @@ class ChromeDaemon(object):
     --disk-cache-size: Forces the maximum disk space to be used by the disk cache, in bytes.
     --single-process
     --proxy-pac-url=xxx
+    --kiosk
+    --incognito
 
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
@@ -96,6 +98,7 @@ class ChromeDaemon(object):
             "--disable-gpu",
             "--no-sandbox",
             "--no-first-run",
+            "--incognito",
         ]
         if not isinstance(self.extra_config, list):
             raise TypeError("extra_config type should be list.")
