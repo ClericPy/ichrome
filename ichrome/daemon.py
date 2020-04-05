@@ -26,6 +26,7 @@ class ChromeDaemon(object):
     --mute-audio: Mutes audio sent to the audio device so it is not audible during automated testing.
     --blink-settings=imagesEnabled=false: disable image loading.
 
+    --no-sandbox: headless mode will need this arg.
     --disable-javascript
     --disable-extensions
     --disable-background-networking
@@ -35,9 +36,8 @@ class ChromeDaemon(object):
     –disk-cache-dir=xxx: Use a specific disk cache location, rather than one derived from the UserDatadir.
     --disk-cache-size: Forces the maximum disk space to be used by the disk cache, in bytes.
     --single-process
-    --proxy-pac-url=xxx
+    --proxy-pac-url=xxx. Nonsense for headless mode.
     --kiosk
-    --incognito
 
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
@@ -374,11 +374,3 @@ class ChromeDaemon(object):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self.host}:{self.port})"
-
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()
