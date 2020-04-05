@@ -1,6 +1,6 @@
 # [ichrome](https://github.com/ClericPy/ichrome) [![PyPI](https://img.shields.io/pypi/v/ichrome?style=plastic)](https://pypi.org/project/ichrome/)![PyPI - Wheel](https://img.shields.io/pypi/wheel/ichrome?style=plastic)![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ichrome?style=plastic)![PyPI - Downloads](https://img.shields.io/pypi/dm/ichrome?style=plastic)![PyPI - License](https://img.shields.io/pypi/l/ichrome?style=plastic)
 
-> A toolkit for using chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+.
+> A toolkit to control Chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+.
 
 ## Install
 
@@ -64,7 +64,9 @@ if __name__ == "__main__":
 
 ### Command Line Usage
 
-> The unhandled args will be appended to extra_config list.
+> Be used for launching a chrome daemon process. The unhandled args will be treated as chrome raw args and appended to extra_config list.
+> 
+> [Chromium Command Line Args List](https://peter.sh/experiments/chromium-command-line-switches/)
 
 ```bash
 λ python3 -m ichrome -s 9222
@@ -75,7 +77,7 @@ if __name__ == "__main__":
 2018-11-27 23:03:57 INFO  [ichrome] __main__.py(69): ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': 'localhost', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': True, 'start_url': 'http://bing.com', 'extra_config': '', 'max_deaths': 1, 'timeout': 2}
 ```
 
-See more: python3 -m ichrome --help
+> Details: python3 -m ichrome --help
 
 ```
 usage:
@@ -107,9 +109,9 @@ optional arguments:
   --timeout TIMEOUT     timeout
 ```
 
-### [Async] Operation with asyncio
+### [Async] Operating tabs with coroutines
 
-> For interactive debugging the raw protocols. Stable choice.
+> Run in a completely asynchronous environment, it's a stable choice.
 
 <details>
     <summary>Code</summary>
@@ -330,11 +332,11 @@ if __name__ == "__main__":
 </details>
 
 
-### [Sync] Simple Usage
+### [Sync] Simple Usage (Archived)
 
-> [Archived] Sync utils will be hardly maintained, only for simple test usage.
+> Sync utils will be hardly maintained, only for simple test usage.
 >
-> Listening a special request sent in background.
+> No more new features to be developed.
 
 <details>
     <summary>Code</summary>
@@ -444,11 +446,11 @@ if __name__ == "__main__":
 
 - [x] ~~Concurrent support. (gevent, threading, asyncio)~~
 - [x] Add auto_restart while crash.
-- [ ] Auto remove the zombie tabs with a lifebook.
+- [ ] ~~Auto remove the zombie tabs with a lifebook.~~
 - [x] Add some useful examples.
 - [x] Coroutine support (for asyncio).
 - [x] Standard test cases.
-- [ ] HTTP apis server console [fastapi].
+- [ ] HTTP apis server console [fastapi]. (maybe write a new lib)
 - [ ] Complete document.
 
 ## Documentary
