@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
 ### Command Line Usage
 
-> For interactive debugging the raw protocols.
+> The unhandled args will be appended to extra_config list.
 
 ```bash
 λ python3 -m ichrome -s 9222
