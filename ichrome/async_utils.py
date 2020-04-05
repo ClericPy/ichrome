@@ -170,6 +170,7 @@ class _WSConnection(object):
 class Tab(object):
     _log_all_recv = False
     get_data_value = get_data_value
+    _min_move_interval = 0.05
 
     def __init__(self,
                  tab_id=None,
@@ -1001,8 +1002,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                          abs(target_y - start_y)]))
             steps_count = steps_count or 30
             interval = duration / steps_count
-            if interval < 0.01:
-                steps_count = int(duration / 0.01)
+            if interval < self._min_move_interval:
+                steps_count = int(duration / self._min_move_interval)
                 interval = duration / steps_count
             steps = self.get_smooth_steps(
                 target_x, target_y, start_x, start_y, steps_count=steps_count)
