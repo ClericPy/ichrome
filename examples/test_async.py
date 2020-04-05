@@ -154,6 +154,7 @@ async def test_examples():
                         timeout=10),
                     loop=tab.loop)
                 await tab.click('#about>a')
+                await tab.wait_loading(2)
                 await task
                 # click download link, without wait_loading.
                 # request
@@ -191,7 +192,9 @@ async def test_examples():
                 assert part
                 assert len(screen) > len(part)
                 # draw
-                await tab.set_url('https://draw.yunser.com/')
+                await tab.set_url('https://awwapp.com/')
+                await tab.wait_loading(1, timeout_stop_loading=True)
+                await tab.mouse_click(5, 5)
                 walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(
                     0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)
                 await walker.move(50 * 1.414, 50 * 1.414, 0.2)
