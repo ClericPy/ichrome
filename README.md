@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
 ### Command Line Usage
 
-> For interactive debugging the raw protocols.
+> The unhandled args will be appended to extra_config list.
 
 ```bash
 λ python3 -m ichrome -s 9222
@@ -73,6 +73,38 @@ if __name__ == "__main__":
 
 λ python3 -m ichrome -p 9222 --start_url "http://bing.com" --disable_image
 2018-11-27 23:03:57 INFO  [ichrome] __main__.py(69): ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': 'localhost', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': True, 'start_url': 'http://bing.com', 'extra_config': '', 'max_deaths': 1, 'timeout': 2}
+```
+
+See more: python3 -m ichrome --help
+
+```
+usage:
+    All the unknown args will be append to extra_config.
+Demo:
+    > python -m ichrome --host=127.0.0.1 --window-size=1200,800 --incognito
+    > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config':['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         show ichrome version info
+  -c CHROME_PATH, --chrome_path CHROME_PATH
+                        chrome_path
+  --host HOST           host
+  -p PORT, --port PORT  port
+  --headless            is_headless
+  -s SHUTDOWN, --shutdown SHUTDOWN
+                        shutdown the port
+  --user_agent USER_AGENT
+                        user_agent
+  --proxy PROXY         proxy
+  --user_data_dir USER_DATA_DIR
+                        user_data_dir
+  --disable_image       disable_image
+  --start_url START_URL
+                        start_url
+  --max_deaths MAX_DEATHS
+                        max_deaths
+  --timeout TIMEOUT     timeout
 ```
 
 ### [Async] Operation with asyncio
