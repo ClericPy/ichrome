@@ -95,10 +95,7 @@ class ChromeDaemon(object):
         if extra_config and isinstance(extra_config, str):
             extra_config = [extra_config]
         self.extra_config = extra_config or [
-            "--disable-gpu",
-            "--no-sandbox",
-            "--no-first-run",
-            "--incognito",
+            "--disable-gpu", "--no-sandbox", "--no-first-run"
         ]
         if not isinstance(self.extra_config, list):
             raise TypeError("extra_config type should be list.")
