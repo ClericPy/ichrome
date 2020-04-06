@@ -30,6 +30,124 @@
 > 3. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
 > 4. Close the browser GRACEFULLY instead of killing process
 
+<details>
+    <summary><b>AsyncChrome feature list</b></summary>
+
+1. server
+    > return `f"http://{self.host}:{self.port}"`, such as `http://127.0.0.1:9222`
+1. version
+    > version info from `/json/version` format like:
+    ```
+    {'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}
+    ```
+1. `connect` / `check` / `ok`
+    > check alive
+1. `get_tabs` / `tabs` / `get_tab` / `get_tabs`
+    > get the `AsyncTab` instance from `/json`.
+1. `new_tab` / `activate_tab` / `close_tab` / `close_tabs`
+    > operating tabs.
+1. `close_browser`
+    > find the activated tab and send `Browser.close` message, close the connected chrome browser gracefully.
+    ```python
+    await chrome.close_browser()
+    ```
+1. `kill`
+    > force kill the chrome process with self.port.
+    ```python
+    await chrome.kill()
+    ```
+1. `connect_tabs`
+    > connect websockets for multiple tabs in one `with` context, and disconnect before exiting.
+    ```python
+    tab0: AsyncTab = (await chrome.tabs)[0]
+    tab1: AsyncTab = await chrome.new_tab()
+    async with chrome.connect_tabs([tab0, tab1]):
+        assert (await tab0.current_url) == 'about:blank'
+        assert (await tab1.current_url) == 'about:blank'
+    ```
+
+</details>
+
+
+<details>
+    <summary><b>AsyncTab feature list</b></summary>
+
+1. `set_url` / `reload`
+    > navigate to a new url. `reload` equals to `set_url(None)`
+1. `wait_event`
+    > listening the events with given name, and separate from other same-name events with filter_function, finally run the callback_function with result.
+1. `wait_page_loading` / `wait_loading`
+    > wait for `Page.loadEventFired` event, or stop loading while timeout. Different from `wait_loading_finished`.
+1. `wait_response`
+    > filt the `Network.responseReceived` event by `filter_function`, return the `request_dict` which can be used by `get_response`
+1. `wait_request_loading` / `wait_loading_finished`
+    > sometimes event got `request_dict` with `wait_response`, but the ajax request is still fetching, which need to wait the `Network.loadingFinished` event.
+1. `activate` / `activate_tab`
+    > activate tab with websocket / http message.
+2. `close` / `close_tab`
+    > close tab with websocket / http message.
+3. `add_js_onload`
+    > `Page.addScriptToEvaluateOnNewDocument`, which means this javascript code will be run before page loaded.
+4. `clear_browser_cache` / `clear_browser_cookies`
+    > `Network.clearBrowserCache` and `Network.clearBrowserCookies`
+5. `querySelectorAll`
+    > get the tag instance, which contains the `tagName, innerHTML, outerHTML, textContent, attributes` attrs.
+6. `click`
+    > click the element queried by given *css selector*.
+7. `refresh_tab_info`
+    > to refresh the init attrs: `url`, `title`.
+8. `current_html` / `current_title` / `current_url`
+    > get the current html / title / url with `tab.js`. or using the `refresh_tab_info` method and init attrs.
+1. `crash`
+    > `Page.crash`
+2. `get_cookies` / `get_all_cookies` / `delete_cookies` / `set_cookie`
+    > some page cookies operations.
+1. `set_headers` / `set_ua`
+    > `Network.setExtraHTTPHeaders` and `Network.setUserAgentOverride`, used to update headers dynamically.
+2. `close_browser`
+    > send `Browser.close` message to close the chrome browser gracefully.
+1. `get_bounding_client_rect` / `get_element_clip`
+    > `get_element_clip` is alias name for the other, these two method is to get the rect of element which queried by css element.
+2. `screenshot` / `screenshot_element`
+    > get the screenshot base64 encoded image data. `screenshot_element` should be given a css selector to locate the element.
+3. `get_page_size` / `get_screen_size`
+    > size of current window or the whole screen.
+4. `get_response`
+    > get the response body with the given request dict.
+5. `js`
+    > run the given js code, return the raw response from sending `Runtime.evaluate` message.
+6. `inject_js_url`
+    > inject some js url, like `<script src="xxx/static/js/jquery.min.js"></script>` do.
+7. `get_value` & `get_variable`
+    > run the given js variable or expression, and return the result.
+    ```python
+    await tab.get_value('document.title')
+    await tab.get_value("document.querySelector('title').innerText")
+    ```
+8. `keyboard_send`
+    > dispath key event with `Input.dispatchKeyEvent`
+9. `mouse_click`
+    > dispath click event on given position
+10. `mouse_drag`
+    > dispath drag event on given position, and return the target x, y. `duration` arg is to slow down the move speed.
+11. `mouse_drag_rel`
+    > dispath drag event on given offset, and return the target x, y.
+12. `mouse_drag_rel`
+    > drag with offsets continuously.
+    ```python
+    await tab.set_url('https://draw.yunser.com/')
+    walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(
+        0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)
+    await walker.move(50 * 1.414, 50 * 1.414, 0.2)
+    ```
+13. `mouse_press` / `mouse_release` / `mouse_move` / `mouse_move_rel` / `mouse_move_rel_chain`
+    > similar to the drag features. These mouse features is only dispatched events, not the real mouse action.
+
+
+
+
+</details>
+
 ```python
 from ichrome import AsyncChromeDaemon, AsyncChrome
 import asyncio
