@@ -20,6 +20,7 @@ from torequests.utils import UA, quote_plus, urljoin
 
 from .base import ChromeDaemon, Tag
 from .logs import logger
+
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -569,6 +570,15 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             await self.send("Page.stopLoading", timeout=0)
         return data
 
+    async def wait_page_loading(self,
+                                timeout: Union[int, float] = None,
+                                callback_function: Optional[Callable] = None,
+                                timeout_stop_loading=False):
+        return self.wait_loading(
+            timeout=timeout,
+            callback_function=callback_function,
+            timeout_stop_loading=timeout_stop_loading)
+
     async def wait_event(
             self,
             event_name: str,
@@ -622,6 +632,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             'Network.loadingFinished',
             timeout=timeout,
             filter_function=request_id_filter)
+
+    async def wait_loading_finished(self,
+                                    request_dict: dict,
+                                    timeout: Union[int, float] = None):
+        return await self.wait_request_loading(
+            request_dict=request_dict, timeout=timeout)
 
     async def get_response(
             self,
@@ -1421,6 +1437,8 @@ class Chrome:
         return f"<Chrome({self.status}): {self.server}>"
 
     async def close(self):
+        if self.status == 'closed':
+            return
         if self.req:
             await self.req.close()
         self.status = 'closed'
