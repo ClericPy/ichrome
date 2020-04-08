@@ -704,7 +704,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def set_url(self,
                       url: Optional[str] = None,
                       referrer: Optional[str] = None,
-                      timeout: Union[float, int] = None):
+                      timeout: Union[float, int] = None,
+                      timeout_stop_loading: bool = True):
         """
         Navigate the tab to the URL
         """
@@ -728,7 +729,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             data = await self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
         real_timeout = max((timeout - time_passed, 0))
-        await self.wait_loading(timeout=real_timeout, timeout_stop_loading=True)
+        await self.wait_loading(
+            timeout=real_timeout, timeout_stop_loading=timeout_stop_loading)
         return data
 
     async def js(self, javascript: str,
@@ -744,6 +746,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         logger.debug(f'[js] {self!r} insert js `{javascript}`.')
         return await self.send(
             "Runtime.evaluate", timeout=timeout, expression=javascript)
+
+    async def handle_dialog(self, accept=True, promptText=None, timeout=None):
+        await self.enable('Page')
+        kwargs = {'timeout': timeout, 'accept': accept}
+        if promptText is not None:
+            kwargs['promptText'] = promptText
+        result = await self.send('Page.handleJavaScriptDialog', **kwargs)
+        return result
 
     async def querySelectorAll(
             self,
