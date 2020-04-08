@@ -938,13 +938,13 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             "[window.innerWidth||document.documentElement.clientWidth||document.querySelector('body').clientWidth,window.innerHeight||document.documentElement.clientHeight||document.querySelector('body').clientHeight]"
         )
 
-    async def keyboard_send(self, type='char', timeout=None, **kwargs):
+    async def keyboard_send(self, *, type='char', timeout=None, **kwargs):
         '''type: keyDown, keyUp, rawKeyDown, char.
 
         kwargs:
             text, unmodifiedText, keyIdentifier, code, key...
 
-        https://chromedevtools.github.io/devtools-protocol/tot/Input#method-dispatchMouseEvent'''
+        https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchKeyEvent'''
         return await self.send(
             'Input.dispatchKeyEvent', type=type, timeout=timeout, **kwargs)
 
