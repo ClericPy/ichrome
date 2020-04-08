@@ -154,9 +154,8 @@ import asyncio
 
 
 async def main():
-    # async with AsyncChromeDaemon() as chromed:
-    # If there is no operation for chromed, it can be omitted for short
-    async with AsyncChromeDaemon(headless=False):
+    # If there is an existing daemon, such as `python -m ichrome`, the `async with AsyncChromeDaemon` context can be omitted.
+    async with AsyncChromeDaemon():
         # connect to an opened chrome
         async with AsyncChrome() as chrome:
             tab = await chrome.new_tab(url="https://github.com/ClericPy")

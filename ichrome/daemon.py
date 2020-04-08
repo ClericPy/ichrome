@@ -66,7 +66,7 @@ class ChromeDaemon(object):
             max_deaths=1,
             daemon=True,
             block=False,
-            timeout=2,
+            timeout=1,
             debug=False,
     ):
         if debug:
