@@ -43,6 +43,13 @@ def get_data_value(item, default=None, path: str = 'result.result.value'):
         return default
 
 
+def check_error(name, result, path='error.message', **kwargs):
+    error = get_data_value(result, path=path)
+    if error:
+        logger.info(f'{name} failed: {kwargs}. result: {result}')
+    return not error
+
+
 class AsyncChromeDaemon:
     __doc__ = ChromeDaemon.__doc__
 
@@ -691,10 +698,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def goto_history(self, entryId: int = 0, timeout=None):
         result = await self.send(
             'Page.navigateToHistoryEntry', entryId=entryId, timeout=timeout)
-        error = get_data_value(result, path='error.message')
-        if error:
-            logger.info(f'goto_history failed: {entryId} {error}')
-        return not error
+        return check_error('goto_history', result, entryId=entryId)
 
     async def get_history_list(self, timeout=None) -> dict:
         """return dict: {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}"""
@@ -753,7 +757,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if promptText is not None:
             kwargs['promptText'] = promptText
         result = await self.send('Page.handleJavaScriptDialog', **kwargs)
-        return result
+        return check_error(
+            'handle_dialog', result, accept=accept, promptText=promptText)
 
     async def querySelectorAll(
             self,
@@ -943,10 +948,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             'Page.removeScriptToEvaluateOnNewDocument',
             identifier=identifier,
             timeout=timeout)
-        error = get_data_value(result, path='error.message')
-        if error:
-            logger.info(f'remove_js_onload failed: {identifier} {error}')
-        return not error
+        return check_error('remove_js_onload', result, identifier=identifier)
 
     async def get_value(self, name: str):
         """name or expression"""
