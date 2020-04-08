@@ -20,7 +20,6 @@ from torequests.utils import UA, quote_plus, urljoin
 
 from .base import ChromeDaemon, Tag
 from .logs import logger
-
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -689,6 +688,19 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             timeout=timeout)
         return data
 
+    async def goto_history(self, entryId: int = 0, timeout=None):
+        result = await self.send(
+            'Page.navigateToHistoryEntry', entryId=entryId, timeout=timeout)
+        error = get_data_value(result, path='error.message')
+        if error:
+            logger.info(f'goto_history failed: {entryId} {error}')
+        return not error
+
+    async def get_history_list(self, timeout=None) -> dict:
+        """return dict: {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}"""
+        result = await self.send('Page.getNavigationHistory', timeout=timeout)
+        return get_data_value(result, {}, path='result')
+
     async def set_url(self,
                       url: Optional[str] = None,
                       referrer: Optional[str] = None,
@@ -909,10 +921,22 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 await f.write(b64decode(base64_img))
         return base64_img
 
-    async def add_js_onload(self, source, **kwargs):
-        '''Page.addScriptToEvaluateOnNewDocument'''
-        return await self.send(
+    async def add_js_onload(self, source: str, **kwargs) -> str:
+        '''Page.addScriptToEvaluateOnNewDocument, return the identifier [str].'''
+        data = await self.send(
             'Page.addScriptToEvaluateOnNewDocument', source=source, **kwargs)
+        return get_data_value(data, path='result.identifier') or ''
+
+    async def remove_js_onload(self, identifier: str, timeout=None):
+        '''Page.removeScriptToEvaluateOnNewDocument, return whether the identifier exist.'''
+        result = await self.send(
+            'Page.removeScriptToEvaluateOnNewDocument',
+            identifier=identifier,
+            timeout=timeout)
+        error = get_data_value(result, path='error.message')
+        if error:
+            logger.info(f'remove_js_onload failed: {identifier} {error}')
+        return not error
 
     async def get_value(self, name: str):
         """name or expression"""
