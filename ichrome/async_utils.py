@@ -235,10 +235,9 @@ class Tab(object):
 
     @property
     def status(self) -> str:
-        status = 'disconnected'
         if self.ws and not self.ws.closed:
-            status = 'connected'
-        return status
+            return 'connected'
+        return 'disconnected'
 
     def connect(self) -> _WSConnection:
         '''`async with tab.connect:`'''
@@ -760,13 +759,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return check_error(
             'handle_dialog', result, accept=accept, promptText=promptText)
 
-    async def querySelectorAll(
-            self,
-            cssselector: str,
-            index: Union[None, int, str] = None,
-            action: Union[None, str] = None,
-            timeout: Union[float, int] = None) -> Union[List[Tag], Tag, None]:
-        """CDP DOM domain is quite heavy both computationally and memory wise, use js instead.
+    async def querySelectorAll(self,
+                               cssselector: str,
+                               index: Union[None, int, str] = None,
+                               action: Union[None, str] = None,
+                               timeout: Union[float, int] = None):
+        """CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, None.
         If index is not None, will return the tag_list[index]
         else return the tag list.
         tab.querySelectorAll("#sc_hdu>li>a", index=2, action="removeAttribute('href')")

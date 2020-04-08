@@ -1,3 +1,8 @@
+import json
+import re
+
+from ichrome import Chrome, ChromeDaemon, logger
+
 """
 Test normal usage of ichrome.
 
@@ -19,15 +24,6 @@ Test normal usage of ichrome.
 
 
 def test_example():
-    import sys
-    import os
-
-    # use local ichrome module
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    os.chdir("..")  # for reuse exiting user data dir
-    from ichrome import Chrome, ChromeDaemon, logger
-    import re
-    import json
     """Example for crawling a special background request."""
 
     # reset default logger level, such as DEBUG
