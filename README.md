@@ -143,10 +143,9 @@
 13. `mouse_press` / `mouse_release` / `mouse_move` / `mouse_move_rel` / `mouse_move_rel_chain`
     > similar to the drag features. These mouse features is only dispatched events, not the real mouse action.
 
-
-
-
 </details>
+
+[More Examples](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
 
 ```python
 from ichrome import AsyncChromeDaemon, AsyncChrome
@@ -154,9 +153,8 @@ import asyncio
 
 
 async def main():
-    # async with AsyncChromeDaemon() as chromed:
-    # If there is no operation for chromed, it can be omitted for short
-    async with AsyncChromeDaemon(headless=False):
+    # If there is an existing daemon, such as `python -m ichrome`, the `async with AsyncChromeDaemon` context can be omitted.
+    async with AsyncChromeDaemon():
         # connect to an opened chrome
         async with AsyncChrome() as chrome:
             tab = await chrome.new_tab(url="https://github.com/ClericPy")

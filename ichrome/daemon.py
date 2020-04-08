@@ -66,7 +66,7 @@ class ChromeDaemon(object):
             max_deaths=1,
             daemon=True,
             block=False,
-            timeout=2,
+            timeout=1,
             debug=False,
     ):
         if debug:
@@ -288,7 +288,11 @@ class ChromeDaemon(object):
     def kill(self, force=False):
         self.ready = False
         if self.proc:
-            self.proc.kill()
+            self.proc.terminate()
+            try:
+                self.proc.wait(1)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
         if force:
             max_deaths = self.max_deaths
         else:

@@ -20,7 +20,6 @@ from torequests.utils import UA, quote_plus, urljoin
 
 from .base import ChromeDaemon, Tag
 from .logs import logger
-
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -42,6 +41,13 @@ def get_data_value(item, default=None, path: str = 'result.result.value'):
         return item
     except (KeyError, TypeError):
         return default
+
+
+def check_error(name, result, path='error.message', **kwargs):
+    error = get_data_value(result, path=path)
+    if error:
+        logger.info(f'{name} failed: {kwargs}. result: {result}')
+    return not error
 
 
 class AsyncChromeDaemon:
@@ -229,10 +235,9 @@ class Tab(object):
 
     @property
     def status(self) -> str:
-        status = 'disconnected'
         if self.ws and not self.ws.closed:
-            status = 'connected'
-        return status
+            return 'connected'
+        return 'disconnected'
 
     def connect(self) -> _WSConnection:
         '''`async with tab.connect:`'''
@@ -689,10 +694,21 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             timeout=timeout)
         return data
 
+    async def goto_history(self, entryId: int = 0, timeout=None):
+        result = await self.send(
+            'Page.navigateToHistoryEntry', entryId=entryId, timeout=timeout)
+        return check_error('goto_history', result, entryId=entryId)
+
+    async def get_history_list(self, timeout=None) -> dict:
+        """return dict: {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}"""
+        result = await self.send('Page.getNavigationHistory', timeout=timeout)
+        return get_data_value(result, {}, path='result')
+
     async def set_url(self,
                       url: Optional[str] = None,
                       referrer: Optional[str] = None,
-                      timeout: Union[float, int] = None):
+                      timeout: Union[float, int] = None,
+                      timeout_stop_loading: bool = True):
         """
         Navigate the tab to the URL
         """
@@ -716,7 +732,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             data = await self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
         real_timeout = max((timeout - time_passed, 0))
-        await self.wait_loading(timeout=real_timeout, timeout_stop_loading=True)
+        await self.wait_loading(
+            timeout=real_timeout, timeout_stop_loading=timeout_stop_loading)
         return data
 
     async def js(self, javascript: str,
@@ -733,13 +750,21 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.send(
             "Runtime.evaluate", timeout=timeout, expression=javascript)
 
-    async def querySelectorAll(
-            self,
-            cssselector: str,
-            index: Union[None, int, str] = None,
-            action: Union[None, str] = None,
-            timeout: Union[float, int] = None) -> Union[List[Tag], Tag, None]:
-        """CDP DOM domain is quite heavy both computationally and memory wise, use js instead.
+    async def handle_dialog(self, accept=True, promptText=None, timeout=None):
+        await self.enable('Page')
+        kwargs = {'timeout': timeout, 'accept': accept}
+        if promptText is not None:
+            kwargs['promptText'] = promptText
+        result = await self.send('Page.handleJavaScriptDialog', **kwargs)
+        return check_error(
+            'handle_dialog', result, accept=accept, promptText=promptText)
+
+    async def querySelectorAll(self,
+                               cssselector: str,
+                               index: Union[None, int, str] = None,
+                               action: Union[None, str] = None,
+                               timeout: Union[float, int] = None):
+        """CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, None.
         If index is not None, will return the tag_list[index]
         else return the tag list.
         tab.querySelectorAll("#sc_hdu>li>a", index=2, action="removeAttribute('href')")
@@ -909,10 +934,19 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 await f.write(b64decode(base64_img))
         return base64_img
 
-    async def add_js_onload(self, source, **kwargs):
-        '''Page.addScriptToEvaluateOnNewDocument'''
-        return await self.send(
+    async def add_js_onload(self, source: str, **kwargs) -> str:
+        '''Page.addScriptToEvaluateOnNewDocument, return the identifier [str].'''
+        data = await self.send(
             'Page.addScriptToEvaluateOnNewDocument', source=source, **kwargs)
+        return get_data_value(data, path='result.identifier') or ''
+
+    async def remove_js_onload(self, identifier: str, timeout=None):
+        '''Page.removeScriptToEvaluateOnNewDocument, return whether the identifier exist.'''
+        result = await self.send(
+            'Page.removeScriptToEvaluateOnNewDocument',
+            identifier=identifier,
+            timeout=timeout)
+        return check_error('remove_js_onload', result, identifier=identifier)
 
     async def get_value(self, name: str):
         """name or expression"""
@@ -938,13 +972,13 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             "[window.innerWidth||document.documentElement.clientWidth||document.querySelector('body').clientWidth,window.innerHeight||document.documentElement.clientHeight||document.querySelector('body').clientHeight]"
         )
 
-    async def keyboard_send(self, type='char', timeout=None, **kwargs):
+    async def keyboard_send(self, *, type='char', timeout=None, **kwargs):
         '''type: keyDown, keyUp, rawKeyDown, char.
 
         kwargs:
             text, unmodifiedText, keyIdentifier, code, key...
 
-        https://chromedevtools.github.io/devtools-protocol/tot/Input#method-dispatchMouseEvent'''
+        https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchKeyEvent'''
         return await self.send(
             'Input.dispatchKeyEvent', type=type, timeout=timeout, **kwargs)
 

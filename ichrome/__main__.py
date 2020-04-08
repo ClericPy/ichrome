@@ -20,7 +20,7 @@ def main():
     timeout=2
     """
     usage = '''
-    All the unknown args will be append to extra_config.
+    All the unknown args will be appended to extra_config.
 Demo:
     > python -m ichrome --host=127.0.0.1 --window-size=1212,1212 --incognito
     > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
@@ -32,7 +32,7 @@ Demo:
         help="show ichrome version info",
         action="store_true")
     parser.add_argument("-c", "--chrome_path", help="chrome_path", default="")
-    parser.add_argument("--host", help="host", default="localhost")
+    parser.add_argument("--host", help="host", default="127.0.0.1")
     parser.add_argument("-p", "--port", help="port", default=9222, type=int)
     parser.add_argument(
         "--headless", help="is_headless", default=False, action="store_true")
@@ -44,7 +44,7 @@ Demo:
         "--disable_image", help="disable_image", action="store_true")
     parser.add_argument("--start_url", help="start_url", default="about:blank")
     parser.add_argument("--max_deaths", help="max_deaths", default=1, type=int)
-    parser.add_argument("--timeout", help="timeout", default=2, type=int)
+    parser.add_argument("--timeout", help="timeout", default=1, type=int)
     args, extra_config = parser.parse_known_args()
     if args.version:
         print(__version__)
