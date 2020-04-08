@@ -143,10 +143,9 @@
 13. `mouse_press` / `mouse_release` / `mouse_move` / `mouse_move_rel` / `mouse_move_rel_chain`
     > similar to the drag features. These mouse features is only dispatched events, not the real mouse action.
 
-
-
-
 </details>
+
+[More Examples](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
 
 ```python
 from ichrome import AsyncChromeDaemon, AsyncChrome
