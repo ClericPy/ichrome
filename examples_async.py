@@ -26,6 +26,8 @@ async def test_chrome(chrome: Chrome):
     tabs2: List[Tab] = await chrome.tabs
     assert tabs1 == tabs2
     tab0: Tab = await chrome.get_tab(0)
+    tab0_by_getitem = await chrome[0]
+    assert tab0 == tab0_by_getitem
     assert tabs1[0] == tab0
     tab1: Tab = await chrome.new_tab()
     assert isinstance(tab1, Tab)
