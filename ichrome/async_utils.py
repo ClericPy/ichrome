@@ -1294,6 +1294,10 @@ class Chrome:
         self.status = 'init'
         self.req = InvalidRequests()
 
+    def __getitem__(self, index: int) -> Awaitable[Tab]:
+        assert isinstance(index, int), 'only support int index'
+        return self.get_tab(index=index)
+
     def __enter__(self):
         return self
 
