@@ -8,7 +8,7 @@ from ichrome import Tag, logger
 
 logger.setLevel('DEBUG')
 # Tab._log_all_recv = True
-port = 9222
+headless = False
 
 
 async def test_chrome(chrome: Chrome):
@@ -211,7 +211,7 @@ async def test_tab_keyboard_mouse(tab: Tab):
 
 
 async def test_examples():
-    async with AsyncChromeDaemon(host="127.0.0.1", port=port, max_deaths=1):
+    async with AsyncChromeDaemon(headless=headless):
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
             await test_chrome(chrome)
