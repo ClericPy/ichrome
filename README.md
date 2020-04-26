@@ -569,6 +569,6 @@ if __name__ == "__main__":
 - [ ] HTTP apis server console [fastapi]. (maybe write a new lib)
 - [ ] Complete document.
 
-## Documentary
+## Document
 
 - On the way...
