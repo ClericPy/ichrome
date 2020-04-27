@@ -8,7 +8,7 @@ from ichrome import Tag, logger
 
 logger.setLevel('DEBUG')
 # Tab._log_all_recv = True
-port = 9222
+headless = False
 
 
 async def test_chrome(chrome: Chrome):
@@ -26,6 +26,8 @@ async def test_chrome(chrome: Chrome):
     tabs2: List[Tab] = await chrome.tabs
     assert tabs1 == tabs2
     tab0: Tab = await chrome.get_tab(0)
+    tab0_by_getitem = await chrome[0]
+    assert tab0 == tab0_by_getitem
     assert tabs1[0] == tab0
     tab1: Tab = await chrome.new_tab()
     assert isinstance(tab1, Tab)
@@ -82,8 +84,6 @@ async def test_tab_cookies(tab: Tab):
 async def test_tab_set_url(tab: Tab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
     assert await tab.set_url('http://python.org', timeout=5)
-    # reload the page
-    assert await tab.reload(timeout=2)
 
 
 async def test_tab_js(tab: Tab):
@@ -114,6 +114,12 @@ async def test_tab_js(tab: Tab):
     # querySelectorAll with JS, index arg is Not None, return Tag or None
     one_tag = await tab.querySelectorAll('#id-search-field', index=0)
     assert isinstance(one_tag, Tag)
+    assert await tab.js("document.write('<html></html>')")
+    assert (await tab.current_html) == '<html><head></head><body></body></html>'
+    # reload the page
+    assert await tab.reload()
+    await tab.wait_loading(2)
+    assert len(await tab.current_html) > 1000
 
 
 async def test_wait_response(tab: Tab):
@@ -136,10 +142,9 @@ async def test_wait_response(tab: Tab):
         return print('get response url:', r['params']['response']['url'],
                      ok) or ok
 
-    task = asyncio.ensure_future(
-        tab.wait_response(
-            filter_function=filter_function, callback_function=cb, timeout=10),
-        loop=tab.loop)
+    task = asyncio.ensure_future(tab.wait_response(
+        filter_function=filter_function, callback_function=cb, timeout=10),
+                                 loop=tab.loop)
     await tab.click('#about>a')
     await tab.wait_loading(2)
     await task
@@ -209,7 +214,7 @@ async def test_tab_keyboard_mouse(tab: Tab):
 
 
 async def test_examples():
-    async with AsyncChromeDaemon(host="127.0.0.1", port=port, max_deaths=1):
+    async with AsyncChromeDaemon(headless=headless):
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
             await test_chrome(chrome)

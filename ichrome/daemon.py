@@ -94,9 +94,7 @@ class ChromeDaemon(object):
         self.start_url = start_url
         if extra_config and isinstance(extra_config, str):
             extra_config = [extra_config]
-        self.extra_config = extra_config or [
-            "--disable-gpu", "--no-sandbox", "--no-first-run"
-        ]
+        self.extra_config = extra_config or ["--disable-gpu", "--no-first-run"]
         if not isinstance(self.extra_config, list):
             raise TypeError("extra_config type should be list.")
         self.chrome_proc_start_time = time.time()
