@@ -3,7 +3,6 @@
 import asyncio
 import inspect
 import json
-import re
 import time
 import traceback
 from asyncio.base_futures import _PENDING
@@ -29,7 +28,7 @@ Async utils for connections and operations.
 try:
     from asyncio.futures import TimeoutError
 except ImportError:
-    # for python 3.8
+    # for python 3.8+
     from asyncio.exceptions import TimeoutError
 
 
@@ -293,16 +292,13 @@ class Tab:
 
     async def activate(self) -> Union[dict, None]:
         """activate tab with cdp websocket"""
-        await self.enable('Page')
         return await self.send("Page.bringToFront")
 
     async def close(self) -> Union[dict, None]:
         """close tab with cdp websocket"""
-        await self.enable('Page')
         return await self.send("Page.close")
 
     async def crash(self) -> Union[dict, None]:
-        await self.enable('Page')
         return await self.send("Page.crash")
 
     async def _recv_daemon(self):
@@ -345,50 +341,45 @@ class Tab:
                     del f
         logger.debug(f'[break] {self!r} _recv_daemon loop break.')
 
-    def _check_duplicated_on_off(self, method: str) -> bool:
-        """ignore nonsense enable / disable method.
-        return True means need to send.
-        return False means ignore sending operations."""
-        if not re.match(r'^\w+\.(enable|disable)$', method):
-            return True
-        function, action = method.split('.', 1)
-        if action == 'enable':
-            if function in self._enabled_domains:
-                # ignore
-                return False
-            else:
-                # update _enabled_domains
-                self._enabled_domains.add(function)
-                return True
-        elif action == 'disable':
-            if function in self._enabled_domains:
-                # update _enabled_domains
-                self._enabled_domains.discard(function)
-                return True
-            else:
-                # ignore
-                return False
-        else:
-            return True
-
     async def send(self,
                    method: str,
                    timeout: Union[int, float] = None,
                    callback_function: Optional[Callable] = None,
-                   check_duplicated_on_off: bool = False,
+                   force: bool = False,
                    **kwargs) -> Union[None, dict]:
+        timeout = self.timeout if timeout is None else timeout
+        if not force:
+            # not force, will check lots of scene
+            domain = method.split('.', 1)[0]
+            if method.endswith('.enable'):
+                # check domain if enabled or not, avoid duplicated enable.
+                if domain in self._enabled_domains:
+                    logger.debug(f'{domain} no need enable twice.')
+                    return None
+                else:
+                    # set force to True
+                    return await self.enable(domain,
+                                             force=True,
+                                             timeout=timeout)
+            elif method.endswith('.disable'):
+                if domain not in self._enabled_domains:
+                    logger.debug(f'{domain} no need disable twice.')
+                    return None
+                else:
+                    # set force to True
+                    return await self.disable(domain,
+                                              force=True,
+                                              timeout=timeout)
+            timeout = await self._ensure_enable_and_timeout(domain,
+                                                            timeout=timeout)
+
         request = {"method": method, "params": kwargs}
-        if check_duplicated_on_off and not self._check_duplicated_on_off(
-                method):
-            logger.debug(f'{method} sended before, ignore. {self}')
-            return None
         request["id"] = self.msg_id
         if not self.ws or self.ws.closed:
             logger.error(
                 f'[closed] {self} ws has been closed, ignore send {request}')
             return None
         try:
-            timeout = self.timeout if timeout is None else timeout
             logger.debug(f"[send] {self!r} {request}")
             await self.ws.send_json(request)
             if timeout <= 0:
@@ -418,6 +409,12 @@ class Tab:
         :return: the event dict from websocket recv.
         :rtype: dict
         """
+        method = event_dict.get('method')
+        if method:
+            # ensure the domain of method is enabled
+            domain = method.split('.', 1)[0]
+            timeout = await self._ensure_enable_and_timeout(domain,
+                                                            timeout=timeout)
         result = None
         timeout = self.timeout if timeout is None else timeout
         if timeout <= 0:
@@ -434,25 +431,56 @@ class Tab:
     def now(self) -> int:
         return int(time.time())
 
-    async def enable(self, name: str, force: bool = False):
-        '''name: Network / Page and so on, will send `Name.enable`. Will check for duplicated sendings.'''
-        if name not in self._domains_can_be_enabled:
-            logger.warning(
-                f'{name} not in valid names {self._domains_can_be_enabled}')
-        return await self.send(f'{name}.enable',
-                               check_duplicated_on_off=not force)
+    async def _ensure_enable_and_timeout(self,
+                                         domain: str,
+                                         timeout=None) -> Union[float, int]:
+        '''return a timeout num.
+        ::
 
-    async def disable(self, name: str, force: bool = False):
-        '''name: Network / Page and so on, will send `Name.disable`. Will check for duplicated sendings.'''
-        if name not in self._domains_can_be_enabled:
+                if domain is enabled:
+                    return timeout
+                else:
+                    await enable
+                    return left timeout
+        '''
+        if domain in self._enabled_domains or not domain:
+            return timeout
+        else:
+            start_time = time.time()
+            for tries in range(3):
+                if await self.enable(domain, force=True, timeout=timeout):
+                    break
+            timeout = timeout - (time.time() - start_time)
+            if timeout <= 0:
+                return 0
+            return timeout
+
+    async def enable(self, domain: str, force: bool = False, timeout=None):
+        '''domain: Network / Page and so on, will send `domain.enable`. Will check for duplicated sendings.'''
+        if domain not in self._domains_can_be_enabled:
             logger.warning(
-                f'{name} not in valid names {self._domains_can_be_enabled}')
-        return await self.send(f'{name}.disable',
-                               check_duplicated_on_off=not force)
+                f'{domain} not in valid domains {self._domains_can_be_enabled}')
+        result = await self.send(f'{domain}.enable',
+                                 force=force,
+                                 timeout=timeout)
+        if result is not None:
+            self._enabled_domains.add(domain)
+        return result
+
+    async def disable(self, domain: str, force: bool = False, timeout=None):
+        '''domain: Network / Page and so on, will send `domain.disable`. Will check for duplicated sendings.'''
+        if domain not in self._domains_can_be_enabled:
+            logger.warning(
+                f'{domain} not in valid domains {self._domains_can_be_enabled}')
+        result = await self.send(f'{domain}.disable',
+                                 force=force,
+                                 timeout=timeout)
+        if result is not None:
+            self._enabled_domains.discard(domain)
+        return result
 
     async def get_all_cookies(self, timeout: Union[int, float] = None):
         """Network.getAllCookies"""
-        await self.enable('Network')
         # {'id': 12, 'result': {'cookies': [{'name': 'test2', 'value': 'test_value', 'domain': 'python.org', 'path': '/', 'expires': -1, 'size': 15, 'httpOnly': False, 'secure': False, 'session': True}]}}
         result = (await self.send("Network.getAllCookies",
                                   timeout=timeout)) or {}
@@ -460,12 +488,10 @@ class Tab:
 
     async def clear_browser_cookies(self, timeout: Union[int, float] = None):
         """clearBrowserCookies"""
-        await self.enable('Network')
         return await self.send("Network.clearBrowserCookies", timeout=timeout)
 
     async def clear_browser_cache(self, timeout: Union[int, float] = None):
         """clearBrowserCache"""
-        await self.enable('Network')
         return await self.send("Network.clearBrowserCache", timeout=timeout)
 
     async def delete_cookies(self,
@@ -478,7 +504,6 @@ class Tab:
         if not any((url, domain)):
             raise ValueError(
                 'At least one of the url and domain needs to be specified')
-        await self.enable('Network')
         return await self.send(
             "Network.deleteCookies",
             name=name,
@@ -492,7 +517,6 @@ class Tab:
                           urls: Union[List[str], str] = None,
                           timeout: Union[int, float] = None) -> List:
         """get cookies of urls."""
-        await self.enable('Network')
         if urls:
             if isinstance(urls, str):
                 urls = [urls]
@@ -544,11 +568,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         kwargs = {
             key: value for key, value in kwargs.items() if value is not None
         }
-        await self.enable('Network')
         return await self.send("Network.setCookie",
-                               timeout=timeout or self.timeout,
+                               timeout=timeout,
                                callback_function=None,
-                               check_duplicated_on_off=False,
+                               force=False,
                                **kwargs)
 
     async def get_current_url(self) -> str:
@@ -605,12 +628,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return self.get_frame_tree()
 
     async def get_frame_tree(self, timeout=None):
-        await self.enable('Page')
         return await self.send('Page.getFrameTree', timeout=timeout)
 
     async def stop_loading_page(self, timeout=0):
         '''Page.stopLoading'''
-        await self.enable('Page')
         return await self.send("Page.stopLoading", timeout=timeout)
 
     async def wait_loading(self,
@@ -640,10 +661,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             callback_function: Optional[Callable] = None,
             filter_function: Optional[Callable] = None) -> Union[dict, None]:
         """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
-        domain = event_name.split('.', 1)[0]
-        # domain should be ensure: enabled
-        if domain in self._domains_can_be_enabled and domain not in self._enabled_domains:
-            await self.enable(domain)
         timeout = self.timeout if timeout is None else timeout
         start_time = time.time()
         result = None
@@ -750,7 +767,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         timeout = (timeout or self.timeout) - (time.time() - start_time)
         if timeout <= 0:
             return None
-        await self.enable('Network')
         result = await self.send("Network.getResponseBody",
                                  requestId=request_id,
                                  timeout=timeout)
@@ -772,7 +788,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         request_id = self._ensure_request_id(request_dict)
         if request_id is None:
             return None
-        await self.enable('Network')
         result = await self.send("Network.getRequestPostData",
                                  requestId=request_id,
                                  timeout=timeout)
@@ -808,7 +823,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         # if 'Referer' in headers or 'referer' in headers:
         #     logger.warning('`Referer` is not valid header, please use the `referrer` arg of set_url')'''
         logger.info(f'[set_headers] {self!r} headers => {headers}')
-        await self.enable('Network')
         data = await self.send('Network.setExtraHTTPHeaders',
                                headers=headers,
                                timeout=timeout)
@@ -820,7 +834,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                      platform: Optional[str] = '',
                      timeout: Union[float, int] = None):
         logger.info(f'[set_ua] {self!r} userAgent => {userAgent}')
-        await self.enable('Network')
         data = await self.send('Network.setUserAgentOverride',
                                userAgent=userAgent,
                                acceptLanguage=acceptLanguage,
@@ -851,7 +864,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             timeout = self.timeout
         logger.debug(f'[set_url] {self!r} url => {url}')
         start_load_ts = self.now
-        await self.enable('Page')
         if url:
             self._url = url
             if referrer is None:
@@ -881,14 +893,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         {'id': 18, 'result': {'result': {'type': 'string', 'value': 'Welcome to Python.org'}}}
         if timeout: return None
         """
-        await self.enable('Runtime')
         logger.debug(f'[js] {self!r} insert js `{javascript}`.')
         return await self.send("Runtime.evaluate",
                                timeout=timeout,
                                expression=javascript)
 
     async def handle_dialog(self, accept=True, promptText=None, timeout=None):
-        await self.enable('Page')
         kwargs = {'timeout': timeout, 'accept': accept}
         if promptText is not None:
             kwargs['promptText'] = promptText
@@ -1010,9 +1020,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def get_element_clip(self, cssselector: str, scale=1):
         """Element.getBoundingClientRect"""
-        rect = get_data_value(
-            await self.js('JSON.stringify(document.querySelector(`' +
-                          cssselector + '`).getBoundingClientRect())'))
+        js_str = 'JSON.stringify(document.querySelector(`' + cssselector + '`).getBoundingClientRect())'
+        rect = get_data_value(await self.js(js_str))
         if rect:
             try:
                 rect = json.loads(rect)
@@ -1057,14 +1066,13 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         :type fromSurface: bool, optional
 
         clip's keys: x, y, width, height, scale"""
-        await self.enable('Page')
         kwargs = dict(format=format, quality=quality, fromSurface=fromSurface)
         if clip:
             kwargs['clip'] = clip
         result = await self.send('Page.captureScreenshot',
                                  timeout=timeout,
                                  callback_function=None,
-                                 check_duplicated_on_off=False,
+                                 force=False,
                                  **kwargs)
         base64_img = get_data_value(result, None, path='result.data')
         if save_path and base64_img:

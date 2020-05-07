@@ -128,8 +128,8 @@ async def test_wait_response(tab: Tab):
     async def cb(request):
         if request:
             # wait_loading for ajax request
-            ok = 'Masonry PACKAGED' in get_data_value(await tab.get_response(
-                request, wait_loading=True), '', 'result.body')
+            result = await tab.get_response(request, wait_loading=True)
+            ok = 'Masonry PACKAGED' in get_data_value(result, '', 'result.body')
             logger.warning(f'check wait_response callback, get_response {ok}')
             assert ok
         else:
