@@ -179,6 +179,14 @@ class Tab(object):
     _log_all_recv = False
     get_data_value = get_data_value
     _min_move_interval = 0.05
+    _domains_can_be_enabled = {
+        'Accessibility', 'Animation', 'ApplicationCache', 'Audits', 'CSS',
+        'Cast', 'DOM', 'DOMSnapshot', 'DOMStorage', 'Database',
+        'HeadlessExperimental', 'IndexedDB', 'Inspector', 'LayerTree', 'Log',
+        'Network', 'Overlay', 'Page', 'Performance', 'Security',
+        'ServiceWorker', 'Fetch', 'WebAudio', 'WebAuthn', 'Media', 'Console',
+        'Debugger', 'HeapProfiler', 'Profiler', 'Runtime'
+    }
 
     def __init__(self,
                  tab_id=None,
@@ -212,7 +220,7 @@ class Tab(object):
         else:
             self.req = Requests(loop=self.loop)
         self._listener = Listener()
-        self._enabled_methods = set()
+        self._enabled_domains = set()
 
     def __hash__(self):
         return self.tab_id
@@ -242,7 +250,7 @@ class Tab(object):
 
     def connect(self) -> _WSConnection:
         '''`async with tab.connect:`'''
-        self._enabled_methods.clear()
+        self._enabled_domains.clear()
         return _WSConnection(self)
 
     def __call__(self) -> _WSConnection:
@@ -340,19 +348,19 @@ class Tab(object):
         return False means ignore sending operations."""
         if not re.match(r'^\w+\.(enable|disable)$', method):
             return True
-        function, action = method.split('.')
+        function, action = method.split('.', 1)
         if action == 'enable':
-            if function in self._enabled_methods:
+            if function in self._enabled_domains:
                 # ignore
                 return False
             else:
-                # update _enabled_methods
-                self._enabled_methods.add(function)
+                # update _enabled_domains
+                self._enabled_domains.add(function)
                 return True
         elif action == 'disable':
-            if function in self._enabled_methods:
-                # update _enabled_methods
-                self._enabled_methods.discard(function)
+            if function in self._enabled_domains:
+                # update _enabled_domains
+                self._enabled_domains.discard(function)
                 return True
             else:
                 # ignore
@@ -425,13 +433,21 @@ class Tab(object):
 
     async def enable(self, name: str, force: bool = False):
         '''name: Network / Page and so on, will send `Name.enable`. Will check for duplicated sendings.'''
-        return await self.send(f'{name}.enable',
-                               check_duplicated_on_off=not force)
+        if name in self._domains_can_be_enabled:
+            return await self.send(f'{name}.enable',
+                                   check_duplicated_on_off=not force)
+        else:
+            raise KeyError(
+                f'{name} not in valid names {self._domains_can_be_enabled}')
 
     async def disable(self, name: str, force: bool = False):
         '''name: Network / Page and so on, will send `Name.disable`. Will check for duplicated sendings.'''
-        return await self.send(f'{name}.disable',
-                               check_duplicated_on_off=not force)
+        if name in self._domains_can_be_enabled:
+            return await self.send(f'{name}.disable',
+                                   check_duplicated_on_off=not force)
+        else:
+            raise KeyError(
+                f'{name} not in valid names {self._domains_can_be_enabled}')
 
     async def get_all_cookies(self, timeout: Union[int, float] = None):
         """Network.getAllCookies"""
@@ -590,6 +606,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             callback_function: Optional[Callable] = None,
             filter_function: Optional[Callable] = None) -> Union[dict, None]:
         """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
+        domain = event_name.split('.', 1)[0]
+        # domain should be ensure: enabled
+        if domain in self._domains_can_be_enabled and domain not in self._enabled_domains:
+            await self.enable(domain)
         timeout = self.timeout if timeout is None else timeout
         start_time = time.time()
         result = None
@@ -616,9 +636,26 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                             filter_function: Optional[Callable] = None,
                             callback_function: Optional[Callable] = None,
                             timeout: Union[int, float] = None):
-        '''wait a special response filted by function, then run the callback_function'''
-        await self.enable('Network')
+        '''wait a special response filted by function, then run the callback_function.
+
+        Sometimes the request fails to be sent, so use the `tab.wait_request` instead.'''
         request_dict = await self.wait_event("Network.responseReceived",
+                                             filter_function=filter_function,
+                                             timeout=timeout)
+        return await ensure_awaitable_result(callback_function, request_dict)
+
+    async def wait_request(self,
+                           filter_function: Optional[Callable] = None,
+                           callback_function: Optional[Callable] = None,
+                           timeout: Union[int, float] = None):
+        '''wait a special request filted by function, then run the callback_function.
+
+        Often used for HTTP packet capture:
+
+
+            await tab.wait_request(filter_function=lambda r: print(r),
+                                   timeout=10)'''
+        request_dict = await self.wait_event("Network.requestWillBeSent",
                                              filter_function=filter_function,
                                              timeout=timeout)
         return await ensure_awaitable_result(callback_function, request_dict)
