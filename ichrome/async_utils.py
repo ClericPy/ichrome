@@ -175,9 +175,8 @@ class _WSConnection(object):
             f'[disconnected] {self.tab!r} ws_connection closed[{self._closed}]')
 
 
-class Tab(object):
+class Tab:
     _log_all_recv = False
-    get_data_value = get_data_value
     _min_move_interval = 0.05
     _domains_can_be_enabled = {
         'Accessibility', 'Animation', 'ApplicationCache', 'Audits', 'CSS',
@@ -238,6 +237,10 @@ class Tab(object):
         if self.ws and not self.ws.closed:
             logger.debug('[unclosed] WSConnection is not closed.')
             asyncio.ensure_future(self.ws.close(), loop=self.loop)
+
+    @staticmethod
+    def get_data_value(*args, **kwargs):
+        return get_data_value(*args, **kwargs)
 
     async def close_browser(self):
         return await self.send('Browser.close')
@@ -433,21 +436,19 @@ class Tab(object):
 
     async def enable(self, name: str, force: bool = False):
         '''name: Network / Page and so on, will send `Name.enable`. Will check for duplicated sendings.'''
-        if name in self._domains_can_be_enabled:
-            return await self.send(f'{name}.enable',
-                                   check_duplicated_on_off=not force)
-        else:
-            raise KeyError(
+        if name not in self._domains_can_be_enabled:
+            logger.warning(
                 f'{name} not in valid names {self._domains_can_be_enabled}')
+        return await self.send(f'{name}.enable',
+                               check_duplicated_on_off=not force)
 
     async def disable(self, name: str, force: bool = False):
         '''name: Network / Page and so on, will send `Name.disable`. Will check for duplicated sendings.'''
-        if name in self._domains_can_be_enabled:
-            return await self.send(f'{name}.disable',
-                                   check_duplicated_on_off=not force)
-        else:
-            raise KeyError(
+        if name not in self._domains_can_be_enabled:
+            logger.warning(
                 f'{name} not in valid names {self._domains_can_be_enabled}')
+        return await self.send(f'{name}.disable',
+                               check_duplicated_on_off=not force)
 
     async def get_all_cookies(self, timeout: Union[int, float] = None):
         """Network.getAllCookies"""
@@ -580,15 +581,48 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         """`await tab.html`. return html from `document.documentElement.outerHTML`"""
         return self.get_html()
 
+    async def set_html(self, html: str, frame_id: str = None, timeout=None):
+        start_time = time.time()
+        if frame_id is None:
+            frame_id = await self.get_page_frame_id(timeout=timeout)
+        timeout = (timeout or self.timeout) - (time.time() - start_time)
+        if timeout <= 0:
+            return None
+        if frame_id is None:
+            return await self.js(f'document.write(`{html}`)', timeout=timeout)
+        else:
+            return await self.send('Page.setDocumentContent',
+                                   html=html,
+                                   frameId=frame_id,
+                                   timeout=timeout)
+
+    async def get_page_frame_id(self, timeout=None):
+        result = await self.get_frame_tree(timeout=timeout)
+        return get_data_value(result, path='result.frameTree.frame.id')
+
+    @property
+    def frame_tree(self):
+        return self.get_frame_tree()
+
+    async def get_frame_tree(self, timeout=None):
+        await self.enable('Page')
+        return await self.send('Page.getFrameTree', timeout=timeout)
+
+    async def stop_loading_page(self, timeout=0):
+        '''Page.stopLoading'''
+        await self.enable('Page')
+        return await self.send("Page.stopLoading", timeout=timeout)
+
     async def wait_loading(self,
                            timeout: Union[int, float] = None,
                            callback_function: Optional[Callable] = None,
                            timeout_stop_loading=False) -> Union[dict, None]:
+        '''Page.loadEventFired event for page loaded.'''
         data = await self.wait_event("Page.loadEventFired",
                                      timeout=timeout,
                                      callback_function=callback_function)
         if data is None and timeout_stop_loading:
-            await self.send("Page.stopLoading", timeout=0)
+            await self.stop_loading_page()
         return data
 
     async def wait_page_loading(self,
@@ -648,26 +682,28 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                            filter_function: Optional[Callable] = None,
                            callback_function: Optional[Callable] = None,
                            timeout: Union[int, float] = None):
-        '''wait a special request filted by function, then run the callback_function.
+        '''Network.requestWillBeSent. To wait a special request filted by function, then run the callback_function(request_dict).
 
         Often used for HTTP packet capture:
 
+            `await tab.wait_request(filter_function=lambda r: print(r), timeout=10)`
 
-            await tab.wait_request(filter_function=lambda r: print(r),
-                                   timeout=10)'''
+        WARNING: requestWillBeSent event fired do not mean the response is ready,
+        should await tab.wait_request_loading(request_dict) or await tab.get_response(request_dict, wait_loading=True)
+'''
         request_dict = await self.wait_event("Network.requestWillBeSent",
                                              filter_function=filter_function,
                                              timeout=timeout)
         return await ensure_awaitable_result(callback_function, request_dict)
 
     async def wait_request_loading(self,
-                                   request_dict: dict,
+                                   request_dict: Union[None, dict, str],
                                    timeout: Union[int, float] = None):
 
         def request_id_filter(event):
             return event["params"]["requestId"] == request_id
 
-        request_id = request_dict["params"]["requestId"]
+        request_id = self._ensure_request_id(request_dict)
         return await self.wait_event('Network.loadingFinished',
                                      timeout=timeout,
                                      filter_function=request_id_filter)
@@ -678,21 +714,69 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.wait_request_loading(request_dict=request_dict,
                                                timeout=timeout)
 
+    @staticmethod
+    def _ensure_request_id(request_id: Union[None, dict, str]):
+        if request_id is None:
+            return None
+        if isinstance(request_id, str):
+            return request_id
+        elif isinstance(request_id, dict):
+            return request_id['params']['requestId']
+        else:
+            raise TypeError(
+                f"request type should be None or dict or str, but given `{type(request_id)}`"
+            )
+
     async def get_response(
             self,
-            request_dict: dict,
+            request_dict: Union[None, dict, str],
             timeout: Union[int, float] = None,
+            wait_loading: bool = False,
     ) -> Union[dict, None]:
-        '''{'id': 30, 'result': {'body': 'xxxxxxxxx', 'base64Encoded': False}}.
-        WARNING: some ajax request need to wait_request_loading before loadingFinished.'''
-        if request_dict is None:
+        '''Network.getResponseBody.
+        return demo:
+
+                {'id': 2, 'result': {'body': 'JSON source code', 'base64Encoded': False}}
+
+        WARNING: some ajax request need to await tab.wait_request_loading(request_dict) for
+        loadingFinished (or sleep some secs), so set the wait_loading=True.'''
+        start_time = time.time()
+        request_id = self._ensure_request_id(request_dict)
+        if request_id is None:
+            return None
+        if wait_loading:
+            # ensure the request loaded
+            await self.wait_request_loading(request_id)
+        timeout = (timeout or self.timeout) - (time.time() - start_time)
+        if timeout <= 0:
             return None
         await self.enable('Network')
-        request_id = request_dict["params"]["requestId"]
-        resp = await self.send("Network.getResponseBody",
-                               requestId=request_id,
-                               timeout=timeout)
-        return resp
+        result = await self.send("Network.getResponseBody",
+                                 requestId=request_id,
+                                 timeout=timeout)
+        return result
+
+    async def get_response_body(self,
+                                request_dict: Union[None, dict, str],
+                                timeout: Union[int, float] = None,
+                                wait_loading=False) -> Union[dict, None]:
+        """For tab.wait_request's callback_function. This will await loading before getting resonse body."""
+        result = await self.get_response(request_dict, timeout=timeout)
+        return get_data_value(result, None, path='result.body')
+
+    async def get_request_post_data(
+            self,
+            request_dict: Union[None, dict, str],
+            timeout: Union[int, float] = None) -> Union[str, None]:
+        """Get the post data of the POST request. No need for wait_request_loading."""
+        request_id = self._ensure_request_id(request_dict)
+        if request_id is None:
+            return None
+        await self.enable('Network')
+        result = await self.send("Network.getRequestPostData",
+                                 requestId=request_id,
+                                 timeout=timeout)
+        return get_data_value(result, None, path='result.postData')
 
     async def reload(self,
                      ignoreCache: bool = False,
@@ -1097,7 +1181,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                          duration=0,
                          timeout=None):
         # move mouse smoothly only if duration > 0.
-        await self.enable('Input')
         if start_x is None:
             start_x = 0.8 * target_x
         if start_y is None:
@@ -1173,7 +1256,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                          button='left',
                          duration=0,
                          timeout=None):
-        await self.enable('Input')
         await self.mouse_press(start_x, start_y, button=button, timeout=timeout)
         await self.mouse_move(target_x,
                               target_y,
