@@ -141,8 +141,7 @@ async def test_wait_response(tab: Tab):
 
     # listening response
     def filter_function(r):
-        ok = 'httpbin.org' in r['params'][
-            'response']['url']
+        ok = 'httpbin.org' in r['params']['response']['url']
         return print('get response url:', r['params']['response']['url'],
                      ok) or ok
 
@@ -263,5 +262,4 @@ async def test_examples():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_examples())
+    asyncio.run(test_examples())

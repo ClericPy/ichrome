@@ -15,7 +15,8 @@ from weakref import WeakValueDictionary
 from aiofiles import open as aopen
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
-from torequests.dummy import NewResponse, Pool, Requests
+from torequests.aiohttp_dummy import Requests
+from torequests.dummy import NewResponse, Pool
 from torequests.utils import UA, quote_plus, urljoin
 
 from .base import ChromeDaemon, Tag
@@ -126,12 +127,11 @@ class _WSConnection(object):
     async def connect(self):
         """Connect to websocket, and set tab.ws as aiohttp.client_ws.ClientWebSocketResponse."""
         try:
-            session = await self.tab.req.session
-            self.tab.ws = await session.ws_connect(
+            self.tab.ws = await self.tab.req.session.ws_connect(
                 self.tab.webSocketDebuggerUrl,
                 timeout=self.tab.timeout,
                 **self.tab.ws_kwargs)
-            asyncio.ensure_future(self.tab._recv_daemon(), loop=self.tab.loop)
+            asyncio.ensure_future(self.tab._recv_daemon())
             logger.debug(
                 f'[connected] {self.tab} websocket connection created.')
         except (ClientError, WebSocketError) as err:
@@ -200,12 +200,10 @@ class Tab(GetValueMixin):
                  chrome=None,
                  timeout=5,
                  ws_kwargs=None,
-                 loop=None,
                  **kwargs):
         tab_id = tab_id or kwargs.pop('id')
         if not tab_id:
             raise ValueError('tab_id should not be null')
-        self.loop = loop
         self.tab_id = tab_id
         self.title = title
         self._url = url
@@ -221,7 +219,7 @@ class Tab(GetValueMixin):
         if self.chrome:
             self.req = self.chrome.req
         else:
-            self.req = Requests(loop=self.loop)
+            self.req = Requests()
         self._listener = Listener()
         self._enabled_domains = set()
 
@@ -240,7 +238,7 @@ class Tab(GetValueMixin):
     def __del__(self):
         if self.ws and not self.ws.closed:
             logger.debug('[unclosed] WSConnection is not closed.')
-            asyncio.ensure_future(self.ws.close(), loop=self.loop)
+            asyncio.ensure_future(self.ws.close())
 
     async def close_browser(self):
         return await self.send('Browser.close')
@@ -993,10 +991,11 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                             retry=0,
                             verify=False,
                             **requests_kwargs) -> Union[dict, None]:
+        if not requests_kwargs.get('headers'):
+            requests_kwargs['headers'] = {'User-Agent': UA.Chrome}
         r = await self.req.get(url,
                                timeout=timeout,
                                retry=retry,
-                               headers={'User-Agent': UA.Chrome},
                                ssl=verify,
                                **requests_kwargs)
         if r:
@@ -1441,13 +1440,11 @@ class Chrome(GetValueMixin):
                  host: str = "127.0.0.1",
                  port: int = 9222,
                  timeout: int = 2,
-                 retry: int = 1,
-                 loop: Optional[asyncio.AbstractEventLoop] = None):
+                 retry: int = 1):
         self.host = host
         self.port = port
         self.timeout = timeout
         self.retry = retry
-        self.loop = loop
         self.status = 'init'
         self.req = InvalidRequests()
 
@@ -1496,7 +1493,7 @@ class Chrome(GetValueMixin):
 
     async def connect(self) -> bool:
         """await self.connect()"""
-        self.req = Requests(loop=self.loop)
+        self.req = Requests()
         if await self.check():
             return True
         else:
@@ -1520,7 +1517,7 @@ class Chrome(GetValueMixin):
         """await self.ok"""
         return self.check()
 
-    async def get_server(self, api: str = '') -> 'NewResponse':
+    async def get_server(self, api: str = '') -> NewResponse:
         # maybe return failure request
         url = urljoin(self.server, api)
         resp = await self.req.get(url, timeout=self.timeout, retry=self.retry)
@@ -1564,12 +1561,10 @@ class Chrome(GetValueMixin):
                    timeout: Union[int, float] = None,
                    max_deaths: int = 1) -> None:
         if self.req:
-            loop = self.req.loop
             await self.req.close()
-        else:
-            loop = asyncio.get_event_loop()
-        await loop.run_in_executor(Pool(1), ChromeDaemon.clear_chrome_process,
-                                   self.port, timeout, max_deaths)
+        await asyncio.get_running_loop().run_in_executor(
+            Pool(1), ChromeDaemon.clear_chrome_process, self.port, timeout,
+            max_deaths)
 
     async def new_tab(self, url: str = "") -> Union[Tab, None]:
         api = f'/json/new?{quote_plus(url)}'
