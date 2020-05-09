@@ -32,24 +32,6 @@ except ImportError:
     from asyncio.exceptions import TimeoutError
 
 
-def get_data_value(item, default=None, path: str = 'result.result.value'):
-    if not item:
-        return None
-    try:
-        for key in path.split('.'):
-            item = item.__getitem__(key)
-        return item
-    except (KeyError, TypeError):
-        return default
-
-
-def check_error(name, result, path='error.message', **kwargs):
-    error = get_data_value(result, path=path)
-    if error:
-        logger.info(f'{name} failed: {kwargs}. result: {result}')
-    return not error
-
-
 class AsyncChromeDaemon:
     __doc__ = ChromeDaemon.__doc__
 
@@ -174,7 +156,30 @@ class _WSConnection(object):
             f'[disconnected] {self.tab!r} ws_connection closed[{self._closed}]')
 
 
-class Tab:
+class GetValueMixin:
+    '''Get value with path'''
+
+    @staticmethod
+    def get_data_value(item, path: str = 'result.result.value', default=None):
+        """default path is for js response dict"""
+        if not item:
+            return default
+        try:
+            for key in path.split('.'):
+                item = item.__getitem__(key)
+            return item
+        except (KeyError, TypeError):
+            return default
+
+    @classmethod
+    def check_error(cls, name, result, path='error.message', **kwargs):
+        error = cls.get_data_value(result, path=path)
+        if error:
+            logger.info(f'{name} failed: {kwargs}. result: {result}')
+        return not error
+
+
+class Tab(GetValueMixin):
     _log_all_recv = False
     _min_move_interval = 0.05
     _domains_can_be_enabled = {
@@ -236,10 +241,6 @@ class Tab:
         if self.ws and not self.ws.closed:
             logger.debug('[unclosed] WSConnection is not closed.')
             asyncio.ensure_future(self.ws.close(), loop=self.loop)
-
-    @staticmethod
-    def get_data_value(*args, **kwargs):
-        return get_data_value(*args, **kwargs)
 
     async def close_browser(self):
         return await self.send('Browser.close')
@@ -621,7 +622,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def get_page_frame_id(self, timeout=None):
         result = await self.get_frame_tree(timeout=timeout)
-        return get_data_value(result, path='result.frameTree.frame.id')
+        return self.get_data_value(result, path='result.frameTree.frame.id')
 
     @property
     def frame_tree(self):
@@ -763,10 +764,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             return None
         if wait_loading:
             # ensure the request loaded
-            await self.wait_request_loading(request_id)
-        timeout = (timeout or self.timeout) - (time.time() - start_time)
-        if timeout <= 0:
-            return None
+            await self.wait_request_loading(request_id, timeout=timeout)
+            timeout = (timeout or self.timeout) - (time.time() - start_time)
+        if timeout < 0:
+            timeout = 0
         result = await self.send("Network.getResponseBody",
                                  requestId=request_id,
                                  timeout=timeout)
@@ -777,8 +778,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 timeout: Union[int, float] = None,
                                 wait_loading=False) -> Union[dict, None]:
         """For tab.wait_request's callback_function. This will await loading before getting resonse body."""
-        result = await self.get_response(request_dict, timeout=timeout)
-        return get_data_value(result, None, path='result.body')
+        result = await self.get_response(request_dict,
+                                         timeout=timeout,
+                                         wait_loading=wait_loading)
+        return self.get_data_value(result, path='result.body', default='')
 
     async def get_request_post_data(
             self,
@@ -791,7 +794,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         result = await self.send("Network.getRequestPostData",
                                  requestId=request_id,
                                  timeout=timeout)
-        return get_data_value(result, None, path='result.postData')
+        return self.get_data_value(result, path='result.postData')
 
     async def reload(self,
                      ignoreCache: bool = False,
@@ -845,12 +848,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         result = await self.send('Page.navigateToHistoryEntry',
                                  entryId=entryId,
                                  timeout=timeout)
-        return check_error('goto_history', result, entryId=entryId)
+        return self.check_error('goto_history', result, entryId=entryId)
 
     async def get_history_list(self, timeout=None) -> dict:
         """return dict: {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}"""
         result = await self.send('Page.getNavigationHistory', timeout=timeout)
-        return get_data_value(result, {}, path='result')
+        return self.get_data_value(result, path='result', default={})
 
     async def set_url(self,
                       url: Optional[str] = None,
@@ -903,10 +906,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if promptText is not None:
             kwargs['promptText'] = promptText
         result = await self.send('Page.handleJavaScriptDialog', **kwargs)
-        return check_error('handle_dialog',
-                           result,
-                           accept=accept,
-                           promptText=promptText)
+        return self.check_error('handle_dialog',
+                                result,
+                                accept=accept,
+                                promptText=promptText)
 
     async def querySelectorAll(self,
                                cssselector: str,
@@ -968,7 +971,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         response = None
         try:
             response = (await self.js(javascript, timeout=timeout)) or {}
-            response_items_str = get_data_value(response, '')
+            response_items_str = self.get_data_value(response, default='')
             items = json.loads(response_items_str)
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
@@ -1021,7 +1024,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def get_element_clip(self, cssselector: str, scale=1):
         """Element.getBoundingClientRect"""
         js_str = 'JSON.stringify(document.querySelector(`' + cssselector + '`).getBoundingClientRect())'
-        rect = get_data_value(await self.js(js_str))
+        rect = self.get_data_value(await self.js(js_str))
         if rect:
             try:
                 rect = json.loads(rect)
@@ -1074,7 +1077,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                  callback_function=None,
                                  force=False,
                                  **kwargs)
-        base64_img = get_data_value(result, None, path='result.data')
+        base64_img = self.get_data_value(result, path='result.data')
         if save_path and base64_img:
             async with aopen(save_path, 'wb') as f:
                 await f.write(b64decode(base64_img))
@@ -1085,14 +1088,16 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         data = await self.send('Page.addScriptToEvaluateOnNewDocument',
                                source=source,
                                **kwargs)
-        return get_data_value(data, path='result.identifier') or ''
+        return self.get_data_value(data, path='result.identifier') or ''
 
     async def remove_js_onload(self, identifier: str, timeout=None):
         '''Page.removeScriptToEvaluateOnNewDocument, return whether the identifier exist.'''
         result = await self.send('Page.removeScriptToEvaluateOnNewDocument',
                                  identifier=identifier,
                                  timeout=timeout)
-        return check_error('remove_js_onload', result, identifier=identifier)
+        return self.check_error('remove_js_onload',
+                                result,
+                                identifier=identifier)
 
     async def get_value(self, name: str):
         """name or expression"""
@@ -1102,7 +1107,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         """name or expression"""
         # using JSON to keep value type
         result = await self.js('JSON.stringify({"%s": %s})' % ('key', name))
-        value = get_data_value(result)
+        value = self.get_data_value(result)
         if value:
             try:
                 return json.loads(value)['key']
@@ -1430,8 +1435,7 @@ class InvalidRequests(object):
         return False
 
 
-class Chrome:
-    get_data_value = get_data_value
+class Chrome(GetValueMixin):
 
     def __init__(self,
                  host: str = "127.0.0.1",
