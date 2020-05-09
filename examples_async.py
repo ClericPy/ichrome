@@ -1,8 +1,7 @@
 import asyncio
 from typing import List
 
-from ichrome.async_utils import (AsyncChromeDaemon, Chrome, Tab, Tag,
-                                 get_data_value, logger)
+from ichrome.async_utils import (AsyncChromeDaemon, Chrome, Tab, Tag, logger)
 
 logger.setLevel('DEBUG')
 # Tab._log_all_recv = True
@@ -63,8 +62,9 @@ async def test_tab_ws(tab: Tab):
 
 async def test_send_msg(tab: Tab):
     # test send msg
-    assert get_data_value(await tab.send('Network.enable'), {},
-                          path='value') == {}
+    assert tab.get_data_value(await tab.send('Network.enable'),
+                              path='value',
+                              default={}) == {}
     # disable Network
     await tab.disable('Network')
 
@@ -110,7 +110,8 @@ async def test_tab_js(tab: Tab):
     assert 'Function' in str(vue_obj)
     # querySelectorAll with JS, return list of Tag object
     tags = await tab.querySelectorAll('#id-search-field')
-    assert isinstance(tags[0], Tag)
+    assert tags, f'{[tags, type(tags)]}'
+    assert isinstance(tags[0], Tag), f'{[tags[0], type(tags[0])]}'
     # querySelectorAll with JS, index arg is Not None, return Tag or None
     one_tag = await tab.querySelectorAll('#id-search-field', index=0)
     assert isinstance(one_tag, Tag)
@@ -126,18 +127,21 @@ async def test_wait_response(tab: Tab):
     # wait_response with filter_function
     # raw response: {'method': 'Network.responseReceived', 'params': {'requestId': '1000003000.69', 'loaderId': 'D7814CD633EDF3E699523AF0C4E9DB2C', 'timestamp': 207483.974238, 'type': 'Script', 'response': {'url': 'https://www.python.org/static/js/libs/masonry.pkgd.min.js', 'status': 200, 'statusText': '', 'headers': {'date': 'Sat, 05 Oct 2019 08:18:34 GMT', 'via': '1.1 vegur, 1.1 varnish, 1.1 varnish', 'last-modified': 'Tue, 24 Sep 2019 18:31:03 GMT', 'server': 'nginx', 'age': '290358', 'etag': '"5d8a60e7-6643"', 'x-served-by': 'cache-iad2137-IAD, cache-tyo19928-TYO', 'x-cache': 'HIT, HIT', 'content-type': 'application/x-javascript', 'status': '200', 'cache-control': 'max-age=604800, public', 'accept-ranges': 'bytes', 'x-timer': 'S1570263515.866582,VS0,VE0', 'content-length': '26179', 'x-cache-hits': '1, 170'}, 'mimeType': 'application/x-javascript', 'connectionReused': False, 'connectionId': 0, 'remoteIPAddress': '151.101.108.223', 'remotePort': 443, 'fromDiskCache': True, 'fromServiceWorker': False, 'fromPrefetchCache': False, 'encodedDataLength': 0, 'timing': {'requestTime': 207482.696803, 'proxyStart': -1, 'proxyEnd': -1, 'dnsStart': -1, 'dnsEnd': -1, 'connectStart': -1, 'connectEnd': -1, 'sslStart': -1, 'sslEnd': -1, 'workerStart': -1, 'workerReady': -1, 'sendStart': 0.079, 'sendEnd': 0.079, 'pushStart': 0, 'pushEnd': 0, 'receiveHeadersEnd': 0.836}, 'protocol': 'h2', 'securityState': 'unknown'}, 'frameId': 'A2971702DE69F008914F18EAE6514DD5'}}
     async def cb(request):
+        result = ''
         if request:
             # wait_loading for ajax request
-            result = await tab.get_response(request, wait_loading=True)
-            ok = 'Masonry PACKAGED' in get_data_value(result, '', 'result.body')
+            result = await tab.get_response_body(request,
+                                                 wait_loading=True,
+                                                 timeout=5)
+            ok = 'User-Agent' in result
             logger.warning(f'check wait_response callback, get_response {ok}')
-            assert ok
+            assert ok, f'{result} not contains "User-Agent"'
         else:
-            raise ValueError
+            raise ValueError(f'{request} is not True')
 
     # listening response
     def filter_function(r):
-        ok = 'www.python.org/static/js/libs/masonry.pkgd.min.js' in r['params'][
+        ok = 'httpbin.org' in r['params'][
             'response']['url']
         return print('get response url:', r['params']['response']['url'],
                      ok) or ok
@@ -146,7 +150,7 @@ async def test_wait_response(tab: Tab):
         tab.wait_response(filter_function=filter_function,
                           callback_function=cb,
                           timeout=10))
-    await tab.click('#about>a')
+    await tab.set_url('http://httpbin.org/get')
     await tab.wait_loading(2)
     await task
     # click download link, without wait_loading.
