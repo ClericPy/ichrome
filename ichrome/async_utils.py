@@ -8,7 +8,6 @@ import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
 from base64 import b64decode
-from functools import partial
 from typing import Any, Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
 
@@ -16,11 +15,12 @@ from aiofiles import open as aopen
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.aiohttp_dummy import Requests
-from torequests.dummy import NewResponse, Pool
+from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
 from .base import ChromeDaemon, Tag
 from .logs import logger
+
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -31,56 +31,6 @@ try:
 except ImportError:
     # for python 3.8+
     from asyncio.exceptions import TimeoutError
-
-
-class AsyncChromeDaemon:
-    __doc__ = ChromeDaemon.__doc__
-
-    def __init__(
-        self,
-        chrome_path=None,
-        host="127.0.0.1",
-        port=9222,
-        headless=False,
-        user_agent=None,
-        proxy=None,
-        user_data_dir=None,
-        disable_image=False,
-        start_url="about:blank",
-        extra_config=None,
-        max_deaths=1,
-        daemon=True,
-        block=False,
-        timeout=2,
-        debug=False,
-    ):
-        self.kwargs = dict(
-            chrome_path=chrome_path,
-            host=host,
-            port=port,
-            headless=headless,
-            user_agent=user_agent,
-            proxy=proxy,
-            user_data_dir=user_data_dir,
-            disable_image=disable_image,
-            start_url=start_url,
-            extra_config=extra_config,
-            max_deaths=max_deaths,
-            daemon=daemon,
-            block=block,
-            timeout=timeout,
-            debug=debug,
-        )
-
-    async def __aenter__(self):
-        loop = asyncio.get_running_loop()
-        self.daemon = await loop.run_in_executor(
-            None, partial(ChromeDaemon, **self.kwargs))
-        return self.daemon
-
-    async def __aexit__(self, *args, **kwargs):
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self.daemon.__exit__)
 
 
 async def ensure_awaitable_result(callback_function, result):
@@ -1563,7 +1513,7 @@ class Chrome(GetValueMixin):
         if self.req:
             await self.req.close()
         await asyncio.get_running_loop().run_in_executor(
-            Pool(1), ChromeDaemon.clear_chrome_process, self.port, timeout,
+            None, ChromeDaemon.clear_chrome_process, self.port, timeout,
             max_deaths)
 
     async def new_tab(self, url: str = "") -> Union[Tab, None]:
@@ -1634,4 +1584,4 @@ class Chrome(GetValueMixin):
         self.status = 'closed'
 
     def __del__(self):
-        asyncio.ensure_future(self.close())
+        _exhaust_simple_coro(self.close())

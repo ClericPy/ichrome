@@ -1,7 +1,7 @@
-from .async_utils import AsyncChromeDaemon
 from .async_utils import Chrome as AsyncChrome
 from .async_utils import Tab as AsyncTab
-from .base import Chrome, ChromeDaemon, Tab, Tag
+from .base import (AsyncChromeDaemon, Chrome, ChromeDaemon, ChromeWorkers, Tab,
+                   Tag)
 from .logs import logger
 
 __version__ = "1.1.5"
