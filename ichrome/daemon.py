@@ -1,12 +1,16 @@
+# -*- coding: utf-8 -*-
+import asyncio
 import os
 import platform
 import socket
 import subprocess
 import threading
 import time
+from pathlib import Path
 
 import psutil
 from torequests import tPool
+from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
 from .logs import logger
@@ -16,28 +20,44 @@ Sync / block operations for launching chrome processes.
 
 
 class ChromeDaemon(object):
-    """create chrome process.
+    """Create chrome process, and auto restart if it crash too fast.
     max_deaths: max_deaths=2 means should quick shutdown chrome twice to skip auto_restart. Default 1.
+
+        chrome_path=None,     chrome executable file path, default to null for
+                              automatic searching
+        host="127.0.0.1",     --remote-debugging-address, default to 127.0.0.1
+        port,                 --remote-debugging-port, default to 9222
+        headless,             --headless and --hide-scrollbars, default to False
+        user_agent,           --user-agent, default to 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'
+        proxy,                --proxy-server, default to None
+        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data
+        disable_image,        disable image for loading performance, default to False
+        start_url,            start url while launching chrome, default to about:blank
+        max_deaths,           max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 for without auto-restart
+        timeout,              timeout to connect the remote server, default to 1 for localhost
+        debug,                set logger level to DEBUG
+        proc_check_interval,  check chrome process alive every interval seconds
 
     default extra_config: ["--disable-gpu", "--no-sandbox", "--no-first-run"]
 
     common args:
-    --incognito: Causes the browser to launch directly in incognito mode
-    --mute-audio: Mutes audio sent to the audio device so it is not audible during automated testing.
-    --blink-settings=imagesEnabled=false: disable image loading.
 
-    --no-sandbox: headless mode will need this arg.
-    --disable-javascript
-    --disable-extensions
-    --disable-background-networking
-    --safebrowsing-disable-auto-update
-    --disable-sync
-    --ignore-certificate-errors
-    –disk-cache-dir=xxx: Use a specific disk cache location, rather than one derived from the UserDatadir.
-    --disk-cache-size: Forces the maximum disk space to be used by the disk cache, in bytes.
-    --single-process
-    --proxy-pac-url=xxx. Nonsense for headless mode.
-    --kiosk
+        --incognito: Causes the browser to launch directly in incognito mode
+        --mute-audio: Mutes audio sent to the audio device so it is not audible during automated testing.
+        --blink-settings=imagesEnabled=false: disable image loading.
+
+        --no-sandbox: headless mode will need this arg.
+        --disable-javascript
+        --disable-extensions
+        --disable-background-networking
+        --safebrowsing-disable-auto-update
+        --disable-sync
+        --ignore-certificate-errors
+        –disk-cache-dir=xxx: Use a specific disk cache location, rather than one derived from the UserDatadir.
+        --disk-cache-size: Forces the maximum disk space to be used by the disk cache, in bytes.
+        --single-process
+        --proxy-pac-url=xxx. Nonsense for headless mode.
+        --kiosk
 
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
@@ -52,25 +72,26 @@ class ChromeDaemon(object):
     MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
 
     def __init__(
-            self,
-            chrome_path=None,
-            host="127.0.0.1",
-            port=9222,
-            headless=False,
-            user_agent=None,
-            proxy=None,
-            user_data_dir=None,
-            disable_image=False,
-            start_url="about:blank",
-            extra_config=None,
-            max_deaths=1,
-            daemon=True,
-            block=False,
-            timeout=1,
-            debug=False,
+        self,
+        chrome_path=None,
+        host="127.0.0.1",
+        port=9222,
+        headless=False,
+        user_agent=None,
+        proxy=None,
+        user_data_dir=None,
+        disable_image=False,
+        start_url="about:blank",
+        extra_config=None,
+        max_deaths=1,
+        daemon=True,
+        block=False,
+        timeout=1,
+        debug=False,
+        proc_check_interval=5,
     ):
         if debug:
-            logger.setLevel(10)
+            logger.setLevel('DEBUG')
         self.debug = debug
         self.start_time = time.time()
         self.max_deaths = max_deaths
@@ -83,9 +104,7 @@ class ChromeDaemon(object):
         self.host = host
         self.port = port
         self.server = f"http://{self.host}:{self.port}"
-        self.chrome_path = chrome_path or self._get_default_path()
-        self.req = tPool()
-        self._ensure_port_free()
+        self.chrome_path = chrome_path
         self.UA = self.PC_UA if user_agent is None else user_agent
         self.headless = headless
         self.proxy = proxy
@@ -98,26 +117,68 @@ class ChromeDaemon(object):
         if not isinstance(self.extra_config, list):
             raise TypeError("extra_config type should be list.")
         self.chrome_proc_start_time = time.time()
+        self.proc_check_interval = proc_check_interval
+        self.init(block)
+
+    def init(self, block):
+        self.chrome_path = self.chrome_path or self._get_default_path()
+        self._ensure_port_free()
+        self.req = tPool()
         self.launch_chrome()
         if self._use_daemon:
             self._daemon_thread = self.run_forever(block=block)
 
+    @staticmethod
+    def ensure_dir(path: Path):
+        if isinstance(path, str):
+            path = Path(path)
+        if path.is_dir():
+            return path
+        else:
+            paths = list(reversed(path.parents))
+            paths.append(path)
+            p: Path
+            for p in paths:
+                if not p.is_dir():
+                    p.mkdir()
+            return path
+
     def _wrap_user_data_dir(self, user_data_dir):
         """refactor this function to set accurate dir."""
-        default_path = os.path.join(
-            os.path.expanduser("~"), "ichrome_user_data")
-        user_data_dir = default_path if user_data_dir is None else user_data_dir
-        self.user_data_dir = os.path.join(user_data_dir, f"chrome_{self.port}")
-        if not os.path.isdir(self.user_data_dir):
+        if user_data_dir is None:
+            user_data_dir = Path.home() / 'ichrome_user_data'
+        else:
+            user_data_dir = Path(user_data_dir)
+        self.user_data_dir = user_data_dir / f"chrome_{self.port}"
+        if not self.user_data_dir.is_dir():
             logger.warning(
                 f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
             )
+            self.ensure_dir(self.user_data_dir)
+
+    @classmethod
+    def clear_user_dir(cls, user_data_dir):
+        return cls.clear_dir(user_data_dir)
+
+    @classmethod
+    def clear_dir(cls, dir_path):
+        dir_path = Path(dir_path)
+        if not dir_path.is_dir():
+            logger.info(f'Dir is not exist: {dir_path}.')
+            return True
+        logger.info(f'Cleaning {dir_path}...')
+        for f in dir_path.iterdir():
+            if f.is_dir():
+                cls.clear_dir(f)
+            else:
+                f.unlink()
+                logger.info(f'File removed: {f}')
+        dir_path.rmdir()
+        logger.info(f'Folder removed: {dir_path}')
 
     @property
     def ok(self):
-        if self.proc_ok and self.connection_ok:
-            return True
-        return False
+        return self.proc_ok and self.connection_ok
 
     @property
     def proc_ok(self):
@@ -172,8 +233,14 @@ class ChromeDaemon(object):
             kwargs["stderr"] = subprocess.DEVNULL
         return kwargs
 
-    def launch_chrome(self):
+    def _start_chrome_process(self):
         self.proc = subprocess.Popen(**self.cmd_args)
+
+    def launch_chrome(self):
+        self._start_chrome_process()
+        return self.check_chrome_ready()
+
+    def check_chrome_ready(self):
         if self.ok:
             logger.info(
                 f"launch_chrome success: {self}, args: {self.proc.args}")
@@ -186,11 +253,12 @@ class ChromeDaemon(object):
         for _ in range(3):
             try:
                 sock = socket.socket()
+                sock.settimeout(self._timeout)
                 sock.connect((self.host, self.port))
                 logger.info(f"shutting down chrome using port {self.port}")
                 self.kill(True)
                 continue
-            except ConnectionRefusedError:
+            except (ConnectionRefusedError, socket.timeout):
                 return True
             finally:
                 sock.close()
@@ -233,10 +301,11 @@ class ChromeDaemon(object):
                     continue
         raise FileNotFoundError("Not found executable chrome file.")
 
-    def _daemon(self, interval=5):
+    def _daemon(self, interval=None):
         """if chrome proc is killed self.max_deaths times too fast (not raise TimeoutExpired),
         will skip auto_restart.
         check alive every `interval` seconds."""
+        interval = interval or proc_check_interval
         return_code = None
         deaths = 0
         while self._use_daemon:
@@ -263,7 +332,8 @@ class ChromeDaemon(object):
         self._shutdown = time.time()
         return return_code
 
-    def run_forever(self, block=True, interval=5):
+    def run_forever(self, block=True, interval=None):
+        interval = interval or self.proc_check_interval
         if self._shutdown:
             raise IOError(
                 f"{self} run_forever failed after shutdown({ttime(self._shutdown)})."
@@ -317,7 +387,8 @@ class ChromeDaemon(object):
         return self
 
     def __exit__(self, *args):
-        self.shutdown()
+        if not self._shutdown:
+            self.shutdown()
 
     @staticmethod
     def get_proc(port):
@@ -376,3 +447,178 @@ class ChromeDaemon(object):
 
     def __str__(self):
         return f"{self.__class__.__name__}({self.host}:{self.port})"
+
+
+class AsyncChromeDaemon(ChromeDaemon):
+
+    def __init__(
+        self,
+        chrome_path=None,
+        host="127.0.0.1",
+        port=9222,
+        headless=False,
+        user_agent=None,
+        proxy=None,
+        user_data_dir=None,
+        disable_image=False,
+        start_url="about:blank",
+        extra_config=None,
+        max_deaths=1,
+        daemon=True,
+        block=False,
+        timeout=1,
+        debug=False,
+    ):
+        super().__init__(chrome_path=chrome_path,
+                         host=host,
+                         port=port,
+                         headless=headless,
+                         user_agent=user_agent,
+                         proxy=proxy,
+                         user_data_dir=user_data_dir,
+                         disable_image=disable_image,
+                         start_url=start_url,
+                         extra_config=extra_config,
+                         max_deaths=max_deaths,
+                         daemon=daemon,
+                         block=block,
+                         timeout=timeout,
+                         debug=debug)
+
+    def init(self, block):
+        # Please init AsyncChromeDaemon in a running loop with `async with`
+        self.req = Requests()
+        self._block = block
+
+    async def _init_chrome_daemon(self):
+        await self.loop.run_in_executor(None, self._ensure_port_free)
+        if not self.chrome_path:
+            self.chrome_path = await self.loop.run_in_executor(
+                None, self._get_default_path)
+        await self.launch_chrome()
+        if self._use_daemon:
+            self._daemon_thread = await self.run_forever(block=self._block)
+
+    def _start_chrome_process(self):
+        self.proc = subprocess.Popen(**self.cmd_args)
+
+    async def launch_chrome(self):
+        await self.loop.run_in_executor(None, self._start_chrome_process)
+        return await self.ok
+
+    async def check_connection(self):
+        url = self.server + "/json"
+        for _ in range(int(self._timeout) + 1):
+            r = await self.req.get(url, timeout=self._timeout)
+            if r and r.ok:
+                self.ready = True
+                self.port_in_using.add(self.port)
+                return True
+            await asyncio.sleep(1)
+        return False
+
+    @property
+    def connection_ok(self):
+        # awaitable property
+        return self.check_connection()
+
+    @property
+    def ok(self):
+        # awaitable property
+        return self.check_chrome_ready()
+
+    async def check_chrome_ready(self):
+        if self.proc_ok and await self.check_connection():
+            logger.info(
+                f"launch_chrome success: {self}, args: {self.proc.args}")
+            return True
+        else:
+            logger.error(f"launch_chrome failed: {self}, args: {self.cmd}")
+            return False
+
+    @property
+    def loop(self):
+        return asyncio.get_running_loop()
+
+    async def run_forever(self, block=True, interval=None):
+        interval = interval or self.proc_check_interval
+        if self._shutdown:
+            raise IOError(
+                f"{self} run_forever failed after shutdown({ttime(self._shutdown)})."
+            )
+        logger.debug(
+            f"{self} run_forever(block={block}, interval={interval}, max_deaths={self.max_deaths})."
+        )
+        task = self._daemon_thread or asyncio.ensure_future(
+            self._daemon(interval=interval))
+        if self._block:
+            await task
+        return task
+
+    async def _daemon(self, interval=None):
+        """if chrome proc is killed self.max_deaths times too fast (not raise TimeoutExpired),
+        will skip auto_restart.
+        check alive every `interval` seconds."""
+        interval = interval or self.proc_check_interval
+        return_code = None
+        deaths = 0
+        while self._use_daemon:
+            if self._shutdown:
+                logger.info(
+                    f"{self} daemon break after shutdown({ttime(self._shutdown)})."
+                )
+                break
+            if deaths >= self.max_deaths:
+                logger.info(
+                    f"{self} daemon break for deaths is more than {self.max_deaths} times."
+                )
+                break
+            if not self.proc_ok:
+                logger.debug(f"{self} daemon is restarting proc.")
+                await self.loop.run_in_executor(None, self.restart)
+                continue
+            try:
+                return_code = await self.loop.run_in_executor(
+                    None, self.proc.wait, self.interval)
+                deaths += 1
+            except subprocess.TimeoutExpired:
+                deaths = 0
+        logger.info(f"{self} daemon exited.")
+        self._shutdown = time.time()
+        return return_code
+
+    async def __aenter__(self):
+        await self._init_chrome_daemon()
+        return self
+
+    async def __aexit__(self, *args, **kwargs):
+        await self.loop.run_in_executor(None, self.__exit__)
+
+
+class ChromeWorkers:
+
+    def __init__(self, args, kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        self.daemons = []
+
+    async def __aenter__(self):
+        return await self.create_chrome_workers()
+
+    async def create_chrome_workers(self):
+        for port in range(self.args.port, self.args.port + self.args.workers):
+            self.daemons.append(await
+                                AsyncChromeDaemon(port=port,
+                                                  daemon=True,
+                                                  block=False,
+                                                  **self.kwargs).__aenter__())
+
+    async def __aexit__(self, *args):
+        for daemon in self.daemons:
+            await daemon._daemon_thread
+            await daemon.__aexit__()
+
+    @classmethod
+    async def run_chrome_workers(cls, args, kwargs):
+        async with cls(args, kwargs):
+            pass

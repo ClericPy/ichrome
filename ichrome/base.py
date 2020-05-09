@@ -1,8 +1,11 @@
-from .daemon import ChromeDaemon
+from .daemon import AsyncChromeDaemon, ChromeDaemon, ChromeWorkers
 from .sync_utils import Chrome, Tab
+
 """
 For base usage with sync utils.
 """
+
+__all__ = ['ChromeDaemon', 'Chrome', 'Tab', 'AsyncChromeDaemon', 'ChromeWorkers']
 
 
 class Tag(object):

@@ -1,7 +1,8 @@
 import asyncio
 from typing import List
 
-from ichrome.async_utils import (AsyncChromeDaemon, Chrome, Tab, Tag, logger)
+from ichrome import AsyncChromeDaemon
+from ichrome.async_utils import Chrome, Tab, Tag, logger
 
 logger.setLevel('DEBUG')
 # Tab._log_all_recv = True
