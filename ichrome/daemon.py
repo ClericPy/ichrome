@@ -579,7 +579,7 @@ class AsyncChromeDaemon(ChromeDaemon):
                 continue
             try:
                 return_code = await self.loop.run_in_executor(
-                    None, self.proc.wait, self.interval)
+                    None, self.proc.wait, interval)
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0

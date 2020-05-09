@@ -6,7 +6,7 @@ def init_logger():
     logger.setLevel(logging.INFO)
     hd = logging.StreamHandler()
     formatter_str = (
-        "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
+        "%(levelname)-5s %(asctime)s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     )
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
     hd.setLevel(logging.DEBUG)
