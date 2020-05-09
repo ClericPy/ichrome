@@ -2,7 +2,6 @@ import json
 import re
 
 from ichrome import Chrome, ChromeDaemon, logger
-
 """
 Test normal usage of ichrome.
 
@@ -30,7 +29,18 @@ def test_example():
     # import logging
     # logger.setLevel(logging.INFO)
     # launch the Chrome process and daemon process, will auto shutdown by 'with' expression.
-    with ChromeDaemon(host="127.0.0.1", port=9222, max_deaths=1) as chromed:
+    def on_startup(chromed):
+        chromed.started = 1
+
+    def on_shutdown(chromed):
+        chromed.__class__.bye = 1
+
+    with ChromeDaemon(host="127.0.0.1",
+                      port=9222,
+                      max_deaths=1,
+                      on_startup=on_startup,
+                      on_shutdown=on_shutdown) as chromed:
+        assert chromed.started
         logger.info(chromed)
         # create connection to Chrome Devtools
         chrome = Chrome(host="127.0.0.1", port=9222, timeout=3, retry=1)
@@ -38,10 +48,9 @@ def test_example():
         tab = chrome.new_tab()
         # reset the url to bing.com, if loading time more than 5 seconds, will stop loading.
         # if inject js success, will alert Vue
-        tab.set_url(
-            "https://www.bing.com/",
-            referrer="https://www.github.com/",
-            timeout=5)
+        tab.set_url("https://www.bing.com/",
+                    referrer="https://www.github.com/",
+                    timeout=5)
         # get_cookies from url
         logger.info(tab.get_cookies("http://cn.bing.com"))
         # test inject_js, if success, will alert jQuery version info 3.3.1
@@ -58,8 +67,9 @@ def test_example():
         # remove href of the a tag.
         tab.click("#sc_hdu>li>a", index=3, action="removeAttribute('href')")
         # remove href of all the 'a' tag.
-        tab.querySelectorAll(
-            "#sc_hdu>li>a", index=None, action="removeAttribute('href')")
+        tab.querySelectorAll("#sc_hdu>li>a",
+                             index=None,
+                             action="removeAttribute('href')")
         # use querySelectorAll to get the elements.
         for i in tab.querySelectorAll("#sc_hdu>li"):
             logger.info("Tag: %s, id:%s, class:%s, text:%s" %
@@ -79,8 +89,9 @@ def test_example():
         request_id = recv_string["params"]["requestId"]
         logger.info("requestId: %s" % request_id)
         # send request for getResponseBody
-        resp = tab.send(
-            "Network.getResponseBody", requestId=request_id, timeout=5)
+        resp = tab.send("Network.getResponseBody",
+                        requestId=request_id,
+                        timeout=5)
         # now resp is the response body result.
         logger.info("getResponseBody success %s" % resp)
         # directly click the button matched the cssselector #sb_form_go, here is the submit button.
@@ -91,6 +102,7 @@ def test_example():
         tab.send('Browser.close')
         # # now click close button of the chrome browser.
         # chromed.run_forever()
+    assert ChromeDaemon.bye
 
 
 if __name__ == "__main__":

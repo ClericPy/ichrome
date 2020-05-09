@@ -219,7 +219,18 @@ async def test_tab_keyboard_mouse(tab: Tab):
 
 
 async def test_examples():
-    async with AsyncChromeDaemon(headless=headless):
+
+    def on_startup(chromed):
+        chromed.started = 1
+
+    def on_shutdown(chromed):
+        chromed.__class__.bye = 1
+
+    async with AsyncChromeDaemon(headless=headless,
+                                 on_startup=on_startup,
+                                 on_shutdown=on_shutdown) as chromed:
+        # test on_startup
+        assert chromed.started
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
             await test_chrome(chrome)
@@ -260,6 +271,7 @@ async def test_examples():
             sep = f'\n{"=" * 80}\n'
             logger.critical(
                 f'{sep}Congratulations, all test cases passed.{sep}')
+    assert AsyncChromeDaemon.bye
 
 
 if __name__ == "__main__":
