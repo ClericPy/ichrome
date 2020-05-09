@@ -38,6 +38,8 @@ class ChromeDaemon(object):
         debug,                set logger level to DEBUG
         proc_check_interval,  check chrome process alive every interval seconds
 
+        on_startup & on_shutdown: function which handled a ChromeDaemon object while startup or shutdown
+
     default extra_config: ["--disable-gpu", "--no-sandbox", "--no-first-run"]
 
     common args:
@@ -89,6 +91,8 @@ class ChromeDaemon(object):
         timeout=1,
         debug=False,
         proc_check_interval=5,
+        on_startup=None,
+        on_shutdown=None,
     ):
         if debug:
             logger.setLevel('DEBUG')
@@ -118,6 +122,8 @@ class ChromeDaemon(object):
             raise TypeError("extra_config type should be list.")
         self.chrome_proc_start_time = time.time()
         self.proc_check_interval = proc_check_interval
+        self.on_startup = on_startup
+        self.on_shutdown = on_shutdown
         self.init(block)
 
     def init(self, block):
@@ -127,6 +133,8 @@ class ChromeDaemon(object):
         self.launch_chrome()
         if self._use_daemon:
             self._daemon_thread = self.run_forever(block=block)
+        if self.on_startup:
+            self.on_startup(self)
 
     @staticmethod
     def ensure_dir(path: Path):
@@ -305,7 +313,7 @@ class ChromeDaemon(object):
         """if chrome proc is killed self.max_deaths times too fast (not raise TimeoutExpired),
         will skip auto_restart.
         check alive every `interval` seconds."""
-        interval = interval or proc_check_interval
+        interval = interval or self.proc_check_interval
         return_code = None
         deaths = 0
         while self._use_daemon:
@@ -328,8 +336,8 @@ class ChromeDaemon(object):
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
-        logger.info(f"{self} daemon exited.")
-        self._shutdown = time.time()
+        logger.info(f"{self} daemon exited. return_code: {return_code}")
+        self.update_shutdown_time()
         return return_code
 
     def run_forever(self, block=True, interval=None):
@@ -373,14 +381,20 @@ class ChromeDaemon(object):
         self.kill()
         return self.launch_chrome()
 
-    def shutdown(self):
+    def update_shutdown_time(self):
+        self._shutdown = time.time()
+        if self.on_shutdown:
+            self.on_shutdown(self)
+
+    def shutdown(self, reason=None):
         if self._shutdown:
             logger.info(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
+        reason = f' for {reason}' if reason else ''
         logger.info(
-            f"{self} shutting down, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
+            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
         )
-        self._shutdown = time.time()
+        self.update_shutdown_time()
         self.kill()
 
     def __enter__(self):
@@ -468,27 +482,37 @@ class AsyncChromeDaemon(ChromeDaemon):
         block=False,
         timeout=1,
         debug=False,
+        proc_check_interval=5,
+        on_startup=None,
+        on_shutdown=None,
     ):
-        super().__init__(chrome_path=chrome_path,
-                         host=host,
-                         port=port,
-                         headless=headless,
-                         user_agent=user_agent,
-                         proxy=proxy,
-                         user_data_dir=user_data_dir,
-                         disable_image=disable_image,
-                         start_url=start_url,
-                         extra_config=extra_config,
-                         max_deaths=max_deaths,
-                         daemon=daemon,
-                         block=block,
-                         timeout=timeout,
-                         debug=debug)
+        super().__init__(
+            chrome_path=chrome_path,
+            host=host,
+            port=port,
+            headless=headless,
+            user_agent=user_agent,
+            proxy=proxy,
+            user_data_dir=user_data_dir,
+            disable_image=disable_image,
+            start_url=start_url,
+            extra_config=extra_config,
+            max_deaths=max_deaths,
+            daemon=daemon,
+            block=block,
+            timeout=timeout,
+            debug=debug,
+            proc_check_interval=proc_check_interval,
+            on_startup=on_startup,
+            on_shutdown=on_shutdown,
+        )
 
     def init(self, block):
         # Please init AsyncChromeDaemon in a running loop with `async with`
         self.req = Requests()
         self._block = block
+        # please use AsyncChromeDaemon in `async with`
+        self._init_coro = self._init_chrome_daemon()
 
     async def _init_chrome_daemon(self):
         await self.loop.run_in_executor(None, self._ensure_port_free)
@@ -498,6 +522,9 @@ class AsyncChromeDaemon(ChromeDaemon):
         await self.launch_chrome()
         if self._use_daemon:
             self._daemon_thread = await self.run_forever(block=self._block)
+        if self.on_startup:
+            self.on_startup(self)
+        return self
 
     def _start_chrome_process(self):
         self.proc = subprocess.Popen(**self.cmd_args)
@@ -584,12 +611,11 @@ class AsyncChromeDaemon(ChromeDaemon):
             except subprocess.TimeoutExpired:
                 deaths = 0
         logger.info(f"{self} daemon exited.")
-        self._shutdown = time.time()
+        self.update_shutdown_time()
         return return_code
 
     async def __aenter__(self):
-        await self._init_chrome_daemon()
-        return self
+        return await self._init_coro
 
     async def __aexit__(self, *args, **kwargs):
         await self.loop.run_in_executor(None, self.__exit__)
