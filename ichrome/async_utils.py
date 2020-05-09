@@ -20,7 +20,6 @@ from torequests.utils import UA, quote_plus, urljoin
 
 from .base import ChromeDaemon, Tag
 from .logs import logger
-
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -438,6 +437,10 @@ class Tab(GetValueMixin):
     async def clear_browser_cookies(self, timeout: Union[int, float] = None):
         """clearBrowserCookies"""
         return await self.send("Network.clearBrowserCookies", timeout=timeout)
+
+    async def clear_cookies(self, timeout: Union[int, float] = None):
+        """clearBrowserCookies. for compatible"""
+        return await self.clear_browser_cookies(timeout)
 
     async def clear_browser_cache(self, timeout: Union[int, float] = None):
         """clearBrowserCache"""
@@ -934,6 +937,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             if isinstance(index, int):
                 return None
             return []
+
+    async def inject_js(self, *args, **kwargs):
+        # for compatible
+        return await self.inject_js_url(*args, **kwargs)
 
     async def inject_js_url(self,
                             url,
@@ -1439,6 +1446,11 @@ class Chrome(GetValueMixin):
     def version(self) -> Awaitable[dict]:
         """`await self.version`
         {'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}"""
+        return self.get_version()
+
+    @property
+    def meta(self):
+        # same for Sync Chrome
         return self.get_version()
 
     async def connect(self) -> bool:
