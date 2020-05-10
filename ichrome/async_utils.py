@@ -8,7 +8,7 @@ import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
 from base64 import b64decode
-from typing import Any, Awaitable, Callable, List, Optional, Union
+from typing import Awaitable, Callable, List, Optional, Union
 from weakref import WeakValueDictionary
 
 from aiofiles import open as aopen
@@ -18,7 +18,7 @@ from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import ChromeDaemon, Tag
+from .base import Tag, clear_chrome_process
 from .logs import logger
 """
 Async utils for connections and operations.
@@ -391,7 +391,7 @@ class Tab(GetValueMixin):
                     await enable
                     return left timeout
         '''
-        if domain in self._enabled_domains or not domain:
+        if domain in self._enabled_domains or domain not in self._domains_can_be_enabled:
             return timeout
         else:
             start_time = time.time()
@@ -1520,8 +1520,7 @@ class Chrome(GetValueMixin):
         if self.req:
             await self.req.close()
         await asyncio.get_running_loop().run_in_executor(
-            None, ChromeDaemon.clear_chrome_process, self.port, timeout,
-            max_deaths)
+            None, clear_chrome_process, self.port, timeout, max_deaths)
 
     async def new_tab(self, url: str = "") -> Union[Tab, None]:
         api = f'/json/new?{quote_plus(url)}'

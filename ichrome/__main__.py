@@ -146,7 +146,6 @@ Other operations:
         proc_check_interval=args.proc_check_interval,
         debug=args.debug,
     )
-    logger.info("ChromeDaemon cmd args: %s" % kwargs)
     asyncio.run(ChromeWorkers.run_chrome_workers(args, kwargs))
 
 
