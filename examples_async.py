@@ -1,14 +1,13 @@
 import asyncio
 from typing import List
 
-from ichrome import AsyncChrome as Chrome
 from ichrome import AsyncChromeDaemon
-from ichrome import AsyncTab as Tab
-from ichrome import Tag, logger
+from ichrome.async_utils import Chrome, Tab, Tag, logger
 
 logger.setLevel('DEBUG')
 # Tab._log_all_recv = True
 headless = False
+headless = True
 
 
 async def test_chrome(chrome: Chrome):
@@ -64,7 +63,9 @@ async def test_tab_ws(tab: Tab):
 
 async def test_send_msg(tab: Tab):
     # test send msg
-    assert (await tab.send('Network.enable'))['result'] == {}
+    assert tab.get_data_value(await tab.send('Network.enable'),
+                              path='value',
+                              default={}) == {}
     # disable Network
     await tab.disable('Network')
 
@@ -110,11 +111,12 @@ async def test_tab_js(tab: Tab):
     assert 'Function' in str(vue_obj)
     # querySelectorAll with JS, return list of Tag object
     tags = await tab.querySelectorAll('#id-search-field')
-    assert isinstance(tags[0], Tag)
+    assert tags, f'{[tags, type(tags)]}'
+    assert isinstance(tags[0], Tag), f'{[tags[0], type(tags[0])]}'
     # querySelectorAll with JS, index arg is Not None, return Tag or None
     one_tag = await tab.querySelectorAll('#id-search-field', index=0)
     assert isinstance(one_tag, Tag)
-    assert await tab.js("document.write('<html></html>')")
+    assert await tab.set_html('')
     assert (await tab.current_html) == '<html><head></head><body></body></html>'
     # reload the page
     assert await tab.reload()
@@ -126,26 +128,29 @@ async def test_wait_response(tab: Tab):
     # wait_response with filter_function
     # raw response: {'method': 'Network.responseReceived', 'params': {'requestId': '1000003000.69', 'loaderId': 'D7814CD633EDF3E699523AF0C4E9DB2C', 'timestamp': 207483.974238, 'type': 'Script', 'response': {'url': 'https://www.python.org/static/js/libs/masonry.pkgd.min.js', 'status': 200, 'statusText': '', 'headers': {'date': 'Sat, 05 Oct 2019 08:18:34 GMT', 'via': '1.1 vegur, 1.1 varnish, 1.1 varnish', 'last-modified': 'Tue, 24 Sep 2019 18:31:03 GMT', 'server': 'nginx', 'age': '290358', 'etag': '"5d8a60e7-6643"', 'x-served-by': 'cache-iad2137-IAD, cache-tyo19928-TYO', 'x-cache': 'HIT, HIT', 'content-type': 'application/x-javascript', 'status': '200', 'cache-control': 'max-age=604800, public', 'accept-ranges': 'bytes', 'x-timer': 'S1570263515.866582,VS0,VE0', 'content-length': '26179', 'x-cache-hits': '1, 170'}, 'mimeType': 'application/x-javascript', 'connectionReused': False, 'connectionId': 0, 'remoteIPAddress': '151.101.108.223', 'remotePort': 443, 'fromDiskCache': True, 'fromServiceWorker': False, 'fromPrefetchCache': False, 'encodedDataLength': 0, 'timing': {'requestTime': 207482.696803, 'proxyStart': -1, 'proxyEnd': -1, 'dnsStart': -1, 'dnsEnd': -1, 'connectStart': -1, 'connectEnd': -1, 'sslStart': -1, 'sslEnd': -1, 'workerStart': -1, 'workerReady': -1, 'sendStart': 0.079, 'sendEnd': 0.079, 'pushStart': 0, 'pushEnd': 0, 'receiveHeadersEnd': 0.836}, 'protocol': 'h2', 'securityState': 'unknown'}, 'frameId': 'A2971702DE69F008914F18EAE6514DD5'}}
     async def cb(request):
+        result = ''
         if request:
-            await tab.wait_request_loading(request, 5)
-            ok = 'Masonry PACKAGED' in (
-                await tab.get_response(request))['result']['body']
+            # wait_loading for ajax request
+            result = await tab.get_response_body(request,
+                                                 wait_loading=True,
+                                                 timeout=5)
+            ok = 'User-Agent' in result
             logger.warning(f'check wait_response callback, get_response {ok}')
-            assert ok
+            assert ok, f'{result} not contains "User-Agent"'
         else:
-            raise ValueError
+            raise ValueError(f'{request} is not True')
 
     # listening response
     def filter_function(r):
-        ok = 'www.python.org/static/js/libs/masonry.pkgd.min.js' in r['params'][
-            'response']['url']
+        ok = 'httpbin.org' in r['params']['response']['url']
         return print('get response url:', r['params']['response']['url'],
                      ok) or ok
 
-    task = asyncio.ensure_future(tab.wait_response(
-        filter_function=filter_function, callback_function=cb, timeout=10),
-                                 loop=tab.loop)
-    await tab.click('#about>a')
+    task = asyncio.ensure_future(
+        tab.wait_response(filter_function=filter_function,
+                          callback_function=cb,
+                          timeout=10))
+    await tab.set_url('http://httpbin.org/get')
     await tab.wait_loading(2)
     await task
     # click download link, without wait_loading.
@@ -214,7 +219,18 @@ async def test_tab_keyboard_mouse(tab: Tab):
 
 
 async def test_examples():
-    async with AsyncChromeDaemon(headless=headless):
+
+    def on_startup(chromed):
+        chromed.started = 1
+
+    def on_shutdown(chromed):
+        chromed.__class__.bye = 1
+
+    async with AsyncChromeDaemon(headless=headless,
+                                 on_startup=on_startup,
+                                 on_shutdown=on_shutdown) as chromed:
+        # test on_startup
+        assert chromed.started
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
             await test_chrome(chrome)
@@ -255,8 +271,8 @@ async def test_examples():
             sep = f'\n{"=" * 80}\n'
             logger.critical(
                 f'{sep}Congratulations, all test cases passed.{sep}')
+    assert AsyncChromeDaemon.bye
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(test_examples())
+    asyncio.run(test_examples())
