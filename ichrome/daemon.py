@@ -8,12 +8,14 @@ import threading
 import time
 from pathlib import Path
 
-import psutil
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
+from .async_utils import Chrome as AsyncChrome
+from .base import clear_chrome_process, get_proc
 from .logs import logger
+
 """
 Sync / block operations for launching chrome processes.
 """
@@ -406,54 +408,17 @@ class ChromeDaemon(object):
 
     @staticmethod
     def get_proc(port):
-        port_args = f"--remote-debugging-port={port}"
-        # win32 and linux chrome proc_names
-        proc_names = {"chrome.exe", "chrome"}
-        procs = []
-        for proc in psutil.process_iter():
-            try:
-                pname = proc.name()
-                if pname in proc_names and port_args in ' '.join(
-                        proc.cmdline()):
-                    procs.append(proc)
-            except Exception:
-                pass
-        return procs
+        return get_proc(port)
 
-    @classmethod
-    def clear_chrome_process(cls,
-                             port=None,
+    @staticmethod
+    def clear_chrome_process(port=None,
                              timeout=None,
                              max_deaths=1,
                              interval=0.5):
-        """kill chrome processes, if port is not set, kill all chrome with --remote-debugging-port.
-        set timeout to avoid running forever.
-        set max_deaths and port, will return before timeout.
-        """
-        port = port or ""
-        killed_count = 0
-        start_time = time.time()
-        if timeout is None:
-            timeout = max_deaths or 3
-        while 1:
-            procs = cls.get_proc(port)
-            for proc in procs:
-                logger.debug(f"killing {proc}, port: {port}")
-                try:
-                    proc.kill()
-                except psutil._exceptions.NoSuchProcess:
-                    continue
-            if port:
-                if procs:
-                    killed_count += 1
-                if killed_count >= max_deaths:
-                    return
-            if max_deaths == 0:
-                return
-            if timeout and time.time() - start_time < timeout:
-                time.sleep(interval)
-                continue
-            return
+        return clear_chrome_process(port=port,
+                                    timeout=timeout,
+                                    max_deaths=max_deaths,
+                                    interval=interval)
 
     def __del__(self):
         if not self._shutdown:
@@ -618,6 +583,11 @@ class AsyncChromeDaemon(ChromeDaemon):
         return await self._init_coro
 
     async def __aexit__(self, *args, **kwargs):
+        if self.max_deaths == 1:
+            async with AsyncChrome(host=self.host,
+                                   port=self.port,
+                                   timeout=self._timeout) as chrome:
+                await chrome.close_browser()
         await self.loop.run_in_executor(None, self.__exit__)
 
 
@@ -633,6 +603,8 @@ class ChromeWorkers:
 
     async def create_chrome_workers(self):
         for port in range(self.args.port, self.args.port + self.args.workers):
+            logger.info("ChromeDaemon cmd args: port=%s, %s" %
+                        (port, self.kwargs))
             self.daemons.append(await
                                 AsyncChromeDaemon(port=port,
                                                   daemon=True,
