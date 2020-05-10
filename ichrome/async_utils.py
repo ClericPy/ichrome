@@ -68,7 +68,7 @@ class _WSConnection(object):
         self._closed = None
 
     def __str__(self):
-        return f'<{self.__class__.__name__}: {not self._closed}>'
+        return f'<{self.__class__.__name__}: {None if self._closed is None else not self._closed}>'
 
     async def __aenter__(self):
         return await self.connect()
@@ -179,7 +179,7 @@ class Tab(GetValueMixin):
         return self.__hash__() == other.__hash__()
 
     def __str__(self):
-        return f"<Tab({self.status}{self.chrome!r}): {self.tab_id}>"
+        return f"<Tab({self.status}-{self.chrome!r}): {self.tab_id}>"
 
     def __repr__(self):
         return f"<Tab({self.status}): {self.tab_id}>"
@@ -1380,17 +1380,6 @@ class Listener(object):
         return self._registered_futures.get(key)
 
 
-class InvalidRequests(object):
-
-    def __getattr__(self, name: str) -> Any:
-        raise AttributeError(
-            'Chrome has not connected. `await chrome.connect()` before request.'
-        )
-
-    def __bool__(self):
-        return False
-
-
 class Chrome(GetValueMixin):
 
     def __init__(self,
@@ -1403,7 +1392,7 @@ class Chrome(GetValueMixin):
         self.timeout = timeout
         self.retry = retry
         self.status = 'init'
-        self.req = InvalidRequests()
+        self._req = None
 
     def __getitem__(self, index: int) -> Awaitable[Tab]:
         assert isinstance(index, int), 'only support int index'
@@ -1455,11 +1444,17 @@ class Chrome(GetValueMixin):
 
     async def connect(self) -> bool:
         """await self.connect()"""
-        self.req = Requests()
+        self._req = Requests()
         if await self.check():
             return True
         else:
             return False
+
+    @property
+    def req(self):
+        if self._req is None:
+            raise RuntimeError('please use Chrome in `async with`')
+        return self._req
 
     async def check(self) -> bool:
         """Test http connection to cdp. `await self.check()`
