@@ -2,35 +2,27 @@
 
 > A toolkit to control Chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+.
 
-## Install
+# Installation
 
-> pip install ichrome -U
+From [PyPI](https://pypi.org/project/ichrome/)
 
-## Why?
+    pip install ichrome -U
+
+# Why?
 
 - pyppeteer / selenium is awesome, but I don't need so much
-  - spelling of pyppeteer is hard to remember.
+  - spelling of pyppeteer is confused.
   - selenium is slow.
 - async communication with Chrome remote debug port, stable choice. [Recommended]
 - sync way to test CDP,  which is not recommended for complex production environments. [Deprecated]
 
 
-## Features
+# Features
 
 - Chrome process daemon
 - Connect to existing chrome debug port
 - Operations on Tabs
 
-## Examples
-
-### [Classic Use Case](https://github.com/ClericPy/ichrome/blob/master/use_cases.py)
-
-### Quick Start
-
-> 1. Start a new chrome daemon process with headless=False
-> 2. Create the connection to exist chrome browser
-> 3. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
-> 4. Close the browser GRACEFULLY instead of killing process
 
 <details>
     <summary><b>AsyncChrome feature list</b></summary>
@@ -147,7 +139,26 @@
 
 </details>
 
-[More Examples](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
+# Examples
+
+### See the [Classic Use Cases](https://github.com/ClericPy/ichrome/blob/master/use_cases.py)
+
+## Quick Start
+
+1. Start a new chrome daemon process with headless=False
+
+        python -m ichrome
+
+   or launch chrome daemon in code
+
+        async with AsyncChromeDaemon():
+
+2. Create the connection to exist chrome browser
+   
+        async with AsyncChrome() as chrome:
+
+3. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
+4. Close the browser GRACEFULLY instead of killing process
 
 ```python
 from ichrome import AsyncChromeDaemon, AsyncChrome
@@ -179,7 +190,9 @@ if __name__ == "__main__":
 
 ```
 
-### Command Line Usage
+[More Examples](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
+
+## Command Line Usage
 
 > Be used for launching a chrome daemon process. The unhandled args will be treated as chrome raw args and appended to extra_config list.
 > 
@@ -194,55 +207,81 @@ if __name__ == "__main__":
 2018-11-27 23:03:57 INFO  [ichrome] __main__.py(69): ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': 'localhost', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': True, 'start_url': 'http://bing.com', 'extra_config': '', 'max_deaths': 1, 'timeout': 2}
 ```
 
-> Details: python3 -m ichrome --help
+Details:
+
+    $ python3 -m ichrome --help
 
 ```
 usage:
-    All the unknown args will be append to extra_config.
+    All the unknown args will be appended to extra_config as chrome original args.
+
 Demo:
-    > python -m ichrome --host=127.0.0.1 --window-size=1200,800 --incognito
-    > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config':['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
+    > python -m ichrome --host=127.0.0.1 --window-size=1212,1212 --incognito
+    > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless':False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
+
+Other operations:
+    1. kill local chrome process with given port:
+        python -m ichrome -s 9222
+    2. clear user_data_dir path (remove the folder and files):
+        python -m ichrome --clear
+        python -m ichrome --clean
+    2. show ChromeDaemon.__doc__:
+        python -m ichrome --doc
 
 optional arguments:
   -h, --help            show this help message and exit
-  -V, --version         show ichrome version info
+  -V, --version         ichrome version info
   -c CHROME_PATH, --chrome_path CHROME_PATH
-                        chrome_path
-  --host HOST           host
-  -p PORT, --port PORT  port
-  --headless            is_headless
+                        chrome executable file path, default to null for
+                        automatic searching
+  --host HOST           --remote-debugging-address, default to 127.0.0.1
+  -p PORT, --port PORT  --remote-debugging-port, default to 9222
+  --headless            --headless and --hide-scrollbars, default to False
   -s SHUTDOWN, --shutdown SHUTDOWN
-                        shutdown the port
+                        shutdown the given port, only for local running chrome
   --user_agent USER_AGENT
-                        user_agent
-  --proxy PROXY         proxy
+                        --user-agen, default to 'Mozilla/5.0 (Windows NT 10.0;
+                        WOW64) AppleWebKit/537.36 (KHTML, like Gecko)
+                        Chrome/70.0.3538.102 Safari/537.36'
+  --proxy PROXY         --proxy-server, default to None
   --user_data_dir USER_DATA_DIR
-                        user_data_dir
-  --disable_image       disable_image
+                        user_data_dir to save the user data, default to
+                        ~/ichrome_user_data
+  --disable_image       disable image for loading performance, default to
+                        False
   --start_url START_URL
-                        start_url
+                        start url while launching chrome, default to
+                        about:blank
   --max_deaths MAX_DEATHS
-                        max_deaths
-  --timeout TIMEOUT     timeout
+                        max deaths in 5 secs, auto restart `max_deaths` times
+                        if crash fast in 5 secs. default to 1 for without
+                        auto-restart
+  --timeout TIMEOUT     timeout to connect the remote server, default to 1 for
+                        localhost
+  --workers WORKERS     the number of worker processes with auto-increment
+                        port, default to 1
+  --proc_check_interval PROC_CHECK_INTERVAL
+                        check chrome process alive every interval seconds
+  --clean, --clear      clean user_data_dir
+  --doc                 show ChromeDaemon.__doc__
+  --debug               set logger level to DEBUG
 ```
 
-### [Async] Operating tabs with coroutines
+## [Async] Operating tabs with coroutines
 
 > Run in a completely asynchronous environment, it's a stable choice.
 
-[examples_async.py](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
+Test Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
 
 
-### [Sync] Simple Usage (Archived)
+## [Sync] Simple Usage (Archived)
 
-> Sync utils will be hardly maintained, only for simple test usage.
->
-> No more new features to be developed.
+> Sync utils will be hardly maintained, no more new features.
 
-[examples_sync.py](https://github.com/ClericPy/ichrome/blob/master/examples_sync.py)
+Test Code: [examples_sync.py](https://github.com/ClericPy/ichrome/blob/master/examples_sync.py)
 
 
-### TODO
+## TODO
 
 - [x] ~~Concurrent support. (gevent, threading, asyncio)~~
 - [x] Add auto_restart while crash.
@@ -250,5 +289,5 @@ optional arguments:
 - [x] Add some useful examples.
 - [x] Coroutine support (for asyncio).
 - [x] Standard test cases.
-- [ ] HTTP apis server console [fastapi]. (maybe write a new lib)
+- [ ] HTTP apis server console [fastapi]. (maybe a new lib)
 - [ ] ~~Complete document.~~
