@@ -15,7 +15,6 @@ from torequests.utils import timepass, ttime
 from .async_utils import Chrome as AsyncChrome
 from .base import clear_chrome_process, get_proc
 from .logs import logger
-
 """
 Sync / block operations for launching chrome processes.
 """
@@ -427,6 +426,9 @@ class ChromeDaemon(object):
     def __str__(self):
         return f"{self.__class__.__name__}({self.host}:{self.port})"
 
+    def __repr__(self):
+        return str(self)
+
 
 class AsyncChromeDaemon(ChromeDaemon):
 
@@ -474,16 +476,23 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     def init(self, block):
         # Please init AsyncChromeDaemon in a running loop with `async with`
-        self.req = Requests()
+        self._req = None
         self._block = block
         # please use AsyncChromeDaemon in `async with`
         self._init_coro = self._init_chrome_daemon()
+
+    @property
+    def req(self):
+        if self._req is None:
+            raise RuntimeError('please use Chrome in `async with`')
+        return self._req
 
     async def _init_chrome_daemon(self):
         await self.loop.run_in_executor(None, self._ensure_port_free)
         if not self.chrome_path:
             self.chrome_path = await self.loop.run_in_executor(
                 None, self._get_default_path)
+        self._req = Requests()
         await self.launch_chrome()
         if self._use_daemon:
             self._daemon_thread = await self.run_forever(block=self._block)
@@ -583,12 +592,13 @@ class AsyncChromeDaemon(ChromeDaemon):
         return await self._init_coro
 
     async def __aexit__(self, *args, **kwargs):
-        if self.max_deaths == 1:
-            async with AsyncChrome(host=self.host,
-                                   port=self.port,
-                                   timeout=self._timeout) as chrome:
-                await chrome.close_browser()
-        await self.loop.run_in_executor(None, self.__exit__)
+        if not self._shutdown:
+            if self.max_deaths == 1:
+                async with AsyncChrome(host=self.host,
+                                       port=self.port,
+                                       timeout=self._timeout) as chrome:
+                    await chrome.close_browser()
+            await self.loop.run_in_executor(None, self.__exit__)
 
 
 class ChromeWorkers:
