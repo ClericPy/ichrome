@@ -21,6 +21,7 @@
   - selenium is slow.
 - async communication with Chrome remote debug port, stable choice. [Recommended]
 - sync way to test CDP,  which is not recommended for complex production environments. [Deprecated]
+  - **ichrome.debugger** is a sync tool and depends on the `ichrome.async_utils`, which may be a better choice.
 
 
 # Features
@@ -142,6 +143,8 @@
     ```
 1. `mouse_press` / `mouse_release` / `mouse_move` / `mouse_move_rel` / `mouse_move_rel_chain`
     > similar to the drag features. These mouse features is only dispatched events, not the real mouse action.
+1. `history_back` / `history_forward` / `goto_history_relative` / `reset_history`
+    > back / forward history
 
 </details>
 
@@ -273,14 +276,49 @@ optional arguments:
   --debug               set logger level to DEBUG
 ```
 
-## [Async] Operating tabs with coroutines
+## Interactive Debugging
+
+```python
+λ python
+Python 3.7.1 (v3.7.1:260ec2c36a, Oct 20 2018, 14:57:15) [MSC v.1915 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from ichrome.debugger import *
+>>> tab = get_a_tab()
+>>> tab.set_url('http://bing.com')
+{'id': 4, 'result': {'frameId': 'DAC309349D270F07505C3DAB71084292', 'loaderId': '181418C22DB39654507D042627C22698'}}
+>>> tab.click('#scpl0')
+Tag(a)
+>>> tab.js('document.getElementById("sb_form_q").value = "jordan"')
+{'id': 16, 'result': {'result': {'type': 'string', 'value': 'jordan'}}}
+>>> tab.click('#sb_form_go')
+Tag(input)
+>>> tab.history_back()
+True
+>>> tab.set_html('hello')
+{'id': 17, 'result': {}}
+>>> tab.set_ua('no UA')
+INFO  2020-05-11 20:14:07 [ichrome] async_utils.py(790): [set_ua] <Tab(connected): 08F4AFF9B389B1D5880AF0C0988B6DD4> userAgent => no UA
+{'id': 12, 'result': {}}
+>>> tab.set_url('http://httpbin.org/user-agent')
+{'id': 14, 'result': {'frameId': '08F4AFF9B389B1D5880AF0C0988B6DD4', 'loaderId': '15761B915F7AC36DC4687C1EED28195B'}}
+>>> tab.html
+'<html><head></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">{\n  "user-agent": "no UA"\n}\n</pre></body></html>'
+```
+
+
+## [Debugger] debug the features of async Chrome / Tab / Daemon.
+
+> Similar to sync usage, but methods come from the AsyncChrome / AsyncTab / AsyncDaemon
+
+Test Code: [examples_debug.py](https://github.com/ClericPy/ichrome/blob/master/examples_debug.py)
+
+## Operating tabs with coroutines in the async environment
 
 > Run in a completely asynchronous environment, it's a stable choice.
 
 Test Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
 
-
-## [Sync] Simple Usage (Archived)
+## [Archived] Simple Sync Usage
 
 > Sync utils will be hardly maintained, no more new features.
 

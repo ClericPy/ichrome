@@ -801,10 +801,48 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                  timeout=timeout)
         return self.check_error('goto_history', result, entryId=entryId)
 
+    async def get_history_entry(self,
+                                index: int = None,
+                                relative_index: int = None,
+                                timeout=None):
+        result = await self.get_history_list(timeout=timeout)
+        if result:
+            if index is None:
+                index = result['currentIndex'] + relative_index
+                return result['entries'][index]
+            elif relative_index is None:
+                return result['entries'][index]
+            else:
+                raise ValueError(
+                    f'index and relative_index should not be both None.')
+
+    async def history_back(self, timeout=None):
+        return await self.goto_history_relative(relative_index=-1)
+
+    async def history_forward(self, timeout=None):
+        return await self.goto_history_relative(relative_index=1)
+
+    async def goto_history_relative(self,
+                                    relative_index: int = None,
+                                    timeout=None):
+        try:
+            entry = await self.get_history_entry(relative_index=relative_index,
+                                                 timeout=timeout)
+        except IndexError:
+            return None
+        entry_id = self.get_data_value(entry, 'id')
+        if entry_id is not None:
+            return await self.goto_history(entryId=entry_id, timeout=timeout)
+        return False
+
     async def get_history_list(self, timeout=None) -> dict:
         """return dict: {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}"""
         result = await self.send('Page.getNavigationHistory', timeout=timeout)
         return self.get_data_value(result, path='result', default={})
+
+    async def reset_history(self, timeout=None):
+        result = await self.send('Page.resetNavigationHistory', timeout=timeout)
+        return self.check_error('reset_history', result)
 
     async def set_url(self,
                       url: Optional[str] = None,
@@ -1079,17 +1117,28 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             "[window.innerWidth||document.documentElement.clientWidth||document.querySelector('body').clientWidth,window.innerHeight||document.documentElement.clientHeight||document.querySelector('body').clientHeight]"
         )
 
-    async def keyboard_send(self, *, type='char', timeout=None, **kwargs):
+    async def keyboard_send(self,
+                            *,
+                            type='char',
+                            timeout=None,
+                            string=None,
+                            **kwargs):
         '''type: keyDown, keyUp, rawKeyDown, char.
 
         kwargs:
             text, unmodifiedText, keyIdentifier, code, key...
 
         https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchKeyEvent'''
-        return await self.send('Input.dispatchKeyEvent',
-                               type=type,
-                               timeout=timeout,
-                               **kwargs)
+        if string:
+            result = None
+            for char in string:
+                result = await self.keyboard_send(text=char, timeout=timeout)
+            return result
+        else:
+            return await self.send('Input.dispatchKeyEvent',
+                                   type=type,
+                                   timeout=timeout,
+                                   **kwargs)
 
     async def mouse_click(self, x, y, button='left', count=1, timeout=None):
         await self.mouse_press(x=x,
