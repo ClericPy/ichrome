@@ -206,9 +206,10 @@ async def test_tab_keyboard_mouse(tab: Tab):
     await tab.keyboard_send(text='1')
     await tab.keyboard_send(text='2')
     await tab.keyboard_send(text='3')
+    await tab.keyboard_send(string='123')
     await tab.mouse_click(rect['left'], rect['top'], count=2)
     selection = await tab.get_variable('window.getSelection().toString()')
-    assert selection == '123'
+    assert selection == '123123'
     # test mouse_drag_rel_chain draw a square, sometime witeboard load failed.....
     await tab.set_url('https://zhoushuo.me/drawingborad/', timeout=5)
     await tab.mouse_click(5, 5)
