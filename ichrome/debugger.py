@@ -32,7 +32,7 @@ INFO  2020-05-11 15:57:08 [ichrome] daemon.py(584): AsyncChromeDaemon(127.0.0.1:
 '''
 __all__ = [
     'Chrome', 'Tab', 'Daemon', 'launch', 'AsyncTab', 'show_all_log',
-    'mute_all_log', 'shutdown', 'get_a_tab'
+    'mute_all_log', 'shutdown', 'get_a_tab', 'network_sniffer'
 ]
 
 
@@ -63,6 +63,14 @@ class SyncLoop:
         return value
 
 
+def quit_while_daemon_missing(daemon):
+    # quit the whole program while missing daemon process for daemon debugger
+    if not daemon.get_proc(daemon.port):
+        import os
+        print(f'{daemon} missing process, exit.')
+        os._exit(1)
+
+
 class Daemon(SyncLoop):
     daemons: Set['Daemon'] = set()
 
@@ -85,7 +93,7 @@ class Daemon(SyncLoop):
         debug=False,
         proc_check_interval=5,
         on_startup=None,
-        on_shutdown=None,
+        on_shutdown=quit_while_daemon_missing,
     ):
         self._self = AsyncChromeDaemon(
             chrome_path=chrome_path,
@@ -199,11 +207,13 @@ def launch(*args, **kwargs):
 
 
 def get_a_tab() -> AsyncTab:
+
     for port in ChromeDaemon.port_in_using:
         return Chrome(port=port).get_tab()
     try:
         return Chrome().get_tab()
     except RuntimeError:
+        # no existing port, launch a new chrome, and auto quit if chrome process missed.
         launch()
         return Chrome().get_tab()
 
@@ -230,3 +240,27 @@ def shutdown():
     stop_all_daemons()
     import os
     os._exit(0)
+
+
+def network_sniffer(timeout=60, filter_function=None, callback_function=None):
+    import json
+
+    get_data_value = AsyncTab.get_data_value
+
+    def _filter_function(r):
+        req = json.dumps(get_data_value(r, 'params.request'),
+                         ensure_ascii=0,
+                         indent=2)
+        req_type = get_data_value(r, 'params.type')
+        req_type = get_data_value(r, 'params.type')
+        doc_url = get_data_value(r, 'params.documentURL')
+        print(f'{doc_url} - {req_type}\n{req}', end=f'\n{"="*40}\n')
+
+    # listen network flow in 60 s
+    timeout = timeout
+    tab = get_a_tab()
+    filter_function = filter_function or _filter_function
+    callback_function = callback_function or (lambda r: print(r))
+    tab.wait_request(filter_function=filter_function,
+                     timeout=timeout,
+                     callback_function=callback_function)
