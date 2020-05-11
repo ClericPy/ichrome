@@ -21,7 +21,8 @@ def test_set_ua():
 
 def test_mouse_keyboard():
     # click the input element and send some string
-    tab.set_url('http://httpbin.org/forms/post', timeout=2)
+    tab.set_url('http://httpbin.org/forms/post')
+    tab.wait_loading(5)
     rect: dict = tab.get_bounding_client_rect('[type="email"]')
     tab.mouse_click(rect['left'], rect['top'], count=1)
     tab.keyboard_send(string='123@1.com')
@@ -39,18 +40,14 @@ def test_js():
     tab.set_html(
         f'<h1>Here is the screenshot image by css selector ".shader_left"</h1><img src="data:image/png;base64, {img_b64}" alt="Red dot" /><h1>Script will shutdown in 5 seconds</h1>'
     )
-
-
-
-def main():
-    test_set_ua()
-    test_mouse_keyboard()
-    test_js()
+    time.sleep(5)
 
 
 if __name__ == "__main__":
-    main()
-    time.sleep(5)
+    test_set_ua()
+    test_mouse_keyboard()
+    test_js()
+    network_sniffer()
     # explicitly stop daemon is not necessary, daemon launched by debugger will auto shutdown after this script quit
     # if the daemon is not launched by this script (using an existing one), the auto-shutdown will not run.
     # daemon.stop()
