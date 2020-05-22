@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 import asyncio
+import re
 import sys
 from pathlib import Path
 
@@ -21,8 +22,10 @@ Other operations:
     2. clear user_data_dir path (remove the folder and files):
         python -m ichrome --clear
         python -m ichrome --clean
-    2. show ChromeDaemon.__doc__:
+    3. show ChromeDaemon.__doc__:
         python -m ichrome --doc
+    4. crawl the URL, output the HTML DOM:
+        python -m ichrome --crawl --headless --timeout=2 http://myip.ipip.net/
 '''
     parser = argparse.ArgumentParser(usage=usage)
     parser.add_argument("-V",
@@ -97,6 +100,10 @@ Other operations:
         help="check chrome process alive every interval seconds",
         default=5,
         type=int)
+    parser.add_argument("--crawl",
+                        help="crawl the given URL, output the HTML DOM",
+                        default=False,
+                        action="store_true")
     parser.add_argument("--clean",
                         "--clear",
                         dest='clean',
@@ -130,6 +137,7 @@ Other operations:
         logger.setLevel(1)
         print(ChromeDaemon.__doc__)
         return
+
     kwargs = {}
     kwargs.update(
         chrome_path=args.chrome_path,
@@ -146,7 +154,18 @@ Other operations:
         proc_check_interval=args.proc_check_interval,
         debug=args.debug,
     )
-    asyncio.run(ChromeWorkers.run_chrome_workers(args, kwargs))
+    if args.start_url == 'about:blank' or not args.start_url:
+        for config in kwargs['extra_config']:
+            if re.match('^https?://', config):
+                kwargs['start_url'] = config
+                kwargs['extra_config'].remove(config)
+                break
+    if '--dump-dom' in extra_config or args.crawl:
+        logger.setLevel(60)
+        from .debugger import crawl_once
+        asyncio.run(crawl_once(**kwargs))
+    else:
+        asyncio.run(ChromeWorkers.run_chrome_workers(args, kwargs))
 
 
 if __name__ == "__main__":
