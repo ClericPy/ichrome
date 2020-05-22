@@ -18,7 +18,7 @@ from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import Tag, clear_chrome_process
+from .base import Tag, TagNotFound, clear_chrome_process
 from .logs import logger
 """
 Async utils for connections and operations.
@@ -546,9 +546,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     def current_html(self) -> Awaitable[str]:
         return self.html
 
-    async def get_html(self) -> str:
+    async def get_html(self, timeout=None) -> str:
         """return html from `document.documentElement.outerHTML`"""
-        html = await self.get_variable('document.documentElement.outerHTML')
+        html = await self.get_variable('document.documentElement.outerHTML',
+                                       timeout=timeout)
         return html or ""
 
     @property
@@ -900,16 +901,39 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 accept=accept,
                                 promptText=promptText)
 
+    async def querySelector(self,
+                            cssselector: str,
+                            action: Union[None, str] = None,
+                            timeout: Union[float, int] = None):
+        return await self.querySelectorAll(cssselector=cssselector,
+                                           index=0,
+                                           action=action,
+                                           timeout=timeout)
+
     async def querySelectorAll(self,
                                cssselector: str,
                                index: Union[None, int, str] = None,
                                action: Union[None, str] = None,
                                timeout: Union[float, int] = None):
-        """CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, None.
-        If index is not None, will return the tag_list[index]
-        else return the tag list.
-        tab.querySelectorAll("#sc_hdu>li>a", index=2, action="removeAttribute('href')")
-        for i in tab.querySelectorAll("#sc_hdu>li"):
+        """CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, TagNotFound.
+        Tag hasattr: tagName, innerHTML, outerHTML, textContent, attributes, result
+
+        If index is not None, will return the tag_list[index], else return the whole tag list.
+
+        Demo:
+
+            # 1. get attribute of the selected tag
+
+            tags = (await tab.querySelectorAll("#sc_hdu>li>a", index=0, action="getAttribute('href')")).result
+            tags = (await tab.querySelectorAll("#sc_hdu>li>a", index=0)).get('href')
+            tags = (await tab.querySelectorAll("#sc_hdu>li>a", index=0)).to_dict()
+
+            # 2. remove href attr of all the selected tags
+            tags = await tab.querySelectorAll("#sc_hdu>li>a", action="removeAttribute('href')")
+
+            for tag in tab.querySelectorAll("#sc_hdu>li"):
+                print(tag.attributes)
+
         """
         if "'" in cssselector:
             cssselector = cssselector.replace("'", "\\'")
@@ -918,43 +942,48 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         else:
             index = int(index)
         if action:
-            action = f"item.result=el.{action} || '';item.result=item.result.toString()"
-
+            # do the action and set Tag.result as el.action result
+            _action = f"item.result=el.{action} || '';item.result=item.result.toString()"
+            action = 'try {%s} catch (error) {}' % _action
         else:
             action = ""
         javascript = """
-            var elements = document.querySelectorAll('%s');
+var index_filter = %s
+var css = `%s`
+if (index_filter == 0) {
+    var element = document.querySelector(css)
+    if (element) {
+        var elements = [element]
+    } else {
+        var elements = []
+    }
+} else {
+    var elements = document.querySelectorAll(css)
+}
+var result = []
+for (let index = 0; index < elements.length; index++) {
+    const el = elements[index];
+    if (index_filter!=null && index_filter!=index) {
+        continue
+    }
 
-            var result = []
-            var index_filter = %s
-
-            for (let index = 0; index < elements.length; index++) {
-                const el = elements[index];
-                if (index_filter!=null && index_filter!=index) {
-                    continue
-                }
-
-                var item = {
-                    tagName: el.tagName,
-                    innerHTML: el.innerHTML,
-                    outerHTML: el.outerHTML,
-                    textContent: el.textContent,
-                    result: "",
-                    attributes: {}
-                }
-                for (const attr of el.attributes) {
-                    item.attributes[attr.name] = attr.value
-                }
-                try {
-                    %s
-                } catch (error) {
-                }
-                result.push(item)
-            }
-            JSON.stringify(result)
-        """ % (
-            cssselector,
+    var item = {
+        tagName: el.tagName,
+        innerHTML: el.innerHTML,
+        outerHTML: el.outerHTML,
+        textContent: el.textContent,
+        result: null,
+        attributes: {}
+    }
+    for (const attr of el.attributes) {
+        item.attributes[attr.name] = attr.value
+    }
+    %s
+    result.push(item)
+}
+JSON.stringify(result)""" % (
             index,
+            cssselector,
             action,
         )
         response = None
@@ -965,15 +994,15 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
                 if result:
-                    return result[0]
+                    return result[index]
                 else:
-                    return None
+                    return TagNotFound()
             else:
                 return result
         except Exception as e:
             logger.error(f"querySelectorAll error: {e}, response: {response}")
             if isinstance(index, int):
-                return None
+                return TagNotFound()
             return []
 
     async def inject_js(self, *args, **kwargs):
@@ -1015,10 +1044,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                            action=action,
                                            timeout=timeout)
 
-    async def get_element_clip(self, cssselector: str, scale=1):
+    async def get_element_clip(self, cssselector: str, scale=1, timeout=None):
         """Element.getBoundingClientRect"""
-        js_str = 'JSON.stringify(document.querySelector(`' + cssselector + '`).getBoundingClientRect())'
-        rect = self.get_data_value(await self.js(js_str))
+        js_str = 'JSON.stringify(document.querySelector(`%s`).getBoundingClientRect())' % cssselector
+        rect = self.get_data_value(await self.js(js_str, timeout=timeout))
         if rect:
             try:
                 rect = json.loads(rect)
@@ -1097,10 +1126,11 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         """name or expression"""
         return await self.get_variable(name)
 
-    async def get_variable(self, name: str):
+    async def get_variable(self, name: str, timeout=None):
         """name or expression"""
         # using JSON to keep value type
-        result = await self.js('JSON.stringify({"%s": %s})' % ('key', name))
+        result = await self.js('JSON.stringify({"%s": %s})' % ('key', name),
+                               timeout=timeout)
         value = self.get_data_value(result)
         if value:
             try:
