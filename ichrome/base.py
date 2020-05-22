@@ -4,14 +4,37 @@ import time
 import psutil
 
 from .logs import logger
-
-
 """
 For base usage with sync utils.
 """
 
 
-class Tag(object):
+class TagNotFound:
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __getattr__(self, name):
+        return None
+
+    def get(self, name, default=None):
+        return default
+
+    def to_dict(self):
+        return {}
+
+    def __str__(self):
+        return "Tag(None)"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __bool__(self):
+        return False
+
+
+class Tag:
+    """Handle the element's tagName, innerHTML, outerHTML, textContent, text, attributes, and the action result."""
 
     def __init__(self, tagName, innerHTML, outerHTML, textContent, attributes,
                  result):

@@ -109,6 +109,8 @@ async def test_tab_js(tab: Tab):
     vue_obj = await tab.js('window.Vue')
     # {'id': 23, 'result': {'result': {'type': 'function', 'className': 'Function', 'description': 'function wn(e){this._init(e)}', 'objectId': '{"injectedScriptId":1,"id":1}'}}}
     assert 'Function' in str(vue_obj)
+    tag = await tab.querySelector('#not-exist')
+    assert not tag
     # querySelectorAll with JS, return list of Tag object
     tags = await tab.querySelectorAll('#id-search-field')
     assert tags, f'{[tags, type(tags)]}'
