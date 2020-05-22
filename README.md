@@ -207,14 +207,23 @@ if __name__ == "__main__":
 > 
 > [Chromium Command Line Args List](https://peter.sh/experiments/chromium-command-line-switches/)
 
+Shutdown Chrome process with the given port
 ```bash
 λ python3 -m ichrome -s 9222
 2018-11-27 23:01:59 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
 2018-11-27 23:02:00 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
-
+```
+Launch a Chrome daemon process
+```bash
 λ python3 -m ichrome -p 9222 --start_url "http://bing.com" --disable_image
 2018-11-27 23:03:57 INFO  [ichrome] __main__.py(69): ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': 'localhost', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': True, 'start_url': 'http://bing.com', 'extra_config': '', 'max_deaths': 1, 'timeout': 2}
 ```
+Crawl the given URL, output the HTML DOM
+```bash
+λ python3 -m ichrome --crawl --headless --timeout=2 http://api.ipify.org/
+<html><head></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">38.143.68.66</pre></body></html>
+```
+
 
 Details:
 
@@ -226,7 +235,7 @@ usage:
 
 Demo:
     > python -m ichrome --host=127.0.0.1 --window-size=1212,1212 --incognito
-    > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless':False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
+    > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
 
 Other operations:
     1. kill local chrome process with given port:
@@ -234,8 +243,10 @@ Other operations:
     2. clear user_data_dir path (remove the folder and files):
         python -m ichrome --clear
         python -m ichrome --clean
-    2. show ChromeDaemon.__doc__:
+    3. show ChromeDaemon.__doc__:
         python -m ichrome --doc
+    4. crawl the URL, output the HTML DOM:
+        python -m ichrome --crawl --headless --timeout=2 http://myip.ipip.net/
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -271,6 +282,7 @@ optional arguments:
                         port, default to 1
   --proc_check_interval PROC_CHECK_INTERVAL
                         check chrome process alive every interval seconds
+  --crawl               crawl the given URL, output the HTML DOM
   --clean, --clear      clean user_data_dir
   --doc                 show ChromeDaemon.__doc__
   --debug               set logger level to DEBUG
