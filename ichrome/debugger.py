@@ -32,7 +32,7 @@ INFO  2020-05-11 15:57:08 [ichrome] daemon.py(584): AsyncChromeDaemon(127.0.0.1:
 '''
 __all__ = [
     'Chrome', 'Tab', 'Daemon', 'launch', 'AsyncTab', 'show_all_log',
-    'mute_all_log', 'shutdown', 'get_a_tab', 'network_sniffer'
+    'mute_all_log', 'shutdown', 'get_a_tab', 'network_sniffer', 'crawl_once'
 ]
 
 
@@ -264,3 +264,21 @@ def network_sniffer(timeout=60, filter_function=None, callback_function=None):
     tab.wait_request(filter_function=filter_function,
                      timeout=timeout,
                      callback_function=callback_function)
+
+
+async def crawl_once(**kwargs):
+    url = kwargs.pop('start_url', None)
+    if not url:
+        raise ValueError('Can not crawl with null start_url')
+    async with AsyncChromeDaemon(**kwargs) as cd:
+        async with AsyncChrome(
+                host=kwargs.get('host', '127.0.0.1'),
+                port=kwargs.get('port', 9222),
+                timeout=cd._timeout or 2,
+        ) as chrome:
+            tab: AsyncTab = await chrome[0]
+            async with tab():
+                await tab.set_url(url, timeout=cd._timeout)
+                html = await tab.get_html(timeout=cd._timeout)
+                print(html)
+                # await tab.close_browser()
