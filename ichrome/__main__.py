@@ -100,11 +100,10 @@ Other operations:
         help="check chrome process alive every interval seconds",
         default=5,
         type=int)
-    parser.add_argument(
-        "--crawl",
-        help="crawl the given URL, do not launching the daemon.",
-        default=False,
-        action="store_true")
+    parser.add_argument("--crawl",
+                        help="crawl the given URL, output the HTML DOM",
+                        default=False,
+                        action="store_true")
     parser.add_argument("--clean",
                         "--clear",
                         dest='clean',

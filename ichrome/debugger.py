@@ -252,7 +252,6 @@ def network_sniffer(timeout=60, filter_function=None, callback_function=None):
                          ensure_ascii=0,
                          indent=2)
         req_type = get_data_value(r, 'params.type')
-        req_type = get_data_value(r, 'params.type')
         doc_url = get_data_value(r, 'params.documentURL')
         print(f'{doc_url} - {req_type}\n{req}', end=f'\n{"="*40}\n')
 
