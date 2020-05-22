@@ -331,6 +331,7 @@ class ChromeDaemon(object):
             if not self.proc_ok:
                 logger.debug(f"{self} daemon is restarting proc.")
                 self.restart()
+                deaths += 1
                 continue
             try:
                 return_code = self.proc.wait(timeout=interval)
@@ -503,6 +504,11 @@ class AsyncChromeDaemon(ChromeDaemon):
     def _start_chrome_process(self):
         self.proc = subprocess.Popen(**self.cmd_args)
 
+    async def restart(self):
+        logger.info(f"restarting {self}")
+        await self.loop.run_in_executor(None, super().kill)
+        return await self.launch_chrome()
+
     async def launch_chrome(self):
         await self.loop.run_in_executor(None, self._start_chrome_process)
         return await self.ok
@@ -576,7 +582,8 @@ class AsyncChromeDaemon(ChromeDaemon):
                 break
             if not self.proc_ok:
                 logger.debug(f"{self} daemon is restarting proc.")
-                await self.loop.run_in_executor(None, self.restart)
+                await self.restart()
+                deaths += 1
                 continue
             try:
                 return_code = await self.loop.run_in_executor(
@@ -593,11 +600,6 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def __aexit__(self, *args, **kwargs):
         if not self._shutdown:
-            if self.max_deaths == 1:
-                async with AsyncChrome(host=self.host,
-                                       port=self.port,
-                                       timeout=self._timeout) as chrome:
-                    await chrome.close_browser()
             await self.loop.run_in_executor(None, self.__exit__)
 
 
