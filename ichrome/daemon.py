@@ -290,7 +290,10 @@ class ChromeDaemon(object):
                     return path
         else:
             if current_platform == 'Linux':
-                paths = ["google-chrome", "google-chrome-stable"]
+                paths = [
+                    "google-chrome", "google-chrome-stable",
+                    "google-chrome-beta", "google-chrome-dev"
+                ]
             elif current_platform == 'Darwin':
                 paths = [
                     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
