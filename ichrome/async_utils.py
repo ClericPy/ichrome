@@ -587,16 +587,24 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         '''Page.stopLoading'''
         return await self.send("Page.stopLoading", timeout=timeout)
 
-    async def wait_loading(self,
-                           timeout: Union[int, float] = None,
-                           callback_function: Optional[Callable] = None,
-                           timeout_stop_loading=False) -> Union[dict, None]:
-        '''Page.loadEventFired event for page loaded.'''
+    async def wait_loading(
+            self,
+            timeout: Union[int, float] = None,
+            callback_function: Optional[Callable] = None,
+            timeout_stop_loading=False) -> Union[dict, None, bool]:
+        '''Page.loadEventFired event for page loaded.
+        If page loaded event catched, return dict.
+        else:
+            if timeout_stop_loading is True:
+                stop loading and return False
+            else:
+                return None'''
         data = await self.wait_event("Page.loadEventFired",
                                      timeout=timeout,
                                      callback_function=callback_function)
         if data is None and timeout_stop_loading:
             await self.stop_loading_page()
+            return False
         return data
 
     async def wait_page_loading(self,
@@ -796,7 +804,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                timeout=timeout)
         return data
 
-    async def goto_history(self, entryId: int = 0, timeout=None):
+    async def goto_history(self, entryId: int = 0, timeout=None) -> bool:
         result = await self.send('Page.navigateToHistoryEntry',
                                  entryId=entryId,
                                  timeout=timeout)
@@ -841,7 +849,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         result = await self.send('Page.getNavigationHistory', timeout=timeout)
         return self.get_data_value(result, path='result', default={})
 
-    async def reset_history(self, timeout=None):
+    async def reset_history(self, timeout=None) -> bool:
         result = await self.send('Page.resetNavigationHistory', timeout=timeout)
         return self.check_error('reset_history', result)
 
@@ -891,7 +899,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                timeout=timeout,
                                expression=javascript)
 
-    async def handle_dialog(self, accept=True, promptText=None, timeout=None):
+    async def handle_dialog(self,
+                            accept=True,
+                            promptText=None,
+                            timeout=None) -> bool:
         kwargs = {'timeout': timeout, 'accept': accept}
         if promptText is not None:
             kwargs['promptText'] = promptText
@@ -1000,10 +1011,8 @@ JSON.stringify(result)""" % (
             else:
                 return result
         except Exception as e:
-            logger.error(f"querySelectorAll error: {e}, response: {response}")
-            if isinstance(index, int):
-                return TagNotFound()
-            return []
+            logger.error(f"querySelectorAll error: {e!r}, response: {response}")
+            return None
 
     async def inject_js(self, *args, **kwargs):
         # for compatible
@@ -1113,7 +1122,7 @@ JSON.stringify(result)""" % (
                                **kwargs)
         return self.get_data_value(data, path='result.identifier') or ''
 
-    async def remove_js_onload(self, identifier: str, timeout=None):
+    async def remove_js_onload(self, identifier: str, timeout=None) -> bool:
         '''Page.removeScriptToEvaluateOnNewDocument, return whether the identifier exist.'''
         result = await self.send('Page.removeScriptToEvaluateOnNewDocument',
                                  identifier=identifier,
