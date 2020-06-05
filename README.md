@@ -1,7 +1,7 @@
 [ichrome](https://github.com/ClericPy/ichrome) [![PyPI](https://img.shields.io/pypi/v/ichrome?style=plastic)](https://pypi.org/project/ichrome/)![PyPI - Wheel](https://img.shields.io/pypi/wheel/ichrome?style=plastic)![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ichrome?style=plastic)![PyPI - Downloads](https://img.shields.io/pypi/dm/ichrome?style=plastic)![PyPI - License](https://img.shields.io/pypi/l/ichrome?style=plastic)
 ==============================================
 
-> A connector to control Chrome browser ([Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/)), for python3.7+.
+> Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/)) and python3.7+.
 
 # Install
 
@@ -17,8 +17,9 @@
 # Why?
 
 - pyppeteer / selenium is awesome, but I don't need so much
-  - spelling of pyppeteer is confused.
-  - selenium is slow.
+  - spelling of pyppeteer is confused, and event-driven programming is not always advisable.
+  - selenium is slow
+  - webdrivers often come with memory leak.
 - async communication with Chrome remote debug port, stable choice. [Recommended]
 - sync way to test CDP,  which is not recommended for complex production environments. [Deprecated]
   - **ichrome.debugger** is a sync tool and depends on the `ichrome.async_utils`, which may be a better choice.
@@ -27,8 +28,11 @@
 # Features
 
 - Chrome process daemon
-- Connect to existing chrome debug port
-- Operations on Tabs
+  - auto restart
+  - command-line usage
+  - async environment compatible
+- Connect to an existing Chrome
+  - Some magic operations on Tabs
 
 
 <details>
@@ -36,23 +40,23 @@
 
 1. server
     > return `f"http://{self.host}:{self.port}"`, such as `http://127.0.0.1:9222`
-1. version
+2. version
     > version info from `/json/version` format like:
     ```
     {'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}
     ```
-1. `connect` / `check` / `ok`
+3. `connect` / `check` / `ok`
     > check alive
-1. `get_tabs` / `tabs` / `get_tab` / `get_tabs`
+4. `get_tabs` / `tabs` / `get_tab` / `get_tabs`
     > get the `AsyncTab` instance from `/json`.
-1. `new_tab` / `activate_tab` / `close_tab` / `close_tabs`
+5. `new_tab` / `activate_tab` / `close_tab` / `close_tabs`
     > operating tabs.
-1. `close_browser`
+6. `close_browser`
     > find the activated tab and send `Browser.close` message, close the connected chrome browser gracefully.
     ```python
     await chrome.close_browser()
     ```
-1. `kill`
+7. `kill`
     > force kill the chrome process with self.port.
     ```python
     await chrome.kill()
