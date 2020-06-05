@@ -124,6 +124,11 @@ async def test_tab_js(tab: Tab):
     assert await tab.reload()
     await tab.wait_loading(2)
     assert len(await tab.current_html) > 1000
+    # test wait tags
+    result = await tab.wait_tags('.python-logo1', max_wait_time=1)
+    assert result == []
+    result = await tab.wait_tags('.python-logo', max_wait_time=3)
+    assert result
 
 
 async def test_wait_response(tab: Tab):
