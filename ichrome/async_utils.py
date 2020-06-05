@@ -266,6 +266,10 @@ class Tab(GetValueMixin):
             if self._log_all_recv:
                 logger.debug(f'[recv] {self!r} {msg}')
             if msg.type in (WSMsgType.CLOSED, WSMsgType.ERROR):
+                # Message size xxxx exceeds limit 4194304: reset the max_msg_size(default=4*1024*1024) in Tab.ws_kwargs
+                logger.error(
+                    f'Receive the {msg.type!r} message which break the recv daemon: "{msg.data}"'
+                )
                 break
             if msg.type != WSMsgType.TEXT:
                 continue
@@ -911,6 +915,33 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 result,
                                 accept=accept,
                                 promptText=promptText)
+
+    async def wait_tags(self,
+                        cssselector: str,
+                        interval=1,
+                        max_wait_time=None,
+                        timeout=None) -> Union[None, List[Tag]]:
+        '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
+        cssselector: css querying the Tags.
+        interval: checking interval for while loop.
+        max_wait_time: if time used up, return [].
+        timeout: timeout seconds for sending a msg.
+
+        If max_wait_time used up: return [].
+        elif querySelectorAll runs failed, return None.
+        else: return List[Tag]
+        '''
+        tags = []
+        NO_TIMEOUT = max_wait_time is None
+        TIMEOUT_AT = time.time() + max_wait_time
+        timeout = timeout if timeout is not None else self.timeout
+        while NO_TIMEOUT or TIMEOUT_AT > time.time():
+            tags = await self.querySelectorAll(cssselector=cssselector,
+                                               timeout=timeout)
+            if tags:
+                break
+            await asyncio.sleep(interval)
+        return tags
 
     async def querySelector(self,
                             cssselector: str,
