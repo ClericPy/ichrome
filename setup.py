@@ -16,11 +16,11 @@ with open('requirements.txt') as f:
     install_requires = f.read().strip().splitlines()
 with open("README.md", encoding="utf-8") as f:
     README = f.read()
-desc = "A toolkit for using chrome browser with the [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/), support python3.7+. Read more: https://github.com/ClericPy/ichrome."
+desc = "Chrome controller for Humans, base on Chrome Devtools Protocol(CDP) and python3.7+. Read more: https://github.com/ClericPy/ichrome."
 setup(
     name="ichrome",
     version=version,
-    keywords=("chrome"),
+    keywords=['chrome', 'Chrome Devtools Protocol', 'daemon', 'CDP', 'browser'],
     description=desc,
     license="MIT License",
     install_requires=install_requires,

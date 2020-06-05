@@ -266,6 +266,10 @@ class Tab(GetValueMixin):
             if self._log_all_recv:
                 logger.debug(f'[recv] {self!r} {msg}')
             if msg.type in (WSMsgType.CLOSED, WSMsgType.ERROR):
+                # Message size xxxx exceeds limit 4194304: reset the max_msg_size(default=4*1024*1024) in Tab.ws_kwargs
+                logger.error(
+                    f'Receive the {msg.type!r} message which break the recv daemon: "{msg.data}"'
+                )
                 break
             if msg.type != WSMsgType.TEXT:
                 continue
@@ -587,16 +591,24 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         '''Page.stopLoading'''
         return await self.send("Page.stopLoading", timeout=timeout)
 
-    async def wait_loading(self,
-                           timeout: Union[int, float] = None,
-                           callback_function: Optional[Callable] = None,
-                           timeout_stop_loading=False) -> Union[dict, None]:
-        '''Page.loadEventFired event for page loaded.'''
+    async def wait_loading(
+            self,
+            timeout: Union[int, float] = None,
+            callback_function: Optional[Callable] = None,
+            timeout_stop_loading=False) -> Union[dict, None, bool]:
+        '''Page.loadEventFired event for page loaded.
+        If page loaded event catched, return dict.
+        else:
+            if timeout_stop_loading is True:
+                stop loading and return False
+            else:
+                return None'''
         data = await self.wait_event("Page.loadEventFired",
                                      timeout=timeout,
                                      callback_function=callback_function)
         if data is None and timeout_stop_loading:
             await self.stop_loading_page()
+            return False
         return data
 
     async def wait_page_loading(self,
@@ -796,7 +808,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                timeout=timeout)
         return data
 
-    async def goto_history(self, entryId: int = 0, timeout=None):
+    async def goto_history(self, entryId: int = 0, timeout=None) -> bool:
         result = await self.send('Page.navigateToHistoryEntry',
                                  entryId=entryId,
                                  timeout=timeout)
@@ -841,7 +853,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         result = await self.send('Page.getNavigationHistory', timeout=timeout)
         return self.get_data_value(result, path='result', default={})
 
-    async def reset_history(self, timeout=None):
+    async def reset_history(self, timeout=None) -> bool:
         result = await self.send('Page.resetNavigationHistory', timeout=timeout)
         return self.check_error('reset_history', result)
 
@@ -891,7 +903,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                timeout=timeout,
                                expression=javascript)
 
-    async def handle_dialog(self, accept=True, promptText=None, timeout=None):
+    async def handle_dialog(self,
+                            accept=True,
+                            promptText=None,
+                            timeout=None) -> bool:
         kwargs = {'timeout': timeout, 'accept': accept}
         if promptText is not None:
             kwargs['promptText'] = promptText
@@ -900,6 +915,33 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 result,
                                 accept=accept,
                                 promptText=promptText)
+
+    async def wait_tags(self,
+                        cssselector: str,
+                        interval=1,
+                        max_wait_time=None,
+                        timeout=None) -> Union[None, List[Tag]]:
+        '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
+        cssselector: css querying the Tags.
+        interval: checking interval for while loop.
+        max_wait_time: if time used up, return [].
+        timeout: timeout seconds for sending a msg.
+
+        If max_wait_time used up: return [].
+        elif querySelectorAll runs failed, return None.
+        else: return List[Tag]
+        '''
+        tags = []
+        NO_TIMEOUT = max_wait_time is None
+        TIMEOUT_AT = time.time() + max_wait_time
+        timeout = timeout if timeout is not None else self.timeout
+        while NO_TIMEOUT or TIMEOUT_AT > time.time():
+            tags = await self.querySelectorAll(cssselector=cssselector,
+                                               timeout=timeout)
+            if tags:
+                break
+            await asyncio.sleep(interval)
+        return tags
 
     async def querySelector(self,
                             cssselector: str,
@@ -1000,10 +1042,8 @@ JSON.stringify(result)""" % (
             else:
                 return result
         except Exception as e:
-            logger.error(f"querySelectorAll error: {e}, response: {response}")
-            if isinstance(index, int):
-                return TagNotFound()
-            return []
+            logger.error(f"querySelectorAll error: {e!r}, response: {response}")
+            return None
 
     async def inject_js(self, *args, **kwargs):
         # for compatible
@@ -1113,7 +1153,7 @@ JSON.stringify(result)""" % (
                                **kwargs)
         return self.get_data_value(data, path='result.identifier') or ''
 
-    async def remove_js_onload(self, identifier: str, timeout=None):
+    async def remove_js_onload(self, identifier: str, timeout=None) -> bool:
         '''Page.removeScriptToEvaluateOnNewDocument, return whether the identifier exist.'''
         result = await self.send('Page.removeScriptToEvaluateOnNewDocument',
                                  identifier=identifier,

@@ -258,19 +258,38 @@ class ChromeDaemon(object):
             logger.error(f"launch_chrome failed: {self}, args: {self.cmd}")
             return False
 
-    def _ensure_port_free(self):
-        for _ in range(3):
-            try:
-                sock = socket.socket()
-                sock.settimeout(self._timeout)
-                sock.connect((self.host, self.port))
-                logger.info(f"shutting down chrome using port {self.port}")
-                self.kill(True)
-                continue
-            except (ConnectionRefusedError, socket.timeout):
+    @classmethod
+    def get_free_port(cls,
+                      host="127.0.0.1",
+                      start=9222,
+                      max_tries=100,
+                      timeout=1):
+        for offset in range(max_tries):
+            port = start + offset
+            if cls._check_host_port_in_use(host, port, timeout):
+                return port
+        raise RuntimeError(f'No free port beteen {start} and {start+max_tries}')
+
+    @staticmethod
+    def _check_host_port_in_use(host="127.0.0.1", port=9222, timeout=1):
+        try:
+            sock = socket.socket()
+            sock.settimeout(timeout)
+            sock.connect((host, port))
+            return False
+        except (ConnectionRefusedError, socket.timeout):
+            return True
+        finally:
+            sock.close()
+
+    def _ensure_port_free(self, max_tries=3):
+        for _ in range(max_tries):
+            ok = self._check_host_port_in_use(self.host, self.port,
+                                              self._timeout)
+            if ok:
                 return True
-            finally:
-                sock.close()
+            logger.info(f"shutting down chrome using port {self.port}")
+            self.kill(True)
         else:
             raise ValueError("port in used")
 
@@ -290,7 +309,10 @@ class ChromeDaemon(object):
                     return path
         else:
             if current_platform == 'Linux':
-                paths = ["google-chrome", "google-chrome-stable"]
+                paths = [
+                    "google-chrome", "google-chrome-stable",
+                    "google-chrome-beta", "google-chrome-dev"
+                ]
             elif current_platform == 'Darwin':
                 paths = [
                     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
