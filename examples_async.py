@@ -84,7 +84,8 @@ async def test_tab_cookies(tab: Tab):
 
 async def test_tab_set_url(tab: Tab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
-    assert await tab.set_url('http://python.org', timeout=5)
+    ok = await tab.set_url('http://python.org', timeout=5)
+    assert ok or (ok is False)
 
 
 async def test_tab_js(tab: Tab):
