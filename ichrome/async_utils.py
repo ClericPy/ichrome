@@ -139,6 +139,7 @@ class Tab(GetValueMixin):
         'ServiceWorker', 'Fetch', 'WebAudio', 'WebAuthn', 'Media', 'Console',
         'Debugger', 'HeapProfiler', 'Profiler', 'Runtime'
     }
+    MAX_WAIT_TIMEOUT = 600
 
     def __init__(self,
                  tab_id=None,
@@ -368,7 +369,8 @@ class Tab(GetValueMixin):
             timeout = await self._ensure_enable_and_timeout(domain,
                                                             timeout=timeout)
         result = None
-        timeout = self.timeout if timeout is None else timeout
+        if timeout is None:
+            timeout = self.MAX_WAIT_TIMEOUT
         if timeout <= 0:
             return result
         f = self._listener.register(event_dict)
@@ -626,7 +628,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             callback_function: Optional[Callable] = None,
             filter_function: Optional[Callable] = None) -> Union[dict, None]:
         """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
-        timeout = self.timeout if timeout is None else timeout
+        timeout = timeout or self.MAX_WAIT_TIMEOUT
         start_time = time.time()
         result = None
         while 1:
@@ -651,13 +653,28 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def wait_response(self,
                             filter_function: Optional[Callable] = None,
                             callback_function: Optional[Callable] = None,
+                            response_body: bool = True,
                             timeout: Union[int, float] = None):
         '''wait a special response filted by function, then run the callback_function.
 
-        Sometimes the request fails to be sent, so use the `tab.wait_request` instead.'''
+        Sometimes the request fails to be sent, so use the `tab.wait_request` instead.
+        if response_body:
+            the non-null request_dict will contains response body.'''
+        start_time = time.time()
+        timeout = timeout or self.MAX_WAIT_TIMEOUT
         request_dict = await self.wait_event("Network.responseReceived",
                                              filter_function=filter_function,
                                              timeout=timeout)
+        timeout = timeout - start_time
+        if response_body:
+            if request_dict:
+                data = await self.get_response(
+                    request_dict['params']['requestId'],
+                    timeout=timeout,
+                    wait_loading=True)
+                request_dict['data'] = self.get_data_value(data, 'result.body')
+            elif isinstance(request_dict, dict):
+                request_dict['data'] = None
         return await ensure_awaitable_result(callback_function, request_dict)
 
     async def wait_request(self,
@@ -726,12 +743,13 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         request_id = self._ensure_request_id(request_dict)
         if request_id is None:
             return None
+        timeout = timeout or self.timeout
         if wait_loading:
             # ensure the request loaded
             await self.wait_request_loading(request_id, timeout=timeout)
-            timeout = (timeout or self.timeout) - (time.time() - start_time)
+            timeout = timeout - (time.time() - start_time)
         if timeout < 0:
-            timeout = 0
+            timeout = self.timeout
         result = await self.send("Network.getResponseBody",
                                  requestId=request_id,
                                  timeout=timeout)
@@ -863,7 +881,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                       timeout: Union[float, int] = None,
                       timeout_stop_loading: bool = True):
         """
-        Navigate the tab to the URL
+        Navigate the tab to the URL. If stop loading occurs, return False.
         """
         if timeout is None:
             timeout = self.timeout
@@ -884,8 +902,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             data = await self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
         real_timeout = max((timeout - time_passed, 0))
-        await self.wait_loading(timeout=real_timeout,
-                                timeout_stop_loading=timeout_stop_loading)
+        if not (await
+                self.wait_loading(timeout=real_timeout,
+                                  timeout_stop_loading=timeout_stop_loading)):
+            return False
         return data
 
     async def js(self,
@@ -918,8 +938,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def wait_tags(self,
                         cssselector: str,
-                        interval=1,
-                        max_wait_time=None,
+                        max_wait_time: Optional[float] = None,
+                        interval: float = 1,
                         timeout=None) -> Union[None, List[Tag]]:
         '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
@@ -932,10 +952,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         else: return List[Tag]
         '''
         tags = []
-        NO_TIMEOUT = max_wait_time is None
-        TIMEOUT_AT = time.time() + max_wait_time
+        TIMEOUT_AT = time.time() + (max_wait_time or self.MAX_WAIT_TIMEOUT)
         timeout = timeout if timeout is not None else self.timeout
-        while NO_TIMEOUT or TIMEOUT_AT > time.time():
+        while TIMEOUT_AT > time.time():
             tags = await self.querySelectorAll(cssselector=cssselector,
                                                timeout=timeout)
             if tags:
