@@ -31,6 +31,8 @@ except ImportError:
     # for python 3.8+
     from asyncio.exceptions import TimeoutError
 
+NotSet = object()
+
 
 async def ensure_awaitable_result(callback_function, result):
     if callable(callback_function):
@@ -63,9 +65,10 @@ class _TabConnectionManager(object):
 
 class _WSConnection(object):
 
-    def __init__(self, tab):
+    def __init__(self, tab, connect_timeout=None):
         self.tab = tab
         self._closed = None
+        self.connect_timeout = connect_timeout
 
     def __str__(self):
         return f'<{self.__class__.__name__}: {None if self._closed is None else not self._closed}>'
@@ -78,7 +81,7 @@ class _WSConnection(object):
         try:
             self.tab.ws = await self.tab.req.session.ws_connect(
                 self.tab.webSocketDebuggerUrl,
-                timeout=self.tab.timeout,
+                timeout=self.tab.connect_timeout or self.tab.connect_timeout,
                 **self.tab.ws_kwargs)
             asyncio.ensure_future(self.tab._recv_daemon())
             logger.debug(
@@ -129,6 +132,15 @@ class GetValueMixin:
 
 
 class Tab(GetValueMixin):
+    """Tab object will do lots of magic operations on tab.
+
+    The timeout variable of many methods have only one feature -- wait for the events::
+
+            if timeout is NotSet => using the self.timeout instead
+            elif timeout is None => wait the self._MAX_WAIT_TIMEOUT seconds unless you reset the Tab._MAX_WAIT_TIMEOUT (None for forever)
+            elif timeout is 0    => no wait
+            else int / float     => wait timeout seconds
+    """
     _log_all_recv = False
     _min_move_interval = 0.05
     _domains_can_be_enabled = {
@@ -139,28 +151,48 @@ class Tab(GetValueMixin):
         'ServiceWorker', 'Fetch', 'WebAudio', 'WebAuthn', 'Media', 'Console',
         'Debugger', 'HeapProfiler', 'Profiler', 'Runtime'
     }
-    MAX_WAIT_TIMEOUT = 600
+    # You can reset this as seconds, will wait forever......
+    _MAX_WAIT_TIMEOUT = None
+    # aiohttp ws timeout default to 10.0
+    _DEFAULT_CONNECT_TIMEOUT = 10.0
 
     def __init__(self,
                  tab_id=None,
                  title=None,
                  url=None,
+                 type=None,
+                 description=None,
                  webSocketDebuggerUrl=None,
+                 devtoolsFrontendUrl=None,
                  json=None,
                  chrome=None,
-                 timeout=5,
+                 timeout=None,
+                 connect_timeout=None,
                  ws_kwargs=None,
                  **kwargs):
+        # [{
+        #     "description": "",
+        #     "devtoolsFrontendUrl": "/devtools/inspector.html?ws=localhost:9222/devtools/page/8ED4BDD54713572BCE026393A0137214",
+        #     "id": "8ED4BDD54713572BCE026393A0137214",
+        #     "title": "about:blank",
+        #     "type": "page",
+        #     "url": "http://localhost:9222/json",
+        #     "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/8ED4BDD54713572BCE026393A0137214"
+        # }]
         tab_id = tab_id or kwargs.pop('id')
         if not tab_id:
             raise ValueError('tab_id should not be null')
         self.tab_id = tab_id
         self.title = title
         self._url = url
+        self.type = type
+        self.description = description
+        self.devtoolsFrontendUrl = devtoolsFrontendUrl
         self.webSocketDebuggerUrl = webSocketDebuggerUrl
         self.json = json
         self.chrome = chrome
         self.timeout = timeout
+        self.connect_timeout = connect_timeout or self._DEFAULT_CONNECT_TIMEOUT
         self._created_time = None
         self.ws_kwargs = ws_kwargs or {}
         self._closed = False
@@ -190,8 +222,16 @@ class Tab(GetValueMixin):
             logger.debug('[unclosed] WSConnection is not closed.')
             asyncio.ensure_future(self.ws.close())
 
-    async def close_browser(self):
-        return await self.send('Browser.close')
+    def ensure_timeout(self, timeout):
+        if timeout is NotSet:
+            return self.timeout
+        elif timeout is None:
+            return self._MAX_WAIT_TIMEOUT
+        else:
+            return timeout
+
+    async def close_browser(self, timeout=NotSet):
+        return await self.send('Browser.close', timeout=timeout)
 
     @property
     def status(self) -> str:
@@ -199,14 +239,14 @@ class Tab(GetValueMixin):
             return 'connected'
         return 'disconnected'
 
-    def connect(self) -> _WSConnection:
-        '''`async with tab.connect:`'''
+    def connect(self, connect_timeout=None) -> _WSConnection:
+        '''`async with tab.connect() as tab:`'''
         self._enabled_domains.clear()
-        return _WSConnection(self)
+        return _WSConnection(self, connect_timeout=connect_timeout)
 
-    def __call__(self) -> _WSConnection:
-        '''`async with tab():`'''
-        return self.connect()
+    def __call__(self, connect_timeout=None) -> _WSConnection:
+        '''`async with tab() as tab:` or just `async with tab():` and reuse `tab` variable.'''
+        return self.connect(connect_timeout=connect_timeout)
 
     @property
     def msg_id(self):
@@ -216,19 +256,21 @@ class Tab(GetValueMixin):
     @property
     def url(self) -> str:
         """The init url since tab created.
-        `await self.current_url` for the current url.
+        or using `await self.current_url` for the current url.
         """
         return self._url
 
     async def refresh_tab_info(self) -> bool:
-        for tab in await self.chrome.tabs:
-            if tab.tab_id == self.tab_id:
-                self.tab_id = tab.tab_id
-                self.title = tab.title
-                self._url = tab.url
-                self.webSocketDebuggerUrl = tab.webSocketDebuggerUrl
-                self.json = tab.json
-                return True
+        r = await self.chrome.get_server('/json')
+        if r:
+            for tab_info in r.json():
+                if tab_info['id'] == self.tab_id:
+                    self.title = tab_info['title']
+                    self.description = tab_info['description']
+                    self.type = tab_info['type']
+                    self._url = tab_info['url']
+                    self.json = tab_info
+                    return True
         return False
 
     async def activate_tab(self) -> Union[str, bool]:
@@ -239,16 +281,16 @@ class Tab(GetValueMixin):
         """close tab with chrome http endpoint"""
         return await self.chrome.close_tab(self)
 
-    async def activate(self) -> Union[dict, None]:
+    async def activate(self, timeout=NotSet) -> Union[dict, None]:
         """activate tab with cdp websocket"""
-        return await self.send("Page.bringToFront")
+        return await self.send("Page.bringToFront", timeout=timeout)
 
-    async def close(self) -> Union[dict, None]:
+    async def close(self, timeout=NotSet) -> Union[dict, None]:
         """close tab with cdp websocket"""
-        return await self.send("Page.close")
+        return await self.send("Page.close", timeout=timeout)
 
-    async def crash(self) -> Union[dict, None]:
-        return await self.send("Page.crash")
+    async def crash(self, timeout=NotSet) -> Union[dict, None]:
+        return await self.send("Page.crash", timeout=timeout)
 
     async def _recv_daemon(self):
         """Daemon Coroutine for listening the ws.recv.
@@ -268,11 +310,11 @@ class Tab(GetValueMixin):
                 logger.debug(f'[recv] {self!r} {msg}')
             if msg.type in (WSMsgType.CLOSED, WSMsgType.ERROR):
                 # Message size xxxx exceeds limit 4194304: reset the max_msg_size(default=4*1024*1024) in Tab.ws_kwargs
-                logger.error(
-                    f'Receive the {msg.type!r} message which break the recv daemon: "{msg.data}"'
-                )
-                break
+                err_msg = f'Receive the {msg.type!r} message which break the recv daemon: "{msg.data}"'
+                logger.error(err_msg)
+                raise RuntimeError(err_msg)
             if msg.type != WSMsgType.TEXT:
+                # ignore
                 continue
             data_str = msg.data
             if not data_str:
@@ -296,72 +338,76 @@ class Tab(GetValueMixin):
 
     async def send(self,
                    method: str,
-                   timeout: Union[int, float] = None,
+                   timeout=NotSet,
                    callback_function: Optional[Callable] = None,
                    force: bool = False,
                    **kwargs) -> Union[None, dict]:
-        timeout = self.timeout if timeout is None else timeout
+        '''Send message to Tab.
+        If timeout is not None: wait for recv event.
+        If not force: will check the domain enabled automatically.
+        If callback_function: run while received the response msg.
+        '''
+        timeout = self.ensure_timeout(timeout)
         if not force:
-            # not force, will check lots of scene
+            # not force, will ignore repetitive execution
             domain = method.split('.', 1)[0]
             if method.endswith('.enable'):
                 # check domain if enabled or not, avoid duplicated enable.
                 if domain in self._enabled_domains:
-                    logger.debug(f'{domain} no need enable twice.')
+                    logger.debug(f'{method} ignore repetitive execution.')
                     return None
                 else:
-                    # set force to True
                     return await self.enable(domain,
                                              force=True,
                                              timeout=timeout)
             elif method.endswith('.disable'):
                 if domain not in self._enabled_domains:
-                    logger.debug(f'{domain} no need disable twice.')
+                    logger.debug(f'{method} ignore repetitive execution.')
                     return None
                 else:
-                    # set force to True
                     return await self.disable(domain,
                                               force=True,
                                               timeout=timeout)
-            timeout = await self._ensure_enable_and_timeout(domain,
-                                                            timeout=timeout)
-
+            else:
+                # normal methods need check enable
+                timeout = await self._ensure_enable_and_timeout(domain,
+                                                                timeout=timeout)
         request = {"method": method, "params": kwargs}
         request["id"] = self.msg_id
-        if not self.ws or self.ws.closed:
-            logger.error(
-                f'[closed] {self} ws has been closed, ignore send {request}')
-            return None
         try:
+            if not self.ws or self.ws.closed:
+                raise RuntimeError(f'[closed] {self} ws has been closed')
             logger.debug(f"[send] {self!r} {request}")
-            await self.ws.send_json(request)
-            if timeout <= 0:
-                # not care for response
-                return None
-            event = {"id": request["id"]}
-            msg = await self.recv(event,
-                                  timeout=timeout,
-                                  callback_function=callback_function)
-            return msg
+            result = await self.ws.send_json(request)
+            if timeout:
+                event = {"id": request["id"]}
+                msg = await self.recv(event,
+                                      timeout=timeout,
+                                      callback_function=callback_function)
+                return msg
+            else:
+                return result
         except (ClientError, WebSocketError, TypeError) as err:
-            logger.error(f'{self} [send] msg failed for {err}')
-            return None
+            err_msg = f'{self} [send] msg {request} failed for {err}'
+            logger.error(err_msg)
+            raise RuntimeError(err_msg)
 
     async def recv(self,
                    event_dict: dict,
-                   timeout: Union[int, float] = None,
+                   timeout=NotSet,
                    callback_function=None) -> Union[dict, None]:
         """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
 
         :param event_dict: dict like {'id': 1} or {'method': 'Page.loadEventFired'} or other JSON serializable dict.
         :type event_dict: dict
-        :param timeout: await seconds, None for permanent, 0 for 0 seconds.
+        :param timeout: await seconds, None for self._MAX_WAIT_TIMEOUT, 0 for 0 seconds.
         :type timeout: float / None, optional
         :param callback_function: event callback_function function accept only one arg(the event dict).
         :type callback_function: callable, optional
         :return: the event dict from websocket recv.
         :rtype: dict
         """
+        timeout = self.ensure_timeout(timeout)
         method = event_dict.get('method')
         if method:
             # ensure the domain of method is enabled
@@ -369,9 +415,7 @@ class Tab(GetValueMixin):
             timeout = await self._ensure_enable_and_timeout(domain,
                                                             timeout=timeout)
         result = None
-        if timeout is None:
-            timeout = self.MAX_WAIT_TIMEOUT
-        if timeout <= 0:
+        if isinstance(timeout, (float, int)) and timeout <= 0:
             return result
         f = self._listener.register(event_dict)
         try:
@@ -387,7 +431,7 @@ class Tab(GetValueMixin):
 
     async def _ensure_enable_and_timeout(self,
                                          domain: str,
-                                         timeout=None) -> Union[float, int]:
+                                         timeout=NotSet) -> Union[float, int]:
         '''return a timeout num.
         ::
 
@@ -628,7 +672,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             callback_function: Optional[Callable] = None,
             filter_function: Optional[Callable] = None) -> Union[dict, None]:
         """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
-        timeout = timeout or self.MAX_WAIT_TIMEOUT
+        timeout = timeout or self._MAX_WAIT_TIMEOUT
         start_time = time.time()
         result = None
         while 1:
@@ -661,14 +705,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if response_body:
             the non-null request_dict will contains response body.'''
         start_time = time.time()
-        timeout = timeout or self.MAX_WAIT_TIMEOUT
+        timeout = timeout or self._MAX_WAIT_TIMEOUT
         request_dict = await self.wait_event("Network.responseReceived",
                                              filter_function=filter_function,
                                              timeout=timeout)
         timeout = timeout - start_time
         if response_body:
             if request_dict:
-                data = await self.get_response(
+                data = await self.get_response_body(
                     request_dict['params']['requestId'],
                     timeout=timeout,
                     wait_loading=True)
@@ -952,7 +996,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         else: return List[Tag]
         '''
         tags = []
-        TIMEOUT_AT = time.time() + (max_wait_time or self.MAX_WAIT_TIMEOUT)
+        TIMEOUT_AT = time.time() + (max_wait_time or self._MAX_WAIT_TIMEOUT)
         timeout = timeout if timeout is not None else self.timeout
         while TIMEOUT_AT > time.time():
             tags = await self.querySelectorAll(cssselector=cssselector,
@@ -1416,7 +1460,7 @@ class OffsetMoveWalker(object):
 
     def __init__(self, start_x, start_y, tab: Tab, timeout=None):
         self.tab = tab
-        self.timeout = timeout
+        self.connect_timeout = timeout
         self.start_x = start_x
         self.start_y = start_y
         self.path: List[tuple] = []
@@ -1433,7 +1477,7 @@ class OffsetMoveWalker(object):
                                           self.start_x,
                                           self.start_y,
                                           duration=duration,
-                                          timeout=self.timeout)
+                                          timeout=self.connect_timeout)
             self.start_x += x
             self.start_y += y
         return self
@@ -1453,7 +1497,7 @@ class OffsetDragWalker(OffsetMoveWalker):
         await self.tab.mouse_press(self.start_x,
                                    self.start_y,
                                    button=self.button,
-                                   timeout=self.timeout)
+                                   timeout=self.connect_timeout)
         while self.path:
             x, y, duration = self.path.pop(0)
             await self.tab.mouse_move_rel(x,
@@ -1461,13 +1505,13 @@ class OffsetDragWalker(OffsetMoveWalker):
                                           self.start_x,
                                           self.start_y,
                                           duration=duration,
-                                          timeout=self.timeout)
+                                          timeout=self.connect_timeout)
             self.start_x += x
             self.start_y += y
         await self.tab.mouse_release(self.start_x,
                                      self.start_y,
                                      button=self.button,
-                                     timeout=self.timeout)
+                                     timeout=self.connect_timeout)
         return self
 
 
@@ -1519,15 +1563,16 @@ class Listener(object):
 
 
 class Chrome(GetValueMixin):
+    _DEFAULT_CONNECT_TIMEOUT = 2
 
     def __init__(self,
                  host: str = "127.0.0.1",
                  port: int = 9222,
-                 timeout: int = 2,
+                 timeout: int = None,
                  retry: int = 1):
         self.host = host
         self.port = port
-        self.timeout = timeout
+        self.connect_timeout = timeout or self._DEFAULT_CONNECT_TIMEOUT
         self.retry = retry
         self.status = 'init'
         self._req = None
@@ -1615,7 +1660,9 @@ class Chrome(GetValueMixin):
     async def get_server(self, api: str = '') -> NewResponse:
         # maybe return failure request
         url = urljoin(self.server, api)
-        resp = await self.req.get(url, timeout=self.timeout, retry=self.retry)
+        resp = await self.req.get(url,
+                                  timeout=self.connect_timeout,
+                                  retry=self.retry)
         if not resp:
             self.status = resp.text
         return resp
@@ -1627,7 +1674,7 @@ class Chrome(GetValueMixin):
             r = await self.get_server('/json')
             if r:
                 return [
-                    Tab(chrome=self, **rjson)
+                    Tab(chrome=self, json=rjson, **rjson)
                     for rjson in r.json()
                     if (rjson["type"] == "page" or filt_page_type is not True)
                 ]
