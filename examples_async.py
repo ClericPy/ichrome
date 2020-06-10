@@ -106,10 +106,10 @@ async def test_tab_js(tab: Tab):
     # get window.Vue variable before injecting
     vue_obj = await tab.js('window.Vue')
     # {'id': 22, 'result': {'result': {'type': 'undefined'}}}
-    assert 'undefined' in str(vue_obj)
+    assert vue_obj is None
     assert await tab.inject_js_url(
         'https://cdn.staticfile.org/vue/2.6.10/vue.min.js', timeout=3)
-    vue_obj = await tab.js('window.Vue')
+    vue_obj = await tab.js('window.Vue', value_path=None)
     # {'id': 23, 'result': {'result': {'type': 'function', 'className': 'Function', 'description': 'function wn(e){this._init(e)}', 'objectId': '{"injectedScriptId":1,"id":1}'}}}
     assert 'Function' in str(vue_obj)
     tag = await tab.querySelector('#not-exist')

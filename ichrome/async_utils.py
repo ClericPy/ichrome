@@ -112,6 +112,8 @@ class GetValueMixin:
         """default path is for js response dict"""
         if not item:
             return default
+        if not path:
+            return item
         try:
             for key in path.split('.'):
                 item = item.__getitem__(key)
@@ -881,7 +883,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return bool(data and (await self.wait_loading(
             timeout=timeout, timeout_stop_loading=timeout_stop_loading)))
 
-    async def js(self, javascript: str, timeout=NotSet):
+    async def js(self,
+                 javascript: str,
+                 timeout=NotSet,
+                 value_path='result.result.value'):
         """
         Evaluate JavaScript on the page.
         `js_result = await tab.js('document.title', timeout=10)`
@@ -889,11 +894,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         {'id': 18, 'result': {'result': {'type': 'string', 'value': 'Welcome to Python.org'}}}
         if timeout: return None
         """
-        logger.debug(f'[js] {self!r} insert js `{javascript}`.')
         result = await self.send("Runtime.evaluate",
                                  timeout=timeout,
                                  expression=javascript)
-        return self.get_data_value(result, 'result.result.value')
+        logger.debug(
+            f'[js] {self!r} insert js `{javascript}`, received: {result}.')
+        return self.get_data_value(result, value_path)
 
     async def handle_dialog(self,
                             accept=True,
