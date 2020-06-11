@@ -10,10 +10,9 @@ from pathlib import Path
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
-from torequests.utils import timepass, ttime
+from torequests.utils import get_readable_size, timepass, ttime
 
-from .async_utils import Chrome as AsyncChrome
-from .base import clear_chrome_process, get_proc
+from .base import clear_chrome_process, get_memory_by_port, get_proc
 from .logs import logger
 """
 Sync / block operations for launching chrome processes.
@@ -31,7 +30,7 @@ class ChromeDaemon(object):
         headless,             --headless and --hide-scrollbars, default to False
         user_agent,           --user-agent, default to 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'
         proxy,                --proxy-server, default to None
-        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data
+        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data. These string will ignore user_data_dir arg: {'null', 'None', '/dev/null', "''", '""'}
         disable_image,        disable image for loading performance, default to False
         start_url,            start url while launching chrome, default to about:blank
         max_deaths,           max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 for without auto-restart
@@ -41,7 +40,7 @@ class ChromeDaemon(object):
 
         on_startup & on_shutdown: function which handled a ChromeDaemon object while startup or shutdown
 
-    default extra_config: ["--disable-gpu", "--no-sandbox", "--no-first-run"]
+    default extra_config: ["--disable-gpu", "--no-first-run"]
 
     common args:
 
@@ -73,6 +72,7 @@ class ChromeDaemon(object):
     WECHAT_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-N9100 Build/LRX21V) > AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 > Chrome/37.0.0.0 Mobile Safari/537.36 > MicroMessenger/6.0.2.56_r958800.520 NetType/WIFI"
     IPAD_UA = "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"
     MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
+    IGNORE_USER_DIR_FLAGS = {'null', 'None', '/dev/null', "''", '""'}
 
     def __init__(
         self,
@@ -137,6 +137,10 @@ class ChromeDaemon(object):
         if self.on_startup:
             self.on_startup(self)
 
+    def get_memory(self, attr='uss', unit='MB'):
+        """Only support local Daemon. `uss` is slower than `rss` but useful."""
+        return get_memory_by_port(port=self.port, attr=attr, unit=unit)
+
     @staticmethod
     def ensure_dir(path: Path):
         if isinstance(path, str):
@@ -152,10 +156,20 @@ class ChromeDaemon(object):
                     p.mkdir()
             return path
 
+    @staticmethod
+    def get_dir_size(path):
+        return sum(f.stat().st_size for f in path.glob("**/*") if f.is_file())
+
     def _wrap_user_data_dir(self, user_data_dir):
         """refactor this function to set accurate dir."""
         if user_data_dir is None:
             user_data_dir = Path.home() / 'ichrome_user_data'
+        elif user_data_dir in self.IGNORE_USER_DIR_FLAGS:
+            self.user_data_dir = None
+            logger.debug(
+                'Ignore custom user_data_dir, using default user set by system.'
+            )
+            return
         else:
             user_data_dir = Path(user_data_dir)
         self.user_data_dir = user_data_dir / f"chrome_{self.port}"
@@ -164,14 +178,24 @@ class ChromeDaemon(object):
                 f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
             )
             self.ensure_dir(self.user_data_dir)
+        port_dir_size = get_readable_size(self.get_dir_size(self.user_data_dir),
+                                          rounded=1)
+        total_dir_size = get_readable_size(self.get_dir_size(user_data_dir),
+                                           rounded=1)
+        logger.info(
+            f'user_data_dir({self.user_data_dir}) size: {port_dir_size} / {total_dir_size}'
+        )
 
     @classmethod
-    def clear_user_dir(cls, user_data_dir):
-        return cls.clear_dir(user_data_dir)
+    def clear_user_dir(cls, user_data_dir, port=None):
+        return cls.clear_dir(user_data_dir, port=port)
 
     @classmethod
-    def clear_dir(cls, dir_path):
+    def clear_dir(cls, dir_path, port=None):
         dir_path = Path(dir_path)
+        if port:
+            dir_path = dir_path / f'chrome_{port}'
+        logger.info(f'Clear dir: {dir_path}.')
         if not dir_path.is_dir():
             logger.info(f'Dir is not exist: {dir_path}.')
             return True

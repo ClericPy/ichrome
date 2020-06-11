@@ -64,7 +64,7 @@ async def test_tab_ws(tab: Tab):
 async def test_send_msg(tab: Tab):
     # test send msg
     assert tab.get_data_value(await tab.send('Network.enable'),
-                              path='value',
+                              value_path='value',
                               default={}) == {}
     # disable Network
     await tab.disable('Network')
@@ -84,12 +84,16 @@ async def test_tab_cookies(tab: Tab):
 
 async def test_tab_set_url(tab: Tab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
-    assert await tab.set_url('http://python.org', timeout=5)
+    assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=1))
+    assert await tab.set_url('http://httpbin.org/delay/1', timeout=3)
+    ok = await tab.set_url('http://python.org', timeout=5)
+    assert ok or (ok is False)
 
 
 async def test_tab_js(tab: Tab):
     # test js update title
     await tab.js("document.title = 'abc'")
+    assert (await tab.js_code('return document.title')) == 'abc'
     new_title = await tab.current_title
     # test refresh_tab_info for tab meta info
     assert tab.title != new_title
@@ -101,12 +105,12 @@ async def test_tab_js(tab: Tab):
     assert await tab.handle_dialog(accept=True)
     # inject js url: vue.js
     # get window.Vue variable before injecting
-    vue_obj = await tab.js('window.Vue')
+    vue_obj = await tab.js('window.Vue', 'result.result.type')
     # {'id': 22, 'result': {'result': {'type': 'undefined'}}}
-    assert 'undefined' in str(vue_obj)
+    assert vue_obj == 'undefined'
     assert await tab.inject_js_url(
         'https://cdn.staticfile.org/vue/2.6.10/vue.min.js', timeout=3)
-    vue_obj = await tab.js('window.Vue')
+    vue_obj = await tab.js('window.Vue', value_path=None)
     # {'id': 23, 'result': {'result': {'type': 'function', 'className': 'Function', 'description': 'function wn(e){this._init(e)}', 'objectId': '{"injectedScriptId":1,"id":1}'}}}
     assert 'Function' in str(vue_obj)
     tag = await tab.querySelector('#not-exist')
@@ -241,6 +245,7 @@ async def test_examples():
         assert chromed.started
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
+            assert chrome.get_memory() > 0
             await test_chrome(chrome)
             # ===================== Tab Test Cases =====================
             tab: Tab = await chrome.new_tab()

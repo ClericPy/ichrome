@@ -44,7 +44,7 @@ Other operations:
     parser.add_argument("-p",
                         "--port",
                         help="--remote-debugging-port, default to 9222",
-                        default=9222,
+                        default=argparse.SUPPRESS,
                         type=int)
     parser.add_argument(
         "--headless",
@@ -131,7 +131,8 @@ Other operations:
         return
     if args.clean:
         logger.setLevel(1)
-        ChromeDaemon.clear_user_dir(args.user_data_dir)
+        ChromeDaemon.clear_user_dir(args.user_data_dir,
+                                    port=getattr(args, 'port', None))
         return
     if args.doc:
         logger.setLevel(1)
@@ -160,6 +161,7 @@ Other operations:
                 kwargs['start_url'] = config
                 kwargs['extra_config'].remove(config)
                 break
+    args.port = getattr(args, 'port', 9222)
     if '--dump-dom' in extra_config or args.crawl:
         logger.setLevel(60)
         from .debugger import crawl_once
