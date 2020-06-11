@@ -17,8 +17,9 @@ from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import Tag, TagNotFound, clear_chrome_process, get_proc
+from .base import Tag, TagNotFound, clear_chrome_process, get_memory_by_port
 from .logs import logger
+
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -1740,15 +1741,7 @@ class Chrome(GetValueMixin):
 
     def get_memory(self, attr='uss', unit='MB'):
         """Only support local Daemon. `uss` is slower than `rss` but useful."""
-        procs = get_proc(port=self.port)
-        if procs:
-            u = {'B': 1, 'KB': 1024, 'MB': 1024**2, 'GB': 1024**3}
-            if attr == 'uss':
-                result = sum((proc.memory_full_info().uss for proc in procs))
-            else:
-                result = sum(
-                    (getattr(proc.memory_info(), attr) for proc in procs))
-            return result / u.get(unit, 1)
+        return get_memory_by_port(port=self.port, attr=attr, unit=unit)
 
     def __repr__(self):
         return f"<Chrome({self.status}): {self.port}>"
