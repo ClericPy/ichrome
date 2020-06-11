@@ -139,7 +139,7 @@ class Tab(GetValueMixin):
             NotSet:
                 using the self.timeout instead
             None:
-                default to self._MAX_WAIT_TIMEOUT, unless you reset the Tab._MAX_WAIT_TIMEOUT -> None for forever
+                using the self._MAX_WAIT_TIMEOUT instead
             0:
                 no wait
             int / float:
@@ -156,8 +156,8 @@ class Tab(GetValueMixin):
         'Debugger', 'HeapProfiler', 'Profiler', 'Runtime'
     }
     # timeout for recv, for wait_XXX methods
-    # You can reset this as None for forever
-    _MAX_WAIT_TIMEOUT = 30 * 60
+    # You can reset this with float instead of forever, like 30 * 60
+    _MAX_WAIT_TIMEOUT = None
     # timeout for recv, not for wait_XXX methods
     _DEFAULT_RECV_TIMEOUT = 5.0
     # aiohttp ws timeout default to 10.0, here is 5
@@ -620,11 +620,13 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.send("Page.stopLoading", timeout=timeout)
 
     async def wait_loading(self,
-                           timeout=NotSet,
+                           timeout=None,
                            callback_function: Optional[Callable] = None,
                            timeout_stop_loading=False) -> bool:
         '''Page.loadEventFired event for page loaded.
-        If page loaded event catched, return True.'''
+        If page loaded event catched, return True.
+        WARNING: methods with prefix `wait_` the `timeout` default to None.
+        '''
         data = await self.wait_event("Page.loadEventFired",
                                      timeout=timeout,
                                      callback_function=callback_function)
@@ -634,7 +636,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return bool(data)
 
     async def wait_page_loading(self,
-                                timeout=NotSet,
+                                timeout=None,
                                 callback_function: Optional[Callable] = None,
                                 timeout_stop_loading=False):
         return self.wait_loading(timeout=timeout,
@@ -644,11 +646,13 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def wait_event(
         self,
         event_name: str,
-        timeout=NotSet,
+        timeout=None,
         callback_function: Optional[Callable] = None,
         filter_function: Optional[Callable] = None
     ) -> Union[dict, None, Any]:
-        """Similar to self.recv, but has the filter_function to distinct duplicated method of event."""
+        """Similar to self.recv, but has the filter_function to distinct duplicated method of event.
+        WARNING: methods with prefix `wait_` the `timeout` default to None.
+        """
         timeout = self.ensure_timeout(timeout)
         start_time = time.time()
         result = None
@@ -706,7 +710,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     async def wait_request(self,
                            filter_function: Optional[Callable] = None,
                            callback_function: Optional[Callable] = None,
-                           timeout=NotSet):
+                           timeout=None):
         '''Network.requestWillBeSent. To wait a special request filted by function, then run the callback_function(request_dict).
 
         Often used for HTTP packet capture:
@@ -715,6 +719,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
         WARNING: requestWillBeSent event fired do not mean the response is ready,
         should await tab.wait_request_loading(request_dict) or await tab.get_response(request_dict, wait_loading=True)
+        WARNING: methods with prefix `wait_` the `timeout` default to None.
 '''
         request_dict = await self.wait_event("Network.requestWillBeSent",
                                              filter_function=filter_function,
@@ -724,7 +729,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def wait_request_loading(self,
                                    request_dict: Union[None, dict, str],
-                                   timeout=NotSet):
+                                   timeout=None):
 
         def request_id_filter(event):
             return event["params"]["requestId"] == request_id
@@ -734,7 +739,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                      timeout=timeout,
                                      filter_function=request_id_filter)
 
-    async def wait_loading_finished(self, request_dict: dict, timeout=NotSet):
+    async def wait_loading_finished(self, request_dict: dict, timeout=None):
         return await self.wait_request_loading(request_dict=request_dict,
                                                timeout=timeout)
 
@@ -961,7 +966,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                         cssselector: str,
                         max_wait_time: Optional[float] = None,
                         interval: float = 1,
-                        timeout=NotSet) -> Union[None, List[Tag]]:
+                        timeout=None) -> Union[None, List[Tag]]:
         '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
         interval: checking interval for while loop.
@@ -971,6 +976,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         If max_wait_time used up: return [].
         elif querySelectorAll runs failed, return None.
         else: return List[Tag]
+        WARNING: methods with prefix `wait_` the `timeout` default to None.
         '''
         tags = []
         TIMEOUT_AT = time.time() + (max_wait_time or self._MAX_WAIT_TIMEOUT)
