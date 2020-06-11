@@ -8,7 +8,7 @@ import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
 from base64 import b64decode
-from typing import Any, Awaitable, Callable, List, Optional, Set, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Union
 from weakref import WeakValueDictionary
 
 from aiohttp.client_exceptions import ClientError
@@ -108,7 +108,9 @@ class GetValueMixin:
     '''Get value with path'''
 
     @staticmethod
-    def get_data_value(item, value_path: str = 'result.result.value', default=None):
+    def get_data_value(item,
+                       value_path: str = 'result.result.value',
+                       default=None):
         """default value_path is for js response dict"""
         if not item:
             return default
@@ -377,15 +379,17 @@ class Tab(GetValueMixin):
                    method: str,
                    timeout=NotSet,
                    callback_function: Optional[Callable] = None,
-                   **kwargs) -> Union[None, dict]:
+                   kwargs: Dict[str, Any] = None,
+                   **_kwargs) -> Union[None, dict]:
         '''Send message to Tab. callback_function only work whlie timeout!=0.
         If timeout is not None: wait for recv event.
         If not force: will check the domain enabled automatically.
         If callback_function: run while received the response msg.
         '''
         timeout = self.ensure_timeout(timeout)
-        request = {"method": method, "params": kwargs}
-        request["id"] = self.msg_id
+        if kwargs:
+            _kwargs.update(kwargs)
+        request = {"id": self.msg_id, "method": method, "params": _kwargs}
         try:
             if not self.ws or self.ws.closed:
                 raise RuntimeError(f'[closed] {self} ws has been closed')
@@ -539,15 +543,15 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if not any((url, domain)):
             raise ValueError(
                 'At least one of the url and domain needs to be specified')
-        kwargs = dict(name=name,
-                      value=value,
-                      url=url,
-                      domain=domain,
-                      path=path,
-                      secure=secure,
-                      httpOnly=httpOnly,
-                      sameSite=sameSite,
-                      expires=expires)
+        kwargs: Dict[str, Any] = dict(name=name,
+                                      value=value,
+                                      url=url,
+                                      domain=domain,
+                                      path=path,
+                                      secure=secure,
+                                      httpOnly=httpOnly,
+                                      sameSite=sameSite,
+                                      expires=expires)
         kwargs = {
             key: value for key, value in kwargs.items() if value is not None
         }
@@ -601,7 +605,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def get_page_frame_id(self, timeout=NotSet):
         result = await self.get_frame_tree(timeout=timeout)
-        return self.get_data_value(result, value_path='result.frameTree.frame.id')
+        return self.get_data_value(result,
+                                   value_path='result.frameTree.frame.id')
 
     @property
     def frame_tree(self):
@@ -919,13 +924,18 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return bool(data and (await self.wait_loading(
             timeout=timeout, timeout_stop_loading=timeout_stop_loading)))
 
-    async def js(self, javascript: str, value_path=None, timeout=NotSet):
+    async def js(self,
+                 javascript: str,
+                 value_path=None,
+                 kwargs=None,
+                 timeout=NotSet):
         """
         Evaluate JavaScript on the page.
         `js_result = await tab.js('document.title', timeout=10)`
         js_result:
-        {'id': 18, 'result': {'result': {'type': 'string', 'value': 'Welcome to Python.org'}}}
-        if timeout: return None
+            {'id': 18, 'result': {'result': {'type': 'string', 'value': 'Welcome to Python.org'}}}
+        return None while timeout.
+        kwargs is a dict for Runtime.evaluate's `timeout` is conflict with `timeout` of self.send.
         """
         result = await self.send("Runtime.evaluate",
                                  timeout=timeout,
