@@ -1208,7 +1208,9 @@ JSON.stringify(result)""" % (
             with open(save_path, 'wb') as f:
                 f.write(b64decode(base64_img))
 
-        kwargs = dict(format=format, quality=quality, fromSurface=fromSurface)
+        kwargs: Dict[str, Any] = dict(format=format,
+                                      quality=quality,
+                                      fromSurface=fromSurface)
         if clip:
             kwargs['clip'] = clip
         result = await self.send('Page.captureScreenshot',
