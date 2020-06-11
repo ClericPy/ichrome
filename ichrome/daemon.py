@@ -10,7 +10,7 @@ from pathlib import Path
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
-from torequests.utils import timepass, ttime
+from torequests.utils import get_readable_size, timepass, ttime
 
 from .base import clear_chrome_process, get_memory_by_port, get_proc
 from .logs import logger
@@ -156,6 +156,10 @@ class ChromeDaemon(object):
                     p.mkdir()
             return path
 
+    @staticmethod
+    def get_dir_size(path):
+        return sum(f.stat().st_size for f in path.glob("**/*") if f.is_file())
+
     def _wrap_user_data_dir(self, user_data_dir):
         """refactor this function to set accurate dir."""
         if user_data_dir is None:
@@ -174,6 +178,13 @@ class ChromeDaemon(object):
                 f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
             )
             self.ensure_dir(self.user_data_dir)
+        port_dir_size = get_readable_size(self.get_dir_size(self.user_data_dir),
+                                          rounded=1)
+        total_dir_size = get_readable_size(self.get_dir_size(user_data_dir),
+                                           rounded=1)
+        logger.info(
+            f'user_data_dir({self.user_data_dir}) size: {port_dir_size} / {total_dir_size}'
+        )
 
     @classmethod
     def clear_user_dir(cls, user_data_dir, port=None):
