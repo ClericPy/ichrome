@@ -926,7 +926,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     async def js(self,
                  javascript: str,
-                 value_path=None,
+                 value_path='result.result',
                  kwargs=None,
                  timeout=NotSet):
         """
@@ -942,9 +942,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                  expression=javascript)
         logger.debug(
             f'[js] {self!r} insert js `{javascript}`, received: {result}.')
-        if value_path:
-            return self.get_data_value(result, value_path)
-        return result
+        return self.get_data_value(result, value_path)
 
     async def handle_dialog(self,
                             accept=True,
