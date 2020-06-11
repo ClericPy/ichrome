@@ -64,7 +64,7 @@ async def test_tab_ws(tab: Tab):
 async def test_send_msg(tab: Tab):
     # test send msg
     assert tab.get_data_value(await tab.send('Network.enable'),
-                              path='value',
+                              value_path='value',
                               default={}) == {}
     # disable Network
     await tab.disable('Network')
@@ -104,9 +104,9 @@ async def test_tab_js(tab: Tab):
     assert await tab.handle_dialog(accept=True)
     # inject js url: vue.js
     # get window.Vue variable before injecting
-    vue_obj = await tab.js('window.Vue')
+    vue_obj = await tab.js('window.Vue', 'result.result.type')
     # {'id': 22, 'result': {'result': {'type': 'undefined'}}}
-    assert vue_obj is None
+    assert vue_obj == 'undefined'
     assert await tab.inject_js_url(
         'https://cdn.staticfile.org/vue/2.6.10/vue.min.js', timeout=3)
     vue_obj = await tab.js('window.Vue', value_path=None)
