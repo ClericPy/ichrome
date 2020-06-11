@@ -6,6 +6,8 @@ from typing import List
 import psutil
 
 from .logs import logger
+
+
 """
 For base usage with sync utils.
 """
@@ -86,6 +88,18 @@ def get_proc(port=9222) -> List[psutil.Process]:
     regex = f"--remote-debugging-port={port}"
     proc_names = {"chrome.exe", "chrome"}
     return get_proc_by_regex(regex, proc_names=proc_names)
+
+
+def get_memory_by_port(port=9222, attr='uss', unit='MB'):
+    """Only support local Daemon. `uss` is slower than `rss` but useful."""
+    procs = get_proc(port=port)
+    if procs:
+        u = {'B': 1, 'KB': 1024, 'MB': 1024**2, 'GB': 1024**3}
+        if attr == 'uss':
+            result = sum((proc.memory_full_info().uss for proc in procs))
+        else:
+            result = sum((getattr(proc.memory_info(), attr) for proc in procs))
+        return result / u.get(unit, 1)
 
 
 def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):

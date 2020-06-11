@@ -12,8 +12,10 @@ from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
-from .base import clear_chrome_process, get_proc
+from .base import clear_chrome_process, get_memory_by_port, get_proc
 from .logs import logger
+
+
 """
 Sync / block operations for launching chrome processes.
 """
@@ -135,6 +137,10 @@ class ChromeDaemon(object):
             self._daemon_thread = self.run_forever(block=block)
         if self.on_startup:
             self.on_startup(self)
+
+    def get_memory(self, attr='uss', unit='MB'):
+        """Only support local Daemon. `uss` is slower than `rss` but useful."""
+        return get_memory_by_port(port=self.port, attr=attr, unit=unit)
 
     @staticmethod
     def ensure_dir(path: Path):
