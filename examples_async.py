@@ -93,6 +93,7 @@ async def test_tab_set_url(tab: Tab):
 async def test_tab_js(tab: Tab):
     # test js update title
     await tab.js("document.title = 'abc'")
+    assert (await tab.js_code('return document.title')) == 'abc'
     new_title = await tab.current_title
     # test refresh_tab_info for tab meta info
     assert tab.title != new_title
