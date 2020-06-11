@@ -949,6 +949,23 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             f'[js] {self!r} insert js `{javascript}`, received: {result}.')
         return self.get_data_value(result, value_path)
 
+    async def js_code(self,
+                      javascript: str,
+                      value_path='result.result.value',
+                      kwargs=None,
+                      timeout=NotSet):
+        """javascript will be filled into function template.
+        Demo::
+            javascript = `return document.title`
+            will run js like, and get the return result
+            `(()=>{return document.title})()`
+"""
+        javascript = '''(()=>{%s})()''' % javascript
+        return await self.js(javascript,
+                             value_path=value_path,
+                             kwargs=kwargs,
+                             timeout=timeout)
+
     async def handle_dialog(self,
                             accept=True,
                             promptText=None,
