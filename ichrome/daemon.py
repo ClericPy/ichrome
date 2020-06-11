@@ -14,8 +14,6 @@ from torequests.utils import timepass, ttime
 
 from .base import clear_chrome_process, get_memory_by_port, get_proc
 from .logs import logger
-
-
 """
 Sync / block operations for launching chrome processes.
 """
@@ -32,7 +30,7 @@ class ChromeDaemon(object):
         headless,             --headless and --hide-scrollbars, default to False
         user_agent,           --user-agent, default to 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'
         proxy,                --proxy-server, default to None
-        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data
+        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data. These string will ignore user_data_dir arg: {'null', 'None', '/dev/null', "''", '""'}
         disable_image,        disable image for loading performance, default to False
         start_url,            start url while launching chrome, default to about:blank
         max_deaths,           max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 for without auto-restart
@@ -74,6 +72,7 @@ class ChromeDaemon(object):
     WECHAT_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-N9100 Build/LRX21V) > AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 > Chrome/37.0.0.0 Mobile Safari/537.36 > MicroMessenger/6.0.2.56_r958800.520 NetType/WIFI"
     IPAD_UA = "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"
     MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
+    IGNORE_USER_DIR_FLAGS = {'null', 'None', '/dev/null', "''", '""'}
 
     def __init__(
         self,
@@ -161,6 +160,12 @@ class ChromeDaemon(object):
         """refactor this function to set accurate dir."""
         if user_data_dir is None:
             user_data_dir = Path.home() / 'ichrome_user_data'
+        elif user_data_dir in self.IGNORE_USER_DIR_FLAGS:
+            self.user_data_dir = None
+            logger.debug(
+                'Ignore custom user_data_dir, using default user set by system.'
+            )
+            return
         else:
             user_data_dir = Path(user_data_dir)
         self.user_data_dir = user_data_dir / f"chrome_{self.port}"
