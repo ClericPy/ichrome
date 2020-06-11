@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import re
 import time
+from typing import List
 
 import psutil
 
@@ -67,19 +69,23 @@ class Tag:
         return self.__str__()
 
 
-def get_proc(port):
-    port_args = f"--remote-debugging-port={port}"
+def get_proc_by_regex(regex, proc_names=None):
     # win32 and linux chrome proc_names
-    proc_names = {"chrome.exe", "chrome"}
     procs = []
     for proc in psutil.process_iter():
         try:
-            pname = proc.name()
-            if pname in proc_names and port_args in ' '.join(proc.cmdline()):
+            if (not proc_names or proc.name() in proc_names) and re.search(
+                    regex, ' '.join(proc.cmdline())):
                 procs.append(proc)
-        except Exception:
+        except psutil.Error:
             pass
     return procs
+
+
+def get_proc(port=9222) -> List[psutil.Process]:
+    regex = f"--remote-debugging-port={port}"
+    proc_names = {"chrome.exe", "chrome"}
+    return get_proc_by_regex(regex, proc_names=proc_names)
 
 
 def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):

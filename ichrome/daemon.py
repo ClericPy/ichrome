@@ -12,7 +12,6 @@ from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
-from .async_utils import Chrome as AsyncChrome
 from .base import clear_chrome_process, get_proc
 from .logs import logger
 """
@@ -41,7 +40,7 @@ class ChromeDaemon(object):
 
         on_startup & on_shutdown: function which handled a ChromeDaemon object while startup or shutdown
 
-    default extra_config: ["--disable-gpu", "--no-sandbox", "--no-first-run"]
+    default extra_config: ["--disable-gpu", "--no-first-run"]
 
     common args:
 

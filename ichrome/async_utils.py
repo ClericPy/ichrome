@@ -17,7 +17,7 @@ from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import Tag, TagNotFound, clear_chrome_process
+from .base import Tag, TagNotFound, clear_chrome_process, get_proc
 from .logs import logger
 """
 Async utils for connections and operations.
@@ -130,15 +130,19 @@ class GetValueMixin:
 
 
 class Tab(GetValueMixin):
-    """Tab object will do lots of magic operations on tab.
+    """Tab operations in async environment.
 
-    The timeout variable of many methods have only one feature -- wait for the events::
+        The timeout variable -- wait for the events::
 
-            if timeout is NotSet => using the self.timeout instead
-            elif timeout is None => wait the self._MAX_WAIT_TIMEOUT seconds unless you reset the Tab._MAX_WAIT_TIMEOUT (None for forever)
-            elif timeout is 0    => no wait
-            else int / float     => wait timeout seconds
-    """
+            NotSet:
+                using the self.timeout instead
+            None:
+                default to self._MAX_WAIT_TIMEOUT, unless you reset the Tab._MAX_WAIT_TIMEOUT -> None for forever
+            0:
+                no wait
+            int / float:
+                wait `timeout` seconds
+"""
     _log_all_recv = False
     _min_move_interval = 0.05
     _domains_can_be_enabled = {
@@ -149,8 +153,11 @@ class Tab(GetValueMixin):
         'ServiceWorker', 'Fetch', 'WebAudio', 'WebAuthn', 'Media', 'Console',
         'Debugger', 'HeapProfiler', 'Profiler', 'Runtime'
     }
-    # You can reset this as seconds, or None for forever
+    # timeout for recv, for wait_XXX methods
+    # You can reset this as None for forever
     _MAX_WAIT_TIMEOUT = 30 * 60
+    # timeout for recv, not for wait_XXX methods
+    _DEFAULT_RECV_TIMEOUT = 5.0
     # aiohttp ws timeout default to 10.0, here is 5
     _DEFAULT_CONNECT_TIMEOUT = 5.0
 
@@ -168,15 +175,44 @@ class Tab(GetValueMixin):
                  ws_kwargs: dict = None,
                  default_recv_callback: Callable = None,
                  **kwargs):
-        # [{
-        #     "description": "",
-        #     "devtoolsFrontendUrl": "/devtools/inspector.html?ws=localhost:9222/devtools/page/8ED4BDD54713572BCE026393A0137214",
-        #     "id": "8ED4BDD54713572BCE026393A0137214",
-        #     "title": "about:blank",
-        #     "type": "page",
-        #     "url": "http://localhost:9222/json",
-        #     "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/8ED4BDD54713572BCE026393A0137214"
-        # }]
+        """
+        original Tab JSON::
+
+            [{
+                "description": "",
+                "devtoolsFrontendUrl": "/devtools/inspector.html?ws=localhost:9222/devtools/page/8ED4BDD54713572BCE026393A0137214",
+                "id": "8ED4BDD54713572BCE026393A0137214",
+                "title": "about:blank",
+                "type": "page",
+                "url": "http://localhost:9222/json",
+                "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/8ED4BDD54713572BCE026393A0137214"
+            }]
+        :param tab_id: defaults to kwargs.pop('id')
+        :type tab_id: str, optional
+        :param title: tab title, defaults to None
+        :type title: str, optional
+        :param url: tab url, binded to self._url, defaults to None
+        :type url: str, optional
+        :param type: tab type, often be `page` type, defaults to None
+        :type type: str, optional
+        :param description: tab description, defaults to None
+        :type description: str, optional
+        :param webSocketDebuggerUrl: ws URL to connect, defaults to None
+        :type webSocketDebuggerUrl: str, optional
+        :param devtoolsFrontendUrl: devtools UI URL, defaults to None
+        :type devtoolsFrontendUrl: str, optional
+        :param json: raw Tab JSON, defaults to None
+        :type json: str, optional
+        :param chrome: the Chrome object which the Tab belongs to, defaults to None
+        :type chrome: Chrome, optional
+        :param timeout: default recv timeout, defaults to Tab._DEFAULT_RECV_TIMEOUT
+        :type timeout: [type], optional
+        :param ws_kwargs: kwargs for ws connection, defaults to None
+        :type ws_kwargs: dict, optional
+        :param default_recv_callback: sync/async function only accept 1 arg of data comes from ws recv, defaults to None
+        :type default_recv_callback: Callable, optional
+        :raises ValueError: [description]
+        """
         tab_id = tab_id or kwargs.pop('id')
         if not tab_id:
             raise ValueError('tab_id should not be null')
@@ -189,7 +225,7 @@ class Tab(GetValueMixin):
         self.webSocketDebuggerUrl = webSocketDebuggerUrl
         self.json = json
         self.chrome = chrome
-        self.timeout = self._DEFAULT_CONNECT_TIMEOUT if timeout is NotSet else timeout
+        self.timeout = self._DEFAULT_RECV_TIMEOUT if timeout is NotSet else timeout
         self._created_time = self.now
         self.ws_kwargs = ws_kwargs or {}
         self.ws_kwargs.setdefault('timeout', self._DEFAULT_CONNECT_TIMEOUT)
@@ -1701,6 +1737,18 @@ class Chrome(GetValueMixin):
         else:
             tabs_todo = tabs
         return _TabConnectionManager(tabs_todo)
+
+    def get_memory(self, attr='uss', unit='MB'):
+        """Only support local Daemon. `uss` is slower than `rss` but useful."""
+        procs = get_proc(port=self.port)
+        if procs:
+            u = {'B': 1, 'KB': 1024, 'MB': 1024**2, 'GB': 1024**3}
+            if attr == 'uss':
+                result = sum((proc.memory_full_info().uss for proc in procs))
+            else:
+                result = sum(
+                    (getattr(proc.memory_info(), attr) for proc in procs))
+            return result / u.get(unit, 1)
 
     def __repr__(self):
         return f"<Chrome({self.status}): {self.port}>"

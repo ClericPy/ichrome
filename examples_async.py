@@ -244,6 +244,7 @@ async def test_examples():
         assert chromed.started
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
+            assert chrome.get_memory() > 0
             await test_chrome(chrome)
             # ===================== Tab Test Cases =====================
             tab: Tab = await chrome.new_tab()
