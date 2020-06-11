@@ -176,12 +176,15 @@ class ChromeDaemon(object):
             self.ensure_dir(self.user_data_dir)
 
     @classmethod
-    def clear_user_dir(cls, user_data_dir):
-        return cls.clear_dir(user_data_dir)
+    def clear_user_dir(cls, user_data_dir, port=None):
+        return cls.clear_dir(user_data_dir, port=port)
 
     @classmethod
-    def clear_dir(cls, dir_path):
+    def clear_dir(cls, dir_path, port=None):
         dir_path = Path(dir_path)
+        if port:
+            dir_path = dir_path / f'chrome_{port}'
+        logger.info(f'Clear dir: {dir_path}.')
         if not dir_path.is_dir():
             logger.info(f'Dir is not exist: {dir_path}.')
             return True
