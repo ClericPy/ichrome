@@ -149,10 +149,7 @@ async def test_wait_response(tab: Tab):
     async def cb(request):
         result = ''
         if request:
-            # wait_loading for ajax request
-            result = await tab.get_response_body(request,
-                                                 wait_loading=True,
-                                                 timeout=5)
+            result = await tab.get_response_body(request, timeout=5)
             ok = 'User-Agent' in result
             logger.warning(f'check wait_response callback, get_response {ok}')
             assert ok, f'{result} not contains "User-Agent"'

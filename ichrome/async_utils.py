@@ -766,14 +766,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             timeout=NotSet,
             wait_loading: bool = None,
     ) -> Union[dict, None]:
-        '''Network.getResponseBody.
+        '''return Network.getResponseBody raw response.
         return demo:
 
                 {'id': 2, 'result': {'body': 'source code', 'base64Encoded': False}}
 
         some ajax request need to await tab.wait_request_loading(request_dict) for
-        loadingFinished (or sleep some secs)
-        wait_loading=None will auto check response loaded.'''
+        loadingFinished (or sleep some secs), 
+        and wait_loading=None will auto check response loaded.'''
         request_id = self._ensure_request_id(request_dict)
         result = None
         if request_id is None:
@@ -783,22 +783,20 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             data = await self.send("Network.getResponseBody",
                                    requestId=request_id,
                                    timeout=timeout)
-            result = self.get_data_value(data, 'result.body')
-            if result:
-                return result
+            if self.get_data_value(data, 'error.code') != -32000:
+                return data
         if wait_loading is not False:
             # ensure the request loaded
             await self.wait_request_loading(request_id, timeout=timeout)
-        result = await self.send("Network.getResponseBody",
-                                 requestId=request_id,
-                                 timeout=timeout)
-        return self.get_data_value(result, 'result.body')
+        return await self.send("Network.getResponseBody",
+                               requestId=request_id,
+                               timeout=timeout)
 
     async def get_response_body(self,
                                 request_dict: Union[None, dict, str],
                                 timeout=NotSet,
                                 wait_loading=None) -> Union[dict, None]:
-        """For tab.wait_request's callback_function. This will await loading before getting resonse body."""
+        """get result.body from self.get_response."""
         result = await self.get_response(request_dict,
                                          timeout=timeout,
                                          wait_loading=wait_loading)
