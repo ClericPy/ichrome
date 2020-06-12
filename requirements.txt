@@ -1,3 +1,4 @@
 psutil
 torequests>=5.0.6
 websocket-client
+aiofiles

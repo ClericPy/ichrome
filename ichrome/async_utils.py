@@ -3,6 +3,7 @@
 import asyncio
 import inspect
 import json
+import re
 import time
 import traceback
 from asyncio.base_futures import _PENDING
@@ -11,6 +12,7 @@ from base64 import b64decode
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Union
 from weakref import WeakValueDictionary
 
+import aiofiles
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.aiohttp_dummy import Requests
@@ -71,10 +73,10 @@ class _WSConnection(object):
     def __str__(self):
         return f'<{self.__class__.__name__}: {None if self._closed is None else not self._closed}>'
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> 'Tab':
         return await self.connect()
 
-    async def connect(self):
+    async def connect(self) -> 'Tab':
         """Connect to websocket, and set tab.ws as aiohttp.client_ws.ClientWebSocketResponse."""
         try:
             self.tab.ws = await self.tab.req.session.ws_connect(
@@ -627,6 +629,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         If page loaded event catched, return True.
         WARNING: methods with prefix `wait_` the `timeout` default to None.
         '''
+        if timeout == 0:
+            return False
         data = await self.wait_event("Page.loadEventFired",
                                      timeout=timeout,
                                      callback_function=callback_function)
@@ -760,37 +764,39 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             self,
             request_dict: Union[None, dict, str],
             timeout=NotSet,
-            wait_loading: bool = False,
+            wait_loading: bool = None,
     ) -> Union[dict, None]:
-        '''Network.getResponseBody.
+        '''return Network.getResponseBody raw response.
         return demo:
 
-                {'id': 2, 'result': {'body': 'JSON source code', 'base64Encoded': False}}
+                {'id': 2, 'result': {'body': 'source code', 'base64Encoded': False}}
 
-        WARNING: some ajax request need to await tab.wait_request_loading(request_dict) for
-        loadingFinished (or sleep some secs), so set the wait_loading=True.'''
-        start_time = time.time()
+        some ajax request need to await tab.wait_request_loading(request_dict) for
+        loadingFinished (or sleep some secs), 
+        and wait_loading=None will auto check response loaded.'''
         request_id = self._ensure_request_id(request_dict)
+        result = None
         if request_id is None:
-            return None
+            return result
         timeout = self.ensure_timeout(timeout)
-        if wait_loading:
+        if wait_loading is None:
+            data = await self.send("Network.getResponseBody",
+                                   requestId=request_id,
+                                   timeout=timeout)
+            if self.get_data_value(data, 'error.code') != -32000:
+                return data
+        if wait_loading is not False:
             # ensure the request loaded
             await self.wait_request_loading(request_id, timeout=timeout)
-            if timeout is not None:
-                timeout = timeout - (time.time() - start_time)
-                if timeout <= 0:
-                    return None
-        result = await self.send("Network.getResponseBody",
-                                 requestId=request_id,
-                                 timeout=timeout)
-        return result
+        return await self.send("Network.getResponseBody",
+                               requestId=request_id,
+                               timeout=timeout)
 
     async def get_response_body(self,
                                 request_dict: Union[None, dict, str],
                                 timeout=NotSet,
-                                wait_loading=False) -> Union[dict, None]:
-        """For tab.wait_request's callback_function. This will await loading before getting resonse body."""
+                                wait_loading=None) -> Union[dict, None]:
+        """get result.body from self.get_response."""
         result = await self.get_response(request_dict,
                                          timeout=timeout,
                                          wait_loading=wait_loading)
@@ -979,11 +985,37 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 accept=accept,
                                 promptText=promptText)
 
+    async def wait_tag(self,
+                       cssselector: str,
+                       max_wait_time: Optional[float] = None,
+                       interval: float = 1,
+                       timeout=None) -> Union[None, Tag]:
+        '''Wait until the tag is ready or max_wait_time used up, sometimes it is more useful than wait loading.
+        cssselector: css querying the Tag.
+        interval: checking interval for while loop.
+        max_wait_time: if time used up, return None.
+        timeout: timeout seconds for sending a msg.
+
+        If max_wait_time used up: return [].
+        elif querySelectorAll runs failed, return None.
+        else: return List[Tag]
+        WARNING: methods with prefix `wait_` the `timeout` default to None.
+        '''
+        tag = None
+        TIMEOUT_AT = time.time() + (max_wait_time or self._MAX_WAIT_TIMEOUT)
+        while TIMEOUT_AT > time.time():
+            tag = await self.querySelector(cssselector=cssselector,
+                                           timeout=timeout)
+            if tag:
+                break
+            await asyncio.sleep(interval)
+        return tag or None
+
     async def wait_tags(self,
                         cssselector: str,
                         max_wait_time: Optional[float] = None,
                         interval: float = 1,
-                        timeout=None) -> Union[None, List[Tag]]:
+                        timeout=None) -> List[Tag]:
         '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
         interval: checking interval for while loop.
@@ -1004,6 +1036,59 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 break
             await asyncio.sleep(interval)
         return tags
+
+    async def findall(self,
+                      regex: str,
+                      cssselector: str = 'html',
+                      flags: str = 'g',
+                      timeout=NotSet):
+        """Similar to python re.findall.
+
+        Demo::
+
+            # no group
+            print(await tab.findall('<title>.*?</title>'))
+            # ['<title>123456789</title>']
+
+            # only 1 group
+            print(await tab.findall('<title>(.*?)</title>'))
+            # ['123456789']
+
+            # multi-groups
+            print(await tab.findall('<title>(1)(2).*?</title>'))
+            # [['1', '2']]
+
+        :param regex: raw regex string to be set in /%s/g
+        :type regex: str
+        :param cssselector: which element.outerHTML to be matched, defaults to 'body'
+        :type cssselector: str, optional
+        :param timeout: defaults to NotSet
+        :type timeout: [type], optional
+        """
+        group_count = len(re.findall(r'(?<!\\)\(', regex))
+        code = '''
+var group_count = %s
+var result = []
+var regex = new RegExp(`%s`, `%s`)
+var items = [...document.querySelector(`%s`).outerHTML.matchAll(regex)]
+items.forEach((item) => {
+    if (group_count <= 1) {
+        result.push(item[group_count])
+    } else {
+        var tmp = []
+        for (let i = 1; i < group_count + 1; i++) {
+            tmp.push(item[i])
+        }
+        result.push(tmp)
+    }
+})
+JSON.stringify(result)
+''' % (group_count, regex, flags, cssselector)
+        result = await self.js(code,
+                               value_path='result.result.value',
+                               timeout=timeout)
+        if result and result.startswith('['):
+            return json.loads(result)
 
     async def querySelector(self,
                             cssselector: str,
@@ -1108,6 +1193,38 @@ JSON.stringify(result)""" % (
             logger.error(f"querySelectorAll error: {e!r}, response: {response}")
             return None
 
+    async def insertAdjacentHTML(self,
+                                 html: str,
+                                 cssselector: str = 'body',
+                                 position: str = 'beforeend',
+                                 timeout=NotSet):
+        """Insert HTML source code into document. Offten used for injecting CSS element.
+
+        :param html: HTML source code
+        :type html: str
+        :param cssselector: cssselector to find the target node, defaults to 'body'
+        :type cssselector: str, optional
+        :param position: ['beforebegin', 'afterbegin', 'beforeend', 'afterend'],  defaults to 'beforeend'
+        :type position: str, optional
+        :param timeout: defaults to NotSet
+        :type timeout: [type], optional
+        :return: [description]
+        :rtype: [type]
+        """
+        template = f'''document.querySelector(`{cssselector}`).insertAdjacentHTML('{position}', `{html}`)'''
+        return await self.js(template)
+
+    async def inject_html(self,
+                          html: str,
+                          cssselector: str = 'body',
+                          position: str = 'beforeend',
+                          timeout=NotSet):
+        """An alias name for tab.insertAdjacentHTML."""
+        return await self.insertAdjacentHTML(html=html,
+                                             cssselector=cssselector,
+                                             position=position,
+                                             timeout=timeout)
+
     async def inject_js(self, *args, **kwargs):
         # for compatible
         return await self.inject_js_url(*args, **kwargs)
@@ -1204,9 +1321,9 @@ JSON.stringify(result)""" % (
 
         clip's keys: x, y, width, height, scale"""
 
-        def save(save_path, base64_img):
-            with open(save_path, 'wb') as f:
-                f.write(b64decode(base64_img))
+        async def save_file(save_path, file_bytes):
+            async with aiofiles.open(save_path, 'wb') as f:
+                await f.write(file_bytes)
 
         kwargs: Dict[str, Any] = dict(format=format,
                                       quality=quality,
@@ -1220,8 +1337,8 @@ JSON.stringify(result)""" % (
                                  **kwargs)
         base64_img = self.get_data_value(result, value_path='result.data')
         if save_path and base64_img:
-            await asyncio.get_running_loop().run_in_executor(
-                save, save_path, base64_img)
+            file_bytes = b64decode(base64_img)
+            await save_file(save_path, file_bytes)
         return base64_img
 
     async def add_js_onload(self, source: str, **kwargs) -> str:
@@ -1240,16 +1357,30 @@ JSON.stringify(result)""" % (
                                 result,
                                 identifier=identifier)
 
-    async def get_value(self, name: str, timeout=NotSet):
-        """name or expression"""
-        return await self.get_variable(name, timeout=timeout)
+    async def get_value(self, name: str, timeout=NotSet, jsonify: bool = False):
+        """name or expression. jsonify will transport the data by JSON, such as the array."""
+        return await self.get_variable(name, timeout=timeout, jsonify=jsonify)
 
-    async def get_variable(self, name: str, timeout=NotSet):
-        """variable or expression"""
+    async def get_variable(self,
+                           name: str,
+                           timeout=NotSet,
+                           jsonify: bool = False):
+        """variable or expression. jsonify will transport the data by JSON, such as the array."""
         # using JSON to keep value type
-        return await self.js(name,
-                             timeout=timeout,
-                             value_path='result.result.value')
+        if jsonify:
+            result = await self.js(f'JSON.stringify({name})',
+                                   timeout=timeout,
+                                   value_path='result.result.value')
+            try:
+                if result:
+                    return json.loads(result)
+            except (TypeError, json.decoder.JSONDecodeError):
+                pass
+            return result
+        else:
+            return await self.js(name,
+                                 timeout=timeout,
+                                 value_path='result.result.value')
 
     async def get_screen_size(self, timeout=NotSet):
         return await self.get_value(
