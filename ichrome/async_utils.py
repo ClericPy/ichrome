@@ -3,6 +3,7 @@
 import asyncio
 import inspect
 import json
+import re
 import time
 import traceback
 from asyncio.base_futures import _PENDING
@@ -71,10 +72,10 @@ class _WSConnection(object):
     def __str__(self):
         return f'<{self.__class__.__name__}: {None if self._closed is None else not self._closed}>'
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> 'Tab':
         return await self.connect()
 
-    async def connect(self):
+    async def connect(self) -> 'Tab':
         """Connect to websocket, and set tab.ws as aiohttp.client_ws.ClientWebSocketResponse."""
         try:
             self.tab.ws = await self.tab.req.session.ws_connect(
@@ -979,11 +980,37 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 accept=accept,
                                 promptText=promptText)
 
+    async def wait_tag(self,
+                       cssselector: str,
+                       max_wait_time: Optional[float] = None,
+                       interval: float = 1,
+                       timeout=None) -> Union[None, Tag]:
+        '''Wait until the tag is ready or max_wait_time used up, sometimes it is more useful than wait loading.
+        cssselector: css querying the Tag.
+        interval: checking interval for while loop.
+        max_wait_time: if time used up, return None.
+        timeout: timeout seconds for sending a msg.
+
+        If max_wait_time used up: return [].
+        elif querySelectorAll runs failed, return None.
+        else: return List[Tag]
+        WARNING: methods with prefix `wait_` the `timeout` default to None.
+        '''
+        tag = None
+        TIMEOUT_AT = time.time() + (max_wait_time or self._MAX_WAIT_TIMEOUT)
+        while TIMEOUT_AT > time.time():
+            tag = await self.querySelector(cssselector=cssselector,
+                                           timeout=timeout)
+            if tag:
+                break
+            await asyncio.sleep(interval)
+        return tag or None
+
     async def wait_tags(self,
                         cssselector: str,
                         max_wait_time: Optional[float] = None,
                         interval: float = 1,
-                        timeout=None) -> Union[None, List[Tag]]:
+                        timeout=None) -> List[Tag]:
         '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
         interval: checking interval for while loop.
@@ -1004,6 +1031,59 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 break
             await asyncio.sleep(interval)
         return tags
+
+    async def findall(self,
+                      regex: str,
+                      cssselector: str = 'html',
+                      flags: str = 'g',
+                      timeout=NotSet):
+        """Similar to python re.findall.
+
+        Demo::
+
+            # no group
+            print(await tab.findall('<title>.*?</title>'))
+            # ['<title>123456789</title>']
+
+            # only 1 group
+            print(await tab.findall('<title>(.*?)</title>'))
+            # ['123456789']
+
+            # multi-groups
+            print(await tab.findall('<title>(1)(2).*?</title>'))
+            # [['1', '2']]
+
+        :param regex: raw regex string to be set in /%s/g
+        :type regex: str
+        :param cssselector: which element.outerHTML to be matched, defaults to 'body'
+        :type cssselector: str, optional
+        :param timeout: defaults to NotSet
+        :type timeout: [type], optional
+        """
+        group_count = len(re.findall(r'(?<!\\)\(', regex))
+        code = '''
+var group_count = %s
+var result = []
+var regex = new RegExp(`%s`, `%s`)
+var items = [...document.querySelector(`%s`).outerHTML.matchAll(regex)]
+items.forEach((item) => {
+    if (group_count <= 1) {
+        result.push(item[group_count])
+    } else {
+        var tmp = []
+        for (let i = 1; i < group_count + 1; i++) {
+            tmp.push(item[i])
+        }
+        result.push(tmp)
+    }
+})
+JSON.stringify(result)
+''' % (group_count, regex, flags, cssselector)
+        result = await self.js(code,
+                               value_path='result.result.value',
+                               timeout=timeout)
+        if result and result.startswith('['):
+            return json.loads(result)
 
     async def querySelector(self,
                             cssselector: str,
@@ -1107,6 +1187,38 @@ JSON.stringify(result)""" % (
         except Exception as e:
             logger.error(f"querySelectorAll error: {e!r}, response: {response}")
             return None
+
+    async def insertAdjacentHTML(self,
+                                 html: str,
+                                 cssselector: str = 'body',
+                                 position: str = 'beforeend',
+                                 timeout=NotSet):
+        """Insert HTML source code into document. Offten used for injecting CSS element.
+
+        :param html: HTML source code
+        :type html: str
+        :param cssselector: cssselector to find the target node, defaults to 'body'
+        :type cssselector: str, optional
+        :param position: ['beforebegin', 'afterbegin', 'beforeend', 'afterend'],  defaults to 'beforeend'
+        :type position: str, optional
+        :param timeout: defaults to NotSet
+        :type timeout: [type], optional
+        :return: [description]
+        :rtype: [type]
+        """
+        template = f'''document.querySelector(`{cssselector}`).insertAdjacentHTML('{position}', `{html}`)'''
+        return await self.js(template)
+
+    async def inject_html(self,
+                          html: str,
+                          cssselector: str = 'body',
+                          position: str = 'beforeend',
+                          timeout=NotSet):
+        """An alias name for tab.insertAdjacentHTML."""
+        return await self.insertAdjacentHTML(html=html,
+                                             cssselector=cssselector,
+                                             position=position,
+                                             timeout=timeout)
 
     async def inject_js(self, *args, **kwargs):
         # for compatible
@@ -1240,16 +1352,30 @@ JSON.stringify(result)""" % (
                                 result,
                                 identifier=identifier)
 
-    async def get_value(self, name: str, timeout=NotSet):
-        """name or expression"""
-        return await self.get_variable(name, timeout=timeout)
+    async def get_value(self, name: str, timeout=NotSet, jsonify: bool = False):
+        """name or expression. jsonify will transport the data by JSON, such as the array."""
+        return await self.get_variable(name, timeout=timeout, jsonify=jsonify)
 
-    async def get_variable(self, name: str, timeout=NotSet):
-        """variable or expression"""
+    async def get_variable(self,
+                           name: str,
+                           timeout=NotSet,
+                           jsonify: bool = False):
+        """variable or expression. jsonify will transport the data by JSON, such as the array."""
         # using JSON to keep value type
-        return await self.js(name,
-                             timeout=timeout,
-                             value_path='result.result.value')
+        if jsonify:
+            result = await self.js(f'JSON.stringify({name})',
+                                   timeout=timeout,
+                                   value_path='result.result.value')
+            try:
+                if result:
+                    return json.loads(result)
+            except (TypeError, json.decoder.JSONDecodeError):
+                pass
+            return result
+        else:
+            return await self.js(name,
+                                 timeout=timeout,
+                                 value_path='result.result.value')
 
     async def get_screen_size(self, timeout=NotSet):
         return await self.get_value(
