@@ -629,6 +629,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         If page loaded event catched, return True.
         WARNING: methods with prefix `wait_` the `timeout` default to None.
         '''
+        if timeout == 0:
+            return False
         data = await self.wait_event("Page.loadEventFired",
                                      timeout=timeout,
                                      callback_function=callback_function)
@@ -762,36 +764,40 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             self,
             request_dict: Union[None, dict, str],
             timeout=NotSet,
-            wait_loading: bool = False,
+            wait_loading: bool = None,
     ) -> Union[dict, None]:
         '''Network.getResponseBody.
         return demo:
 
-                {'id': 2, 'result': {'body': 'JSON source code', 'base64Encoded': False}}
+                {'id': 2, 'result': {'body': 'source code', 'base64Encoded': False}}
 
-        WARNING: some ajax request need to await tab.wait_request_loading(request_dict) for
-        loadingFinished (or sleep some secs), so set the wait_loading=True.'''
-        start_time = time.time()
+        some ajax request need to await tab.wait_request_loading(request_dict) for
+        loadingFinished (or sleep some secs)
+        wait_loading=None will auto check response loaded.'''
         request_id = self._ensure_request_id(request_dict)
+        result = None
         if request_id is None:
-            return None
+            return result
         timeout = self.ensure_timeout(timeout)
-        if wait_loading:
+        if wait_loading is None:
+            data = await self.send("Network.getResponseBody",
+                                   requestId=request_id,
+                                   timeout=timeout)
+            result = self.get_data_value(data, 'result.body')
+            if result:
+                return result
+        if wait_loading is not False:
             # ensure the request loaded
             await self.wait_request_loading(request_id, timeout=timeout)
-            if timeout is not None:
-                timeout = timeout - (time.time() - start_time)
-                if timeout <= 0:
-                    return None
         result = await self.send("Network.getResponseBody",
                                  requestId=request_id,
                                  timeout=timeout)
-        return result
+        return self.get_data_value(result, 'result.body')
 
     async def get_response_body(self,
                                 request_dict: Union[None, dict, str],
                                 timeout=NotSet,
-                                wait_loading=False) -> Union[dict, None]:
+                                wait_loading=None) -> Union[dict, None]:
         """For tab.wait_request's callback_function. This will await loading before getting resonse body."""
         result = await self.get_response(request_dict,
                                          timeout=timeout,
