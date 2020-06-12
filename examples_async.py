@@ -93,7 +93,15 @@ async def test_tab_set_url(tab: Tab):
 async def test_tab_js(tab: Tab):
     # test js update title
     await tab.js("document.title = 'abc'")
+    # test js_code
     assert (await tab.js_code('return document.title')) == 'abc'
+    # test findall
+    await tab.js("document.title = 123456789")
+    assert (await tab.findall('<title>(.*?)</title>')) == ['123456789']
+    assert (await
+            tab.findall('<title>.*?</title>')) == ['<title>123456789</title>']
+    assert (await tab.findall('<title>(1)(2).*?</title>')) == [['1', '2']]
+    assert (await tab.findall('<title>(1)(2).*?</title>', 'body')) == []
     new_title = await tab.current_title
     # test refresh_tab_info for tab meta info
     assert tab.title != new_title
@@ -181,6 +189,8 @@ async def test_tab_js_onload(tab: Tab):
     assert await tab.remove_js_onload(js_id)
     await tab.set_url('http://p.3.cn')
     assert (await tab.get_variable('window.title')) != 123456789
+    assert (await tab.get_variable('[1, 2, 3]')) != [1, 2, 3]
+    assert (await tab.get_variable('[1, 2, 3]', jsonify=True)) == [1, 2, 3]
 
 
 async def test_tab_current_html(tab: Tab):
