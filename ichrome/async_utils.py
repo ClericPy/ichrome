@@ -324,11 +324,12 @@ class Tab(GetValueMixin):
         """activate tab with cdp websocket"""
         return await self.send("Page.bringToFront", timeout=timeout)
 
-    async def close(self, timeout=NotSet) -> Union[dict, None]:
-        """close tab with cdp websocket"""
+    async def close(self, timeout=0) -> Union[dict, None]:
+        """close tab with cdp websocket. will lose ws, so timeout default to 0."""
         return await self.send("Page.close", timeout=timeout)
 
-    async def crash(self, timeout=NotSet) -> Union[dict, None]:
+    async def crash(self, timeout=0) -> Union[dict, None]:
+        """will lose ws, so timeout default to 0."""
         return await self.send("Page.crash", timeout=timeout)
 
     async def _recv_daemon(self):
