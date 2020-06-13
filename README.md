@@ -3,42 +3,49 @@
 
 > Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.7+.
 
+# Why?
+
+- Pyppeteer is awesome, but I don't need so much
+  - spelling of pyppeteer is confused
+  - event-driven programming is not always advisable.
+- Selenium is slow
+  - webdrivers often come with memory leak.
+- In desperate need of a stable toolkit to communicate with Chrome browser
+  - fast http & websocket connections (based on aiohttp) for **asyncio** environment
+  - **ichrome.debugger** is a sync tool and depends on the `ichrome.async_utils`
+    - a choice for debugging interactively.
+
+# Features
+
+- Chrome process daemon
+  - auto-restart
+  - command-line usage support
+  - async environment compatible
+- Connect to an existing Chrome
+- Operations on Tabs under stable websocket
+  - Package very commonly used functions
+
+# Structure Chart
+
+![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
+
+
 # Install
 
 > Install from [PyPI](https://pypi.org/project/ichrome/)
 
     pip install ichrome -U
 
-> Uninstall & clear the user data
+> Uninstall & Clear the user data dir
 
         $ python3 -m ichrome --clean
         $ pip uninstall ichrome
-
-# Why?
-
-- pyppeteer / selenium is awesome, but I don't need so much
-  - spelling of pyppeteer is confused, and event-driven programming is not always advisable.
-  - selenium is slow
-  - webdrivers often come with memory leak.
-- async communication with Chrome remote debug port, stable choice. [Recommended]
-- sync way to test CDP,  which is not recommended for complex production environments. [Deprecated]
-  - **ichrome.debugger** is a sync tool and depends on the `ichrome.async_utils`, which may be a better choice.
-
-
-# Features
-
-- Chrome process daemon
-  - auto restart
-  - command-line usage
-  - async environment compatible
-- Connect to an existing Chrome
-  - Some magic operations on Tabs
-
 
 <details>
     <summary><b>AsyncChrome feature list</b></summary>
 
 1. server
+    
     > return `f"http://{self.host}:{self.port}"`, such as `http://127.0.0.1:9222`
 2. version
     > version info from `/json/version` format like:
@@ -46,10 +53,13 @@
     {'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}
     ```
 3. `connect` / `check` / `ok`
+    
     > check alive
 4. `get_tabs` / `tabs` / `get_tab` / `get_tabs`
+    
     > get the `AsyncTab` instance from `/json`.
 5. `new_tab` / `activate_tab` / `close_tab` / `close_tabs`
+    
     > operating tabs.
 6. `close_browser`
     > find the activated tab and send `Browser.close` message, close the connected chrome browser gracefully.
@@ -78,50 +88,73 @@
     <summary><b>AsyncTab feature list</b></summary>
 
 1. `set_url` / `reload`
+    
     > navigate to a new url. `reload` equals to `set_url(None)`
 1. `wait_event`
+    
     > listening the events with given name, and separate from other same-name events with filter_function, finally run the callback_function with result.
 1. `wait_page_loading` / `wait_loading`
+    
     > wait for `Page.loadEventFired` event, or stop loading while timeout. Different from `wait_loading_finished`.
 1. `wait_response` / `wait_request`
+    
     > filt the `Network.responseReceived` / `Network.requestWillBeSent` event by `filter_function`, return the `request_dict` which can be used by `get_response` / `get_response_body` / `get_request_post_data`. WARNING: requestWillBeSent event fired do not mean the response is ready, should await tab.wait_request_loading(request_dict) or await tab.get_response(request_dict, wait_loading=True)
 1. `wait_request_loading` / `wait_loading_finished`
+    
     > sometimes event got `request_dict` with `wait_response`, but the ajax request is still fetching, which need to wait the `Network.loadingFinished` event.
 1. `activate` / `activate_tab`
+    
     > activate tab with websocket / http message.
 1. `close` / `close_tab`
+    
     > close tab with websocket / http message.
 1. `add_js_onload`
+    
     > `Page.addScriptToEvaluateOnNewDocument`, which means this javascript code will be run before page loaded.
 1. `clear_browser_cache` / `clear_browser_cookies`
+    
     > `Network.clearBrowserCache` and `Network.clearBrowserCookies`
 1. `querySelectorAll`
+    
     > get the tag instance, which contains the `tagName, innerHTML, outerHTML, textContent, attributes` attrs.
 1. `click`
+    
     > click the element queried by given *css selector*.
 1. `refresh_tab_info`
+    
     > to refresh the init attrs: `url`, `title`.
 1. `current_html` / `current_title` / `current_url`
+    
     > get the current html / title / url with `tab.js`. or using the `refresh_tab_info` method and init attrs.
 1. `crash`
+    
     > `Page.crash`
 1. `get_cookies` / `get_all_cookies` / `delete_cookies` / `set_cookie`
+    
     > some page cookies operations.
 1. `set_headers` / `set_ua`
+    
     > `Network.setExtraHTTPHeaders` and `Network.setUserAgentOverride`, used to update headers dynamically.
 1. `close_browser`
+    
     > send `Browser.close` message to close the chrome browser gracefully.
 1. `get_bounding_client_rect` / `get_element_clip`
+    
     > `get_element_clip` is alias name for the other, these two method is to get the rect of element which queried by css element.
 1. `screenshot` / `screenshot_element`
+    
     > get the screenshot base64 encoded image data. `screenshot_element` should be given a css selector to locate the element.
 1. `get_page_size` / `get_screen_size`
+    
     > size of current window or the whole screen.
 1. `get_response`
+    
     > get the response body with the given request dict.
 1. `js`
+    
     > run the given js code, return the raw response from sending `Runtime.evaluate` message.
 1. `inject_js_url`
+    
     > inject some js url, like `<script src="xxx/static/js/jquery.min.js"></script>` do.
 1. `get_value` & `get_variable`
     > run the given js variable or expression, and return the result.
@@ -130,12 +163,16 @@
     await tab.get_value("document.querySelector('title').innerText")
     ```
 8. `keyboard_send`
+    
     > dispath key event with `Input.dispatchKeyEvent`
 9. `mouse_click`
+    
     > dispath click event on given position
 1. `mouse_drag`
+    
     > dispath drag event on given position, and return the target x, y. `duration` arg is to slow down the move speed.
 1. `mouse_drag_rel`
+    
     > dispath drag event on given offset, and return the target x, y.
 1. `mouse_drag_rel`
     > drag with offsets continuously.
@@ -146,8 +183,10 @@
     await walker.move(50 * 1.414, 50 * 1.414, 0.2)
     ```
 1. `mouse_press` / `mouse_release` / `mouse_move` / `mouse_move_rel` / `mouse_move_rel_chain`
+    
     > similar to the drag features. These mouse features is only dispatched events, not the real mouse action.
 1. `history_back` / `history_forward` / `goto_history_relative` / `reset_history`
+    
     > back / forward history
 
 </details>
