@@ -674,8 +674,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                     if ok:
                         result = _result
                         break
-                except Exception:
-                    continue
+                except Exception as error:
+                    logger.error(f'wait_event crashed for: {error!r}')
+                    raise error
             elif _result:
                 result = _result
                 break
@@ -1190,9 +1191,10 @@ JSON.stringify(result)""" % (
                     return TagNotFound()
             else:
                 return result
-        except Exception as e:
-            logger.error(f"querySelectorAll error: {e!r}, response: {response}")
-            return None
+        except Exception as error:
+            logger.error(
+                f"querySelectorAll error: {error!r}, response: {response}")
+            raise error
 
     async def insertAdjacentHTML(self,
                                  html: str,
@@ -1818,9 +1820,9 @@ class Chrome(GetValueMixin):
                     for rjson in r.json()
                     if (rjson["type"] == "page" or filt_page_type is not True)
                 ]
-        except Exception:
-            logger.error(
-                f'fail to get_tabs {self.server}, {traceback.format_exc()}')
+        except Exception as error:
+            logger.error(f'fail to get_tabs {self.server}, {error!r}')
+            raise error
         return []
 
     async def get_tab(self, index: int = 0) -> Union[Tab, None]:
