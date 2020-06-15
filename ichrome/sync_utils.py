@@ -11,8 +11,6 @@ from torequests.utils import quote_plus
 
 from .daemon import ChromeDaemon
 from .logs import logger
-
-
 """
 [Archived]: will not update except bugs.
 Sync utils for connections and operations.
@@ -45,8 +43,9 @@ class Chrome(object):
         Get all open browser tabs that are pages tabs
         """
         try:
-            r = self.req.get(
-                self.server + "/json", timeout=self.timeout, retry=self.retry)
+            r = self.req.get(self.server + "/json",
+                             timeout=self.timeout,
+                             retry=self.retry)
             return [
                 Tab(
                     tab["id"],
@@ -56,9 +55,9 @@ class Chrome(object):
                     self,
                 ) for tab in r.json() if tab["type"] == "page"
             ]
-        except Exception:
-            traceback.print_exc()
-            return []
+        except Exception as error:
+            logger.error(f'_get_tabs crashed for: {error!r}')
+            raise error
 
     @property
     def server(self):
@@ -120,15 +119,15 @@ class Chrome(object):
         return [self.close_tab(tab_id) for tab_id in tab_ids]
 
     def kill(self, timeout=None, max_deaths=1):
-        ChromeDaemon.clear_chrome_process(
-            self.port, timeout=timeout, max_deaths=max_deaths)
+        ChromeDaemon.clear_chrome_process(self.port,
+                                          timeout=timeout,
+                                          max_deaths=max_deaths)
 
     @property
     def meta(self):
-        r = self.req.get(
-            f"{self.server}/json/version",
-            retry=self.retry,
-            timeout=self.timeout)
+        r = self.req.get(f"{self.server}/json/version",
+                         retry=self.retry,
+                         timeout=self.timeout)
         if r.x and r.ok:
             return r.json()
 
@@ -248,8 +247,9 @@ class Tab(object):
             with self.lock:
                 self.ws.send(json.dumps(request))
             request = {"id": request["id"]}
-            res = self.recv(
-                request, timeout=timeout, callback_function=callback_function)
+            res = self.recv(request,
+                            timeout=timeout,
+                            callback_function=callback_function)
             return res
         except (
                 websocket._exceptions.WebSocketTimeoutException,
@@ -304,8 +304,9 @@ class Tab(object):
             result = self.send("Network.getCookies", timeout=timeout)
         try:
             return json.loads(result)["result"]["cookies"]
-        except Exception:
-            return []
+        except Exception as error:
+            logger.error(f'get_cookies crashed for: {error!r}')
+            raise error
 
     @property
     def current_url(self):
@@ -334,23 +335,24 @@ class Tab(object):
     def disable(self, name: str):
         return self.send(f'{name}.disable', timeout=0)
 
-    def wait_loading(self, wait_seconds=None, timeout=1,
+    def wait_loading(self,
+                     wait_seconds=None,
+                     timeout=1,
                      callback_function=None):
         self.enable('Page')
-        data = self.wait_event(
-            "Page.loadEventFired",
-            timeout=timeout,
-            wait_seconds=wait_seconds,
-            callback_function=callback_function)
+        data = self.wait_event("Page.loadEventFired",
+                               timeout=timeout,
+                               wait_seconds=wait_seconds,
+                               callback_function=callback_function)
         return data
 
     def wait_event(
-            self,
-            event="",
-            timeout=None,
-            callback_function=None,
-            filter_function=None,
-            wait_seconds=None,
+        self,
+        event="",
+        timeout=None,
+        callback_function=None,
+        filter_function=None,
+        wait_seconds=None,
     ):
         """ensure enable the method first, or will not listen any event."""
         timeout = self.timeout if timeout is None else timeout
@@ -388,11 +390,10 @@ class Tab(object):
             if referrer is None:
                 data = self.send("Page.navigate", url=url, timeout=timeout)
             else:
-                data = self.send(
-                    "Page.navigate",
-                    url=url,
-                    referrer=referrer,
-                    timeout=timeout)
+                data = self.send("Page.navigate",
+                                 url=url,
+                                 referrer=referrer,
+                                 timeout=timeout)
         else:
             data = self.send("Page.reload", timeout=timeout)
         time_passed = self.now - start_load_ts
@@ -405,8 +406,9 @@ class Tab(object):
         """
         Evaluate JavaScript on the page
         """
-        return self.send(
-            "Runtime.evaluate", expression=javascript, mute_log=mute_log)
+        return self.send("Runtime.evaluate",
+                         expression=javascript,
+                         mute_log=mute_log)
 
     def querySelectorAll(self, cssselector, index=None, action=None):
         """
@@ -477,11 +479,11 @@ class Tab(object):
                     return None
             else:
                 return result
-        except Exception as e:
-            logger.info(f"querySelectorAll error: {e}, response: {response}")
-            if isinstance(index, int):
-                return None
-            return []
+        except Exception as error:
+            logger.info(
+                f"querySelectorAll crashed for: {error!r}, response: {response}"
+            )
+            raise error
 
     def inject_js_url(self,
                       url,
@@ -489,10 +491,17 @@ class Tab(object):
                       retry=0,
                       verify=0,
                       **requests_kwargs):
-        return self.inject_js(
-            url, timeout=timeout, retry=retry, verify=verify, **requests_kwargs)
+        return self.inject_js(url,
+                              timeout=timeout,
+                              retry=retry,
+                              verify=verify,
+                              **requests_kwargs)
 
-    def inject_js(self, url, timeout=None, retry=0, verify=0,
+    def inject_js(self,
+                  url,
+                  timeout=None,
+                  retry=0,
+                  verify=0,
                   **requests_kwargs):
         # js_source_code = """
         # var script=document.createElement("script");
@@ -500,8 +509,11 @@ class Tab(object):
         # script.src="{}";
         # document.getElementsByTagName('head')[0].appendChild(script);
         # """.format(url)
-        r = self.req.get(
-            url, timeout=timeout, retry=retry, verify=verify, **requests_kwargs)
+        r = self.req.get(url,
+                         timeout=timeout,
+                         retry=retry,
+                         verify=verify,
+                         **requests_kwargs)
         if r.x and r.ok:
             javascript = r.text
             return self.js(javascript, mute_log=True)
