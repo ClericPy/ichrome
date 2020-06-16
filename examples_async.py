@@ -141,6 +141,12 @@ async def test_tab_js(tab: Tab):
     assert result == []
     result = await tab.wait_tags('.python-logo', max_wait_time=3)
     assert result
+    assert await tab.includes('python-logo')
+    assert not (await tab.includes('python-ichrome'))
+    assert await tab.wait_includes('python')
+    assert (await tab.wait_includes('python-ichrome', max_wait_time=1)) is False
+    assert await tab.wait_findall('python')
+    assert (await tab.wait_findall('python-ichrome', max_wait_time=1)) == []
 
 
 async def test_wait_response(tab: Tab):
