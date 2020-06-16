@@ -33,6 +33,7 @@ except ImportError:
     from asyncio.exceptions import TimeoutError
 
 NotSet = object()
+INF = float('inf')
 
 
 async def _ensure_awaitable_callback_result(callback_function, result):
@@ -159,7 +160,7 @@ class Tab(GetValueMixin):
     }
     # timeout for recv, for wait_XXX methods
     # You can reset this with float instead of forever, like 30 * 60
-    _MAX_WAIT_TIMEOUT = None
+    _MAX_WAIT_TIMEOUT = float('inf')
     # timeout for recv, not for wait_XXX methods
     _DEFAULT_RECV_TIMEOUT = 5.0
     # aiohttp ws timeout default to 10.0, here is 5
@@ -265,11 +266,11 @@ class Tab(GetValueMixin):
         if timeout is NotSet:
             return self.timeout
         elif timeout is None:
-            return self._MAX_WAIT_TIMEOUT
+            return self._MAX_WAIT_TIMEOUT or INF
         else:
             return timeout
 
-    async def close_browser(self, timeout=NotSet):
+    async def close_browser(self, timeout=0):
         return await self.send('Browser.close', timeout=timeout)
 
     @property
@@ -991,7 +992,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                        cssselector: str,
                        max_wait_time: Optional[float] = None,
                        interval: float = 1,
-                       timeout=None) -> Union[None, Tag]:
+                       timeout=NotSet) -> Union[None, Tag]:
         '''Wait until the tag is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tag.
         interval: checking interval for while loop.
@@ -1004,7 +1005,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         WARNING: methods with prefix `wait_` the `timeout` default to None.
         '''
         tag = None
-        TIMEOUT_AT = time.time() + (max_wait_time or self._MAX_WAIT_TIMEOUT)
+        TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
         while TIMEOUT_AT > time.time():
             tag = await self.querySelector(cssselector=cssselector,
                                            timeout=timeout)
@@ -1017,7 +1018,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                         cssselector: str,
                         max_wait_time: Optional[float] = None,
                         interval: float = 1,
-                        timeout=None) -> List[Tag]:
+                        timeout=NotSet) -> List[Tag]:
         '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
         interval: checking interval for while loop.
@@ -1030,7 +1031,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         WARNING: methods with prefix `wait_` the `timeout` default to None.
         '''
         tags = []
-        TIMEOUT_AT = time.time() + (max_wait_time or self._MAX_WAIT_TIMEOUT)
+        TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
         while TIMEOUT_AT > time.time():
             tags = await self.querySelectorAll(cssselector=cssselector,
                                                timeout=timeout)
@@ -1039,11 +1040,47 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             await asyncio.sleep(interval)
         return tags
 
+    async def wait_findall(self,
+                           regex: str,
+                           cssselector: str = 'html',
+                           attribute: str = 'outerHTML',
+                           flags: str = 'g',
+                           max_wait_time: Optional[float] = None,
+                           interval: float = 1,
+                           timeout=NotSet) -> list:
+        '''while loop until await tab.findall got somethine.'''
+        result = []
+        TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
+        while TIMEOUT_AT > time.time():
+            result = await self.findall(regex=regex,
+                                        cssselector=cssselector,
+                                        attribute=attribute,
+                                        flags=flags,
+                                        timeout=timeout)
+            if result:
+                break
+            await asyncio.sleep(interval)
+        return result
+
+    async def findone(self,
+                      regex: str,
+                      cssselector: str = 'html',
+                      attribute: str = 'outerHTML',
+                      timeout=NotSet):
+        result = await self.findall(regex=regex,
+                                    cssselector=cssselector,
+                                    attribute=attribute,
+                                    timeout=timeout)
+        if result:
+            return result[0]
+        return None
+
     async def findall(self,
                       regex: str,
                       cssselector: str = 'html',
+                      attribute: str = 'outerHTML',
                       flags: str = 'g',
-                      timeout=NotSet):
+                      timeout=NotSet) -> list:
         """Similar to python re.findall.
 
         Demo::
@@ -1062,8 +1099,12 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
         :param regex: raw regex string to be set in /%s/g
         :type regex: str
-        :param cssselector: which element.outerHTML to be matched, defaults to 'body'
+        :param cssselector: which element.outerHTML to be matched, defaults to 'html'
         :type cssselector: str, optional
+        :param attribute: attribute of the selected element, defaults to 'outerHTML'
+        :type attribute: str, optional
+        :param flags: regex flags, defaults to 'g'
+        :type flags: str, optional
         :param timeout: defaults to NotSet
         :type timeout: [type], optional
         """
@@ -1072,7 +1113,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 var group_count = %s
 var result = []
 var regex = new RegExp(`%s`, `%s`)
-var items = [...document.querySelector(`%s`).outerHTML.matchAll(regex)]
+var items = [...document.querySelector(`%s`).%s.matchAll(regex)]
 items.forEach((item) => {
     if (group_count <= 1) {
         result.push(item[group_count])
@@ -1085,12 +1126,53 @@ items.forEach((item) => {
     }
 })
 JSON.stringify(result)
-''' % (group_count, regex, flags, cssselector)
+''' % (group_count, regex, flags, cssselector, attribute)
         result = await self.js(code,
                                value_path='result.result.value',
                                timeout=timeout)
         if result and result.startswith('['):
             return json.loads(result)
+        else:
+            return []
+
+    async def includes(self,
+                       text,
+                       cssselector: str = 'html',
+                       attribute: str = 'outerHTML',
+                       timeout=NotSet) -> bool:
+        """String.prototype.includes.
+
+        :param text: substring
+        :type text: str
+        :param cssselector: css selector for outerHTML, defaults to 'html'
+        :type cssselector: str, optional
+        :param attribute: attribute of the selected element, defaults to 'outerHTML'
+        :type attribute: str, optional
+        :return: whether the outerHTML contains substring.
+        :rtype: bool
+        """
+        js = f'document.querySelector(`{cssselector}`).{attribute}.includes(`{text}`)'
+        return await self.get_value(js, jsonify=True, timeout=timeout)
+
+    async def wait_includes(self,
+                            text: str,
+                            cssselector: str = 'html',
+                            attribute: str = 'outerHTML',
+                            max_wait_time: Optional[float] = None,
+                            interval: float = 1,
+                            timeout=NotSet) -> bool:
+        '''while loop until element contains the substring.'''
+        exist = False
+        TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
+        while TIMEOUT_AT > time.time():
+            exist = await self.includes(text=text,
+                                        cssselector=cssselector,
+                                        attribute=attribute,
+                                        timeout=timeout)
+            if exist:
+                return exist
+            await asyncio.sleep(interval)
+        return exist
 
     async def querySelector(self,
                             cssselector: str,
@@ -1742,7 +1824,10 @@ class Chrome(GetValueMixin):
         tab0 = await self.get_tab(0)
         if tab0:
             async with tab0():
-                await tab0.send('Browser.close')
+                try:
+                    await tab0.close_browser()
+                except RuntimeError:
+                    pass
 
     @property
     def server(self) -> str:
