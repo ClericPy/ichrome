@@ -270,7 +270,7 @@ class Tab(GetValueMixin):
         else:
             return timeout
 
-    async def close_browser(self, timeout=NotSet):
+    async def close_browser(self, timeout=0):
         return await self.send('Browser.close', timeout=timeout)
 
     @property
@@ -1824,7 +1824,10 @@ class Chrome(GetValueMixin):
         tab0 = await self.get_tab(0)
         if tab0:
             async with tab0():
-                await tab0.send('Browser.close')
+                try:
+                    await tab0.close_browser()
+                except RuntimeError:
+                    pass
 
     @property
     def server(self) -> str:
