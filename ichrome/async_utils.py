@@ -1092,6 +1092,23 @@ JSON.stringify(result)
         if result and result.startswith('['):
             return json.loads(result)
 
+    async def includes(self,
+                       text,
+                       cssselector: str = 'html',
+                       attribute: str = 'outerHTML',
+                       timeout=NotSet) -> bool:
+        """String.prototype.includes.
+
+        :param text: substring
+        :type text: str
+        :param cssselector: css selector for outerHTML, defaults to 'html'
+        :type cssselector: str, optional
+        :return: whether the outerHTML contains substring.
+        :rtype: bool
+        """
+        js = f'document.querySelector(`{cssselector}`).{attribute}.includes(`{text}`)'
+        return await self.get_value(js, jsonify=True, timeout=timeout)
+
     async def querySelector(self,
                             cssselector: str,
                             action: Union[None, str] = None,
