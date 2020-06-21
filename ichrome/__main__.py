@@ -28,12 +28,18 @@ Other operations:
         python -m ichrome --crawl --headless --timeout=2 http://myip.ipip.net/
 '''
     parser = argparse.ArgumentParser(usage=usage)
-    parser.add_argument("-V",
+    parser.add_argument("-v",
+                        "-V",
                         "--version",
                         help="ichrome version info",
                         action="store_true")
+    parser.add_argument("-c",
+                        "--config",
+                        help="load config dict from JSON file of given path",
+                        default="")
     parser.add_argument(
-        "-c",
+        "-cp",
+        "--chrome-path",
         "--chrome_path",
         help=
         "chrome executable file path, default to null for automatic searching",
@@ -57,27 +63,36 @@ Other operations:
         help="shutdown the given port, only for local running chrome",
         type=int)
     parser.add_argument(
+        "-A",
+        "--user-agent",
         "--user_agent",
         help=
         "--user-agen, default to 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'",
         default="")
-    parser.add_argument("--proxy",
+    parser.add_argument("-x",
+                        "--proxy",
                         help="--proxy-server, default to None",
                         default="")
     parser.add_argument(
+        "-U",
+        "--user-data-dir",
         "--user_data_dir",
         help=
         "user_data_dir to save the user data, default to ~/ichrome_user_data",
         default=Path.home() / 'ichrome_user_data')
     parser.add_argument(
+        "--disable-image",
         "--disable_image",
         help="disable image for loading performance, default to False",
         action="store_true")
     parser.add_argument(
+        "-url",
+        "--start-url",
         "--start_url",
         help="start url while launching chrome, default to about:blank",
         default="about:blank")
     parser.add_argument(
+        "--max-deaths",
         "--max_deaths",
         help=
         "max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 for without auto-restart",
@@ -89,12 +104,14 @@ Other operations:
         default=1,
         type=int)
     parser.add_argument(
+        "-w",
         "--workers",
         help=
         "the number of worker processes with auto-increment port, default to 1",
         default=1,
         type=int)
     parser.add_argument(
+        "--proc-check-interval",
         "--proc_check_interval",
         dest='proc_check_interval',
         help="check chrome process alive every interval seconds",
@@ -104,7 +121,8 @@ Other operations:
                         help="crawl the given URL, output the HTML DOM",
                         default=False,
                         action="store_true")
-    parser.add_argument("--clean",
+    parser.add_argument("-C",
+                        "--clear",
                         "--clear",
                         dest='clean',
                         help="clean user_data_dir",
@@ -123,6 +141,18 @@ Other operations:
     args, extra_config = parser.parse_known_args()
     if args.version:
         print(__version__)
+        return
+    if args.config:
+        path = Path(args.config)
+        if not (path.is_file() and path.exists()):
+            logger.error(f'config file not found: {path}')
+            return
+        import json
+        kwargs = json.loads(path.read_text())
+        start_port = kwargs.pop('port', 9222)
+        workers = kwargs.pop('workers', 1)
+        asyncio.run(
+            ChromeWorkers.run_chrome_workers(start_port, workers, kwargs))
         return
     if args.shutdown:
         logger.setLevel(1)
@@ -161,13 +191,14 @@ Other operations:
                 kwargs['start_url'] = config
                 kwargs['extra_config'].remove(config)
                 break
-    args.port = getattr(args, 'port', 9222)
     if '--dump-dom' in extra_config or args.crawl:
         logger.setLevel(60)
         from .debugger import crawl_once
         asyncio.run(crawl_once(**kwargs))
     else:
-        asyncio.run(ChromeWorkers.run_chrome_workers(args, kwargs))
+        start_port = getattr(args, 'port', 9222)
+        asyncio.run(
+            ChromeWorkers.run_chrome_workers(start_port, args.workers, kwargs))
 
 
 if __name__ == "__main__":

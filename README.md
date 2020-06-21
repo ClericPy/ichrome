@@ -293,8 +293,10 @@ Other operations:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -V, --version         ichrome version info
-  -c CHROME_PATH, --chrome_path CHROME_PATH
+  -v, -V, --version     ichrome version info
+  -c CONFIG, --config CONFIG
+                        load config dict from JSON file of given path
+  -cp CHROME_PATH, --chrome-path CHROME_PATH, --chrome_path CHROME_PATH
                         chrome executable file path, default to null for
                         automatic searching
   --host HOST           --remote-debugging-address, default to 127.0.0.1
@@ -302,31 +304,34 @@ optional arguments:
   --headless            --headless and --hide-scrollbars, default to False
   -s SHUTDOWN, --shutdown SHUTDOWN
                         shutdown the given port, only for local running chrome
-  --user_agent USER_AGENT
+  -A USER_AGENT, --user-agent USER_AGENT, --user_agent USER_AGENT
                         --user-agen, default to 'Mozilla/5.0 (Windows NT 10.0;
                         WOW64) AppleWebKit/537.36 (KHTML, like Gecko)
                         Chrome/70.0.3538.102 Safari/537.36'
-  --proxy PROXY         --proxy-server, default to None
-  --user_data_dir USER_DATA_DIR
+  -x PROXY, --proxy PROXY
+                        --proxy-server, default to None
+  -U USER_DATA_DIR, --user-data-dir USER_DATA_DIR, --user_data_dir USER_DATA_DIR
                         user_data_dir to save the user data, default to
                         ~/ichrome_user_data
-  --disable_image       disable image for loading performance, default to
+  --disable-image, --disable_image
+                        disable image for loading performance, default to
                         False
-  --start_url START_URL
+  -url START_URL, --start-url START_URL, --start_url START_URL
                         start url while launching chrome, default to
                         about:blank
-  --max_deaths MAX_DEATHS
+  --max-deaths MAX_DEATHS, --max_deaths MAX_DEATHS
                         max deaths in 5 secs, auto restart `max_deaths` times
                         if crash fast in 5 secs. default to 1 for without
                         auto-restart
   --timeout TIMEOUT     timeout to connect the remote server, default to 1 for
                         localhost
-  --workers WORKERS     the number of worker processes with auto-increment
+  -w WORKERS, --workers WORKERS
+                        the number of worker processes with auto-increment
                         port, default to 1
-  --proc_check_interval PROC_CHECK_INTERVAL
+  --proc-check-interval PROC_CHECK_INTERVAL, --proc_check_interval PROC_CHECK_INTERVAL
                         check chrome process alive every interval seconds
   --crawl               crawl the given URL, output the HTML DOM
-  --clean, --clear      clean user_data_dir
+  -C, --clear, --clear  clean user_data_dir
   --doc                 show ChromeDaemon.__doc__
   --debug               set logger level to DEBUG
 ```
