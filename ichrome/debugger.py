@@ -276,8 +276,7 @@ async def crawl_once(**kwargs):
                 port=kwargs.get('port', 9222),
                 timeout=cd._timeout or 2,
         ) as chrome:
-            tab: AsyncTab = await chrome[0]
-            async with tab():
+            async with chrome.connect_tab(0) as tab:
                 await tab.set_url(url, timeout=cd._timeout)
                 html = await tab.get_html(timeout=cd._timeout)
                 print(html)

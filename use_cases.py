@@ -33,8 +33,7 @@ def network_sniffer():
         # listen network flow in 60 s
         timeout = 60
         async with AsyncChrome() as chrome:
-            tab: AsyncTab = await chrome[0]
-            async with tab():
+            async with chrome.connect_tab(0) as tab:
                 await tab.wait_request(filter_function=filter_function,
                                        timeout=timeout)
 
@@ -57,14 +56,12 @@ def html_headless_crawler():
         timeout = 3
 
         async def crawl(url):
-            tab: AsyncTab = await chrome.new_tab(url)
-            async with tab():
+            async with chrome.connect_tab(url, True) as tab:
                 await tab.wait_loading(timeout=timeout)
                 html = await tab.html
                 result = re.search('<h1>(.*?)</h1>', html).group(1)
                 print(result)
                 assert result == 'Herman Melville - Moby-Dick'
-                await tab.close()
 
         async with AsyncChromeDaemon(headless=True):
             async with AsyncChrome() as chrome:
