@@ -73,8 +73,7 @@ Other operations:
         "-A",
         "--user-agent",
         "--user_agent",
-        help=
-        "--user-agen, default to 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'",
+        help=f"--user-agent, default to Chrome PC: {ChromeDaemon.PC_UA}",
         default="")
     parser.add_argument("-x",
                         "--proxy",
@@ -84,8 +83,7 @@ Other operations:
         "-U",
         "--user-data-dir",
         "--user_data_dir",
-        help=
-        "user_data_dir to save the user data, default to ~/ichrome_user_data",
+        help="user_data_dir to save user data, default to ~/ichrome_user_data",
         default=Path.home() / 'ichrome_user_data')
     parser.add_argument(
         "--disable-image",
@@ -101,8 +99,7 @@ Other operations:
     parser.add_argument(
         "--max-deaths",
         "--max_deaths",
-        help=
-        "max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 for without auto-restart",
+        help="restart times. default to 1 for without auto-restart",
         default=1,
         type=int)
     parser.add_argument(
@@ -110,13 +107,11 @@ Other operations:
         help="timeout to connect the remote server, default to 1 for localhost",
         default=1,
         type=int)
-    parser.add_argument(
-        "-w",
-        "--workers",
-        help=
-        "the number of worker processes with auto-increment port, default to 1",
-        default=1,
-        type=int)
+    parser.add_argument("-w",
+                        "--workers",
+                        help="the number of worker processes, default to 1",
+                        default=1,
+                        type=int)
     parser.add_argument(
         "--proc-check-interval",
         "--proc_check_interval",
