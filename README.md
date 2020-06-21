@@ -220,26 +220,25 @@ import asyncio
 async def main():
     # If there is an existing daemon, such as `python -m ichrome`, the `async with AsyncChromeDaemon` context can be omitted.
     async with AsyncChromeDaemon():
-        # connect to an opened chrome
+        # connect to an opened chrome, default host=127.0.0.1, port=9222, headless=False
         async with AsyncChrome() as chrome:
-            tab = await chrome.new_tab(url="https://github.com/ClericPy")
-            # async with tab() as tab:
-            # and `as tab` can be omitted
-            async with tab():
+            # If you need the current tab, set index with int like 0 for activated tab.
+            async with chrome.connect_tab(index='https://github.com/ClericPy',
+                                          auto_close=True) as tab:
                 await tab.wait_loading(2)
                 await tab.js("document.write('<h1>Document updated.</h1>')")
                 await asyncio.sleep(1)
                 # await tab.js('alert("test ok")')
                 print('output:', await tab.html)
                 # output: <html><head></head><body><h1>Document updated.</h1></body></html>
-                await tab.close()
+                # will auto_close tab while exiting context
+                # await tab.close()
             # close_browser gracefully, I have no more need of chrome instance
             await chrome.close_browser()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-
 ```
 
 [More Examples](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
@@ -277,15 +276,20 @@ usage:
     All the unknown args will be appended to extra_config as chrome original args.
 
 Demo:
-    > python -m ichrome --host=127.0.0.1 --window-size=1212,1212 --incognito
-    > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
+    > python -m ichrome -H 127.0.0.1 -p 9222 --window-size=1212,1212 --incognito
+    > ChromeDaemon cmd args: port=9222, {'chrome_path': '', 'host': '127.0.0.1', 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': WindowsPath('C:/Users/root/ichrome_user_data'), 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout':1, 'proc_check_interval': 5, 'debug': False}
+
+    > python -m ichrome
+    > ChromeDaemon cmd args: port=9222, {'chrome_path': '', 'host': '127.0.0.1', 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': WindowsPath('C:/Users/root/ichrome_user_data'), 'disable_image': False, 'start_url': 'about:blank', 'extra_config': [], 'max_deaths': 1, 'timeout': 1, 'proc_check_interval': 5, 'debug': False}
 
 Other operations:
     1. kill local chrome process with given port:
         python -m ichrome -s 9222
+        python -m ichrome -k 9222
     2. clear user_data_dir path (remove the folder and files):
         python -m ichrome --clear
         python -m ichrome --clean
+        python -m ichrome -C -p 9222
     3. show ChromeDaemon.__doc__:
         python -m ichrome --doc
     4. crawl the URL, output the HTML DOM:
@@ -299,19 +303,20 @@ optional arguments:
   -cp CHROME_PATH, --chrome-path CHROME_PATH, --chrome_path CHROME_PATH
                         chrome executable file path, default to null for
                         automatic searching
-  --host HOST           --remote-debugging-address, default to 127.0.0.1
+  -H HOST, --host HOST  --remote-debugging-address, default to 127.0.0.1
   -p PORT, --port PORT  --remote-debugging-port, default to 9222
   --headless            --headless and --hide-scrollbars, default to False
-  -s SHUTDOWN, --shutdown SHUTDOWN
+  -s SHUTDOWN, -k SHUTDOWN, --shutdown SHUTDOWN
                         shutdown the given port, only for local running chrome
   -A USER_AGENT, --user-agent USER_AGENT, --user_agent USER_AGENT
-                        --user-agen, default to 'Mozilla/5.0 (Windows NT 10.0;
-                        WOW64) AppleWebKit/537.36 (KHTML, like Gecko)
-                        Chrome/70.0.3538.102 Safari/537.36'
+                        --user-agent, default to Chrome PC: Mozilla/5.0
+                        (Linux; Android 6.0; Nexus 5 Build/MRA58N)
+                        AppleWebKit/537.36 (KHTML, like Gecko)
+                        Chrome/83.0.4103.106 Mobile Safari/537.36
   -x PROXY, --proxy PROXY
                         --proxy-server, default to None
   -U USER_DATA_DIR, --user-data-dir USER_DATA_DIR, --user_data_dir USER_DATA_DIR
-                        user_data_dir to save the user data, default to
+                        user_data_dir to save user data, default to
                         ~/ichrome_user_data
   --disable-image, --disable_image
                         disable image for loading performance, default to
@@ -320,20 +325,19 @@ optional arguments:
                         start url while launching chrome, default to
                         about:blank
   --max-deaths MAX_DEATHS, --max_deaths MAX_DEATHS
-                        max deaths in 5 secs, auto restart `max_deaths` times
-                        if crash fast in 5 secs. default to 1 for without
-                        auto-restart
+                        restart times. default to 1 for without auto-restart
   --timeout TIMEOUT     timeout to connect the remote server, default to 1 for
                         localhost
   -w WORKERS, --workers WORKERS
-                        the number of worker processes with auto-increment
-                        port, default to 1
+                        the number of worker processes, default to 1
   --proc-check-interval PROC_CHECK_INTERVAL, --proc_check_interval PROC_CHECK_INTERVAL
                         check chrome process alive every interval seconds
   --crawl               crawl the given URL, output the HTML DOM
   -C, --clear, --clear  clean user_data_dir
   --doc                 show ChromeDaemon.__doc__
   --debug               set logger level to DEBUG
+  -K, --killall         killall chrome launched local with --remote-debugging-
+                        port
 ```
 
 ## Interactive Debugging
