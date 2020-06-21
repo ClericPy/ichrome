@@ -660,16 +660,17 @@ class AsyncChromeDaemon(ChromeDaemon):
 
 class ChromeWorkers:
 
-    def __init__(self, args, kwargs):
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(self, start_port=9222, workers=1, kwargs=None):
+        self.start_port = start_port or 9222
+        self.workers = workers or 1
+        self.kwargs = kwargs or {}
         self.daemons = []
 
     async def __aenter__(self):
         return await self.create_chrome_workers()
 
     async def create_chrome_workers(self):
-        for port in range(self.args.port, self.args.port + self.args.workers):
+        for port in range(self.start_port, self.start_port + self.workers):
             logger.info("ChromeDaemon cmd args: port=%s, %s" %
                         (port, self.kwargs))
             self.daemons.append(await
@@ -684,6 +685,6 @@ class ChromeWorkers:
             await daemon.__aexit__()
 
     @classmethod
-    async def run_chrome_workers(cls, args, kwargs):
-        async with cls(args, kwargs):
+    async def run_chrome_workers(cls, start_port, workers, kwargs):
+        async with cls(start_port, workers, kwargs):
             pass
