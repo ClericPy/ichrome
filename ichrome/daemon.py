@@ -622,6 +622,20 @@ class AsyncChromeDaemon(ChromeDaemon):
         # awaitable property
         return self.check_chrome_ready()
 
+    @classmethod
+    async def get_free_port(cls,
+                            host="127.0.0.1",
+                            start=9222,
+                            max_tries=100,
+                            timeout=1):
+        return await asyncio.get_running_loop().run_in_executor(
+            None,
+            super().get_free_port,
+            host=host,
+            start=start,
+            max_tries=max_tries,
+            timeout=timeout)
+
     async def check_chrome_ready(self):
         if self.proc_ok and await self.check_connection():
             logger.info(

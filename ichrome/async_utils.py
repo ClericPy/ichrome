@@ -1159,7 +1159,7 @@ JSON.stringify(result)
         :type text: str
         :param cssselector: css selector for outerHTML, defaults to 'html'
         :type cssselector: str, optional
-        :param attribute: attribute of the selected element, defaults to 'outerHTML'
+        :param attribute: attribute of the selected element, defaults to 'outerHTML'. Sometimes for case-insensitive usage by setting `attribute='textContent.toLowerCase()'`
         :type attribute: str, optional
         :return: whether the outerHTML contains substring.
         :rtype: bool
