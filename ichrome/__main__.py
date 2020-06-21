@@ -30,7 +30,7 @@ Other operations:
     3. show ChromeDaemon.__doc__:
         python -m ichrome --doc
     4. crawl the URL, output the HTML DOM:
-        python -m ichrome --crawl --headless --timeout=2 http://myip.ipip.net/
+        python -m ichrome --crawl --timeout=2 http://myip.ipip.net/
 '''
     parser = argparse.ArgumentParser(usage=usage)
     parser.add_argument("-v",
@@ -61,7 +61,7 @@ Other operations:
     parser.add_argument(
         "--headless",
         help="--headless and --hide-scrollbars, default to False",
-        default=False,
+        default=argparse.SUPPRESS,
         action="store_true")
     parser.add_argument(
         "-s",
@@ -119,7 +119,8 @@ Other operations:
         help="check chrome process alive every interval seconds",
         default=5,
         type=int)
-    parser.add_argument("--crawl",
+    parser.add_argument("-crawl",
+                        "--crawl",
                         help="crawl the given URL, output the HTML DOM",
                         default=False,
                         action="store_true")
@@ -138,6 +139,12 @@ Other operations:
     parser.add_argument("--debug",
                         dest='debug',
                         help="set logger level to DEBUG",
+                        default=False,
+                        action="store_true")
+    parser.add_argument("-cc",
+                        "--clear-cache",
+                        "--clear_cache",
+                        help="clear cache for given port, port default to 9222",
                         default=False,
                         action="store_true")
     parser.add_argument(
@@ -185,7 +192,7 @@ Other operations:
     kwargs.update(
         chrome_path=args.chrome_path,
         host=args.host,
-        headless=args.headless,
+        headless=getattr(args, 'headless', False),
         user_agent=args.user_agent,
         proxy=args.proxy,
         user_data_dir=args.user_data_dir,
@@ -206,7 +213,12 @@ Other operations:
     if '--dump-dom' in extra_config or args.crawl:
         logger.setLevel(60)
         from .debugger import crawl_once
+        kwargs['headless'] = getattr(args, 'headless', True)
         asyncio.run(crawl_once(**kwargs))
+    elif args.clear_cache:
+        from .debugger import clear_cache_handler
+        kwargs['headless'] = getattr(args, 'headless', True)
+        asyncio.run(clear_cache_handler(**kwargs))
     else:
         start_port = getattr(args, 'port', 9222)
         asyncio.run(
