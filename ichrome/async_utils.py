@@ -683,9 +683,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 timeout=None,
                                 callback_function: Optional[Callable] = None,
                                 timeout_stop_loading=False):
-        return self.wait_loading(timeout=timeout,
-                                 callback_function=callback_function,
-                                 timeout_stop_loading=timeout_stop_loading)
+        return await self.wait_loading(
+            timeout=timeout,
+            callback_function=callback_function,
+            timeout_stop_loading=timeout_stop_loading)
 
     async def wait_event(
         self,
