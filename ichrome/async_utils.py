@@ -1137,6 +1137,17 @@ JSON.stringify(result)
         else:
             return []
 
+    async def contains(self,
+                       text,
+                       cssselector: str = 'html',
+                       attribute: str = 'outerHTML',
+                       timeout=NotSet) -> bool:
+        """alias for Tab.includes"""
+        return await self.includes(text=text,
+                                   cssselector=cssselector,
+                                   attribute=attribute,
+                                   timeout=timeout)
+
     async def includes(self,
                        text,
                        cssselector: str = 'html',
