@@ -1085,7 +1085,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
         Demo::
 
-            # no group
+            # no group / (?:) / (?<=) / (?!)
             print(await tab.findall('<title>.*?</title>'))
             # ['<title>123456789</title>']
 
@@ -1108,12 +1108,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         :param timeout: defaults to NotSet
         :type timeout: [type], optional
         """
-        group_count = len(re.findall(r'(?<!\\)\(', regex))
+        if re.search(r'(?<!\\)/', regex):
+            regex = re.sub(r'(?<!\\)/', r'\/', regex)
+        group_count = len(re.findall(r'(?<!\\)\((?!\?)', regex))
+        act = 'matchAll' if 'g' in flags else 'match'
         code = '''
 var group_count = %s
 var result = []
-var regex = new RegExp(`%s`, `%s`)
-var items = [...document.querySelector(`%s`).%s.matchAll(regex)]
+var items = [...document.querySelector(`%s`).%s.%s(/%s/%s)]
 items.forEach((item) => {
     if (group_count <= 1) {
         result.push(item[group_count])
@@ -1126,7 +1128,7 @@ items.forEach((item) => {
     }
 })
 JSON.stringify(result)
-''' % (group_count, regex, flags, cssselector, attribute)
+''' % (group_count, cssselector, attribute, act, regex, flags)
         result = await self.js(code,
                                value_path='result.result.value',
                                timeout=timeout)
