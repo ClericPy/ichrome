@@ -80,7 +80,23 @@
         assert (await tab0.current_url) == 'about:blank'
         assert (await tab1.current_url) == 'about:blank'
     ```
-
+1. `connect_tab`
+    > The easiest way to get a connected tab.
+    > get an existing tab
+    ```python
+    async with chrome.connect_tab(0) as tab:
+        print(await tab.current_title)
+    ```
+    > get a new tab and auto close it
+    ```python
+    async with chrome.connect_tab(None, True) as tab:
+        print(await tab.current_title)
+    ```
+    > get a new tab with given url and auto close it
+    ```python
+    async with chrome.connect_tab('http://python.org', True) as tab:
+        print(await tab.current_title)
+    ```
 </details>
 
 
@@ -90,91 +106,91 @@
 1. `set_url` / `reload`
     
     > navigate to a new url. `reload` equals to `set_url(None)`
-1. `wait_event`
+2. `wait_event`
     
     > listening the events with given name, and separate from other same-name events with filter_function, finally run the callback_function with result.
-1. `wait_page_loading` / `wait_loading`
+3. `wait_page_loading` / `wait_loading`
     
     > wait for `Page.loadEventFired` event, or stop loading while timeout. Different from `wait_loading_finished`.
-1. `wait_response` / `wait_request`
+4. `wait_response` / `wait_request`
     
     > filt the `Network.responseReceived` / `Network.requestWillBeSent` event by `filter_function`, return the `request_dict` which can be used by `get_response` / `get_response_body` / `get_request_post_data`. WARNING: requestWillBeSent event fired do not mean the response is ready, should await tab.wait_request_loading(request_dict) or await tab.get_response(request_dict, wait_loading=True)
-1. `wait_request_loading` / `wait_loading_finished`
+5. `wait_request_loading` / `wait_loading_finished`
     
     > sometimes event got `request_dict` with `wait_response`, but the ajax request is still fetching, which need to wait the `Network.loadingFinished` event.
-1. `activate` / `activate_tab`
+6. `activate` / `activate_tab`
     
     > activate tab with websocket / http message.
-1. `close` / `close_tab`
+7. `close` / `close_tab`
     
     > close tab with websocket / http message.
-1. `add_js_onload`
+8. `add_js_onload`
     
     > `Page.addScriptToEvaluateOnNewDocument`, which means this javascript code will be run before page loaded.
-1. `clear_browser_cache` / `clear_browser_cookies`
+9. `clear_browser_cache` / `clear_browser_cookies`
     
     > `Network.clearBrowserCache` and `Network.clearBrowserCookies`
-1. `querySelectorAll`
+10. `querySelectorAll`
     
     > get the tag instance, which contains the `tagName, innerHTML, outerHTML, textContent, attributes` attrs.
-1. `click`
+11. `click`
     
     > click the element queried by given *css selector*.
-1. `refresh_tab_info`
+12. `refresh_tab_info`
     
     > to refresh the init attrs: `url`, `title`.
-1. `current_html` / `current_title` / `current_url`
+13. `current_html` / `current_title` / `current_url`
     
     > get the current html / title / url with `tab.js`. or using the `refresh_tab_info` method and init attrs.
-1. `crash`
+14. `crash`
     
     > `Page.crash`
-1. `get_cookies` / `get_all_cookies` / `delete_cookies` / `set_cookie`
+15. `get_cookies` / `get_all_cookies` / `delete_cookies` / `set_cookie`
     
     > some page cookies operations.
-1. `set_headers` / `set_ua`
+16. `set_headers` / `set_ua`
     
     > `Network.setExtraHTTPHeaders` and `Network.setUserAgentOverride`, used to update headers dynamically.
-1. `close_browser`
+17. `close_browser`
     
     > send `Browser.close` message to close the chrome browser gracefully.
-1. `get_bounding_client_rect` / `get_element_clip`
+18. `get_bounding_client_rect` / `get_element_clip`
     
     > `get_element_clip` is alias name for the other, these two method is to get the rect of element which queried by css element.
-1. `screenshot` / `screenshot_element`
+19. `screenshot` / `screenshot_element`
     
     > get the screenshot base64 encoded image data. `screenshot_element` should be given a css selector to locate the element.
-1. `get_page_size` / `get_screen_size`
+20. `get_page_size` / `get_screen_size`
     
     > size of current window or the whole screen.
-1. `get_response`
+21. `get_response`
     
     > get the response body with the given request dict.
-1. `js`
+22. `js`
     
     > run the given js code, return the raw response from sending `Runtime.evaluate` message.
-1. `inject_js_url`
+23. `inject_js_url`
     
     > inject some js url, like `<script src="xxx/static/js/jquery.min.js"></script>` do.
-1. `get_value` & `get_variable`
+24. `get_value` & `get_variable`
     > run the given js variable or expression, and return the result.
     ```python
     await tab.get_value('document.title')
     await tab.get_value("document.querySelector('title').innerText")
     ```
-8. `keyboard_send`
+25. `keyboard_send`
     
     > dispath key event with `Input.dispatchKeyEvent`
-9. `mouse_click`
+26. `mouse_click`
     
     > dispath click event on given position
-1. `mouse_drag`
+27. `mouse_drag`
     
     > dispath drag event on given position, and return the target x, y. `duration` arg is to slow down the move speed.
-1. `mouse_drag_rel`
+28. `mouse_drag_rel`
     
     > dispath drag event on given offset, and return the target x, y.
-1. `mouse_drag_rel`
+29. `mouse_drag_rel`
     > drag with offsets continuously.
     ```python
     await tab.set_url('https://draw.yunser.com/')
@@ -182,10 +198,10 @@
         0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)
     await walker.move(50 * 1.414, 50 * 1.414, 0.2)
     ```
-1. `mouse_press` / `mouse_release` / `mouse_move` / `mouse_move_rel` / `mouse_move_rel_chain`
+30. `mouse_press` / `mouse_release` / `mouse_move` / `mouse_move_rel` / `mouse_move_rel_chain`
     
     > similar to the drag features. These mouse features is only dispatched events, not the real mouse action.
-1. `history_back` / `history_forward` / `goto_history_relative` / `reset_history`
+31. `history_back` / `history_forward` / `goto_history_relative` / `reset_history`
     
     > back / forward history
 
@@ -222,7 +238,7 @@ async def main():
     async with AsyncChromeDaemon():
         # connect to an opened chrome, default host=127.0.0.1, port=9222, headless=False
         async with AsyncChrome() as chrome:
-            # If you need the current tab, set index with int like 0 for activated tab.
+            # If you need reuse an existing tab, set index with int like 0 for activated tab, such as `async with chrome.connect_tab(0) as tab:`
             async with chrome.connect_tab(index='https://github.com/ClericPy',
                                           auto_close=True) as tab:
                 await tab.wait_loading(2)
