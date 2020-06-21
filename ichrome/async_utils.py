@@ -47,7 +47,7 @@ async def _ensure_awaitable_callback_result(callback_function, result):
         return callback_result
 
 
-class _TabConnectionManager(object):
+class _TabConnectionManager:
 
     def __init__(self, tabs):
         self.tabs = tabs
@@ -65,7 +65,37 @@ class _TabConnectionManager(object):
                 await ws_connection.shutdown()
 
 
-class _WSConnection(object):
+class _SingleTabConnectionManager:
+
+    def __init__(self,
+                 chrome: 'Chrome',
+                 index: Union[None, int, str] = 0,
+                 auto_close: bool = False):
+        self.chrome = chrome
+        self.index = index
+        self.tab: 'Tab' = None
+        self._ws_connection: '_WSConnection' = None
+        self._auto_close = auto_close
+
+    async def __aenter__(self) -> 'Tab':
+        if isinstance(self.index, int):
+            self.tab = await self.chrome.get_tab(self.index)
+        else:
+            self.tab = await self.chrome.new_tab(self.index or "")
+        if not self.tab:
+            raise ValueError(f'Tab not found.')
+        self._ws_connection = _WSConnection(self.tab)
+        await self._ws_connection.__aenter__()
+        return self.tab
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self._ws_connection:
+            if self._auto_close:
+                await self.tab.close(timeout=0)
+            await self._ws_connection.__aexit__()
+
+
+class _WSConnection:
 
     def __init__(self, tab):
         self.tab = tab
@@ -1707,7 +1737,7 @@ JSON.stringify(result)""" % (
                                 timeout=timeout)
 
 
-class OffsetMoveWalker(object):
+class OffsetMoveWalker:
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
 
     def __init__(self, start_x, start_y, tab: Tab, timeout=NotSet):
@@ -1767,7 +1797,7 @@ class OffsetDragWalker(OffsetMoveWalker):
         return self
 
 
-class Listener(object):
+class Listener:
 
     def __init__(self):
         self._registered_futures = WeakValueDictionary()
@@ -2000,6 +2030,23 @@ class Chrome(GetValueMixin):
         if tab_ids is None:
             tab_ids = await self.tabs
         return [await self.close_tab(tab_id) for tab_id in tab_ids]
+
+    def connect_tab(self,
+                    index: Union[None, int, str] = 0,
+                    auto_close: bool = False):
+        '''More easier way to init a connected Tab with `async with`.
+
+        Got a connected Tab object by using `async with chrome.connect_tab(0):`
+
+            index = 0 means the current tab.
+            index = None means create a new tab.
+            index = 'http://python.org' means create a new tab with url.
+
+            If auto_close is True: close this tab while exiting context.
+'''
+        return _SingleTabConnectionManager(chrome=self,
+                                           index=index,
+                                           auto_close=auto_close)
 
     def connect_tabs(self, *tabs) -> '_TabConnectionManager':
         '''async with chrome.connect_tabs([tab1, tab2]):.

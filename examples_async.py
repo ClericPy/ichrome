@@ -291,6 +291,11 @@ async def test_examples():
                 assert await tab.clear_browser_cache()
                 # close tab
                 await tab.close()
+            # test chrome.connect_tab
+            async with chrome.connect_tab(chrome.get_server('/json'),
+                                          True) as tab:
+                await tab.wait_loading(2)
+                assert 'webSocketDebuggerUrl' in (await tab.current_html)
             # close_browser gracefully, I have no more need of chrome instance
             await chrome.close_browser()
             # await chrome.kill()
