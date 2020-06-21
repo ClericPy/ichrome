@@ -165,6 +165,7 @@ class Tab(GetValueMixin):
     _DEFAULT_RECV_TIMEOUT = 5.0
     # aiohttp ws timeout default to 10.0, here is 5
     _DEFAULT_CONNECT_TIMEOUT = 5.0
+    _RECV_DAEMON_BREAK_CALLBACK = None
 
     def __init__(self,
                  tab_id: str = None,
@@ -179,6 +180,7 @@ class Tab(GetValueMixin):
                  timeout=NotSet,
                  ws_kwargs: dict = None,
                  default_recv_callback: Callable = None,
+                 _recv_daemon_break_callback: Callable = None,
                  **kwargs):
         """
         original Tab JSON::
@@ -214,8 +216,10 @@ class Tab(GetValueMixin):
         :type timeout: [type], optional
         :param ws_kwargs: kwargs for ws connection, defaults to None
         :type ws_kwargs: dict, optional
-        :param default_recv_callback: sync/async function only accept 1 arg of data comes from ws recv, defaults to None
+        :param default_recv_callback: called for each data received, sync/async function only accept 1 arg of data comes from ws recv, defaults to None
         :type default_recv_callback: Callable, optional
+        :param _recv_daemon_break_callback: like the tab_close_callback. sync/async function only accept 1 arg of self while _recv_daemon break, defaults to None
+        :type _recv_daemon_break_callback: Callable, optional
         :raises ValueError: [description]
         """
         tab_id = tab_id or kwargs.pop('id')
@@ -238,6 +242,7 @@ class Tab(GetValueMixin):
         self._message_id = 0
         self.ws = None
         self.default_recv_callback = default_recv_callback
+        self._recv_daemon_break_callback = _recv_daemon_break_callback or self._RECV_DAEMON_BREAK_CALLBACK
         if self.chrome:
             self.req = self.chrome.req
         else:
@@ -378,6 +383,9 @@ class Tab(GetValueMixin):
                 else:
                     del f
         logger.debug(f'[break] {self!r} _recv_daemon loop break.')
+        if self._recv_daemon_break_callback:
+            return await _ensure_awaitable_callback_result(
+                self._recv_daemon_break_callback, self)
 
     async def send(self,
                    method: str,
