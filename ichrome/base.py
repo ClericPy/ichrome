@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import re
 import time
+from pathlib import Path
 from typing import List
 
 import psutil
+from torequests.utils import get_readable_size
 
 from .logs import logger
-
-
 """
 For base usage with sync utils.
 """
@@ -131,3 +131,11 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
             time.sleep(interval)
             continue
         return
+
+
+def get_dir_size(path):
+    return sum(f.stat().st_size for f in Path(path).glob("**/*") if f.is_file())
+
+
+def get_readable_dir_size(path):
+    return get_readable_size(get_dir_size(path), rounded=1)

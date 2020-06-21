@@ -10,9 +10,9 @@ from pathlib import Path
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
-from torequests.utils import get_readable_size, timepass, ttime
+from torequests.utils import timepass, ttime
 
-from .base import clear_chrome_process, get_memory_by_port, get_proc
+from .base import clear_chrome_process, get_memory_by_port, get_proc, get_dir_size, get_readable_dir_size
 from .logs import logger
 """
 Sync / block operations for launching chrome processes.
@@ -114,7 +114,11 @@ class ChromeDaemon(object):
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image
-        self._wrap_user_data_dir(user_data_dir)
+        if '--user-data-dir=' in str(extra_config):
+            # ignore custom user_data_dir by ichrome
+            self.user_data_dir = None
+        else:
+            self._wrap_user_data_dir(user_data_dir)
         self.start_url = start_url
         if extra_config and isinstance(extra_config, str):
             extra_config = [extra_config]
@@ -167,48 +171,83 @@ class ChromeDaemon(object):
 
     @staticmethod
     def get_dir_size(path):
-        return sum(f.stat().st_size for f in path.glob("**/*") if f.is_file())
+        return get_dir_size(path)
 
-    def _wrap_user_data_dir(self, user_data_dir):
-        """refactor this function to set accurate dir."""
+    @staticmethod
+    def get_readable_dir_size(path):
+        return get_readable_dir_size(path)
+
+    @classmethod
+    def _ensure_user_dir(cls, user_data_dir):
         if user_data_dir is None:
-            user_data_dir = Path.home() / 'ichrome_user_data'
-        elif user_data_dir in self.IGNORE_USER_DIR_FLAGS:
-            self.user_data_dir = None
+            # use default path
+            return Path.home() / 'ichrome_user_data'
+        elif user_data_dir in cls.IGNORE_USER_DIR_FLAGS:
+            # ignore custom path settings
             logger.debug(
                 'Ignore custom user_data_dir, using default user set by system.'
             )
-            return
+            return None
         else:
-            user_data_dir = Path(user_data_dir)
-        self.user_data_dir = user_data_dir / f"chrome_{self.port}"
+            # valid path string
+            return Path(user_data_dir)
+
+    def _wrap_user_data_dir(self, user_data_dir):
+        main_user_dir = self._ensure_user_dir(user_data_dir)
+        if main_user_dir is None:
+            return
+        port_user_dir = main_user_dir / f"chrome_{self.port}"
+        self.user_data_dir = port_user_dir
         if not self.user_data_dir.is_dir():
             logger.warning(
                 f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
             )
             self.ensure_dir(self.user_data_dir)
-        port_dir_size = get_readable_size(self.get_dir_size(self.user_data_dir),
-                                          rounded=1)
-        total_dir_size = get_readable_size(self.get_dir_size(user_data_dir),
-                                           rounded=1)
+        port_dir_size = get_readable_dir_size(port_user_dir)
+        total_dir_size = get_readable_dir_size(main_user_dir)
         logger.info(
             f'user_data_dir({self.user_data_dir}) size: {port_dir_size} / {total_dir_size}'
         )
 
     @classmethod
     def clear_user_dir(cls, user_data_dir, port=None):
-        return cls.clear_dir(user_data_dir, port=port)
+        main_user_dir = cls._ensure_user_dir(user_data_dir)
+        if port:
+            port_user_dir = main_user_dir / f"chrome_{port}"
+            logger.info(
+                f'Clearing only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
+            )
+            cls.clear_dir_with_shutil(port_user_dir)
+            logger.info(
+                f'Cleared only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
+            )
+        else:
+            logger.info(
+                f'Clearing total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
+            )
+            cls.clear_dir_with_shutil(main_user_dir)
+            logger.info(
+                f'Cleared total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
+            )
+
+    @staticmethod
+    def clear_dir_with_shutil(dir_path):
+        dir_path = Path(dir_path)
+        if not dir_path.is_dir():
+            logger.warning(f'{dir_path} is not exists, ignore.')
+            return
+        import shutil
+        shutil.rmtree(dir_path)
 
     @classmethod
-    def clear_dir(cls, dir_path, port=None):
+    def clear_dir(cls, dir_path):
         dir_path = Path(dir_path)
-        if port:
-            dir_path = dir_path / f'chrome_{port}'
-        logger.info(f'Clear dir: {dir_path}.')
         if not dir_path.is_dir():
-            logger.info(f'Dir is not exist: {dir_path}.')
+            logger.warning(f'{dir_path} not exists, ignore.')
+            return
+        if not dir_path.is_dir():
+            logger.info(f'{dir_path} is not exist:.')
             return True
-        logger.info(f'Cleaning {dir_path}...')
         for f in dir_path.iterdir():
             if f.is_dir():
                 cls.clear_dir(f)
@@ -216,7 +255,6 @@ class ChromeDaemon(object):
                 f.unlink()
                 logger.info(f'File removed: {f}')
         dir_path.rmdir()
-        logger.info(f'Folder removed: {dir_path}')
 
     @property
     def ok(self):
