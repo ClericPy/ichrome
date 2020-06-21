@@ -16,8 +16,6 @@ from torequests.utils import timepass, ttime
 from .base import (clear_chrome_process, get_dir_size, get_memory_by_port,
                    get_proc, get_readable_dir_size)
 from .logs import logger
-
-
 """
 Sync / block operations for launching chrome processes.
 """
@@ -69,7 +67,7 @@ class ChromeDaemon(object):
     """
 
     port_in_using: set = set()
-    PC_UA = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"
+    PC_UA = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"
     MAC_OS_UA = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0_1) Version/8.0.1a Safari/728.28.19"
     )
