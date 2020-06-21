@@ -4,17 +4,15 @@ iChrome common use cases.
 """
 
 
-def network_sniffer():
+def network_sniffer(timeout=60):
     """network flow sniffer
 
-        0. launch a chrome daemon before running this use case
-            > python3 -m ichrome
         1. run the function.
         2. change url of chrome's tab.
         3. watch the console logs.
     """
     import asyncio
-    from ichrome import AsyncChrome, AsyncTab
+    from ichrome import AsyncChrome, AsyncTab, AsyncChromeDaemon
     import json
 
     get_data_value = AsyncTab.get_data_value
@@ -30,47 +28,46 @@ def network_sniffer():
         # print(r)
 
     async def main():
-        # listen network flow in 60 s
-        timeout = 60
-        async with AsyncChrome() as chrome:
-            tab: AsyncTab = await chrome[0]
-            async with tab():
-                await tab.wait_request(filter_function=filter_function,
-                                       timeout=timeout)
+        async with AsyncChromeDaemon():
+            async with AsyncChrome() as chrome:
+                async with chrome.connect_tab(0) as tab:
+                    await tab.wait_request(filter_function=filter_function,
+                                           timeout=timeout)
 
     asyncio.run(main())
 
 
-def html_headless_crawler():
+def html_headless_crawler(url='http://httpbin.org/html'):
     """crawl a page with headless chrome"""
     import asyncio
     import re
 
-    from ichrome import AsyncChrome, AsyncTab, AsyncChromeDaemon
+    from ichrome import AsyncChrome, AsyncChromeDaemon
 
     # WARNING: Chrome has a limit of 6 connections per host name, and a max of 10 connections.
     # Read more: https://blog.bluetriangle.com/blocking-web-performance-villain
-    test_urls = ['http://httpbin.org/html'] * 3
 
     async def main():
         # crawl 3 urls in 3 tabs
         timeout = 3
 
         async def crawl(url):
-            tab: AsyncTab = await chrome.new_tab(url)
-            async with tab():
+            async with chrome.connect_tab(url, True) as tab:
                 await tab.wait_loading(timeout=timeout)
                 html = await tab.html
                 result = re.search('<h1>(.*?)</h1>', html).group(1)
                 print(result)
                 assert result == 'Herman Melville - Moby-Dick'
-                await tab.close()
-
+        # multi-urls concurrently crawl
+        # test_urls = ['http://httpbin.org/html'] * 3
+        # async with AsyncChromeDaemon(headless=True):
+        #     async with AsyncChrome() as chrome:
+        #         tasks = [asyncio.ensure_future(crawl(url)) for url in test_urls]
+        #         await asyncio.wait(tasks)
+        #         # await asyncio.sleep(2)
         async with AsyncChromeDaemon(headless=True):
             async with AsyncChrome() as chrome:
-                tasks = [asyncio.ensure_future(crawl(url)) for url in test_urls]
-                await asyncio.wait(tasks)
-                # await asyncio.sleep(2)
+                await crawl(url)
 
     asyncio.run(main())
 
@@ -105,6 +102,6 @@ def custom_ua_headless_crawler():
 
 if __name__ == "__main__":
     pass
-    # network_sniffer()
-    # html_headless_crawler()
+    # network_sniffer(120)
+    # html_headless_crawler('http://httpbin.org/html')
     # custom_ua_headless_crawler()
