@@ -13,15 +13,20 @@ def main():
     All the unknown args will be appended to extra_config as chrome original args.
 
 Demo:
-    > python -m ichrome --host=127.0.0.1 --window-size=1212,1212 --incognito
-    > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
+    > python -m ichrome -H 127.0.0.1 -p 9222 --window-size=1212,1212 --incognito
+    > ChromeDaemon cmd args: port=9222, {'chrome_path': '', 'host': '127.0.0.1', 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': WindowsPath('C:/Users/root/ichrome_user_data'), 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout':1, 'proc_check_interval': 5, 'debug': False}
+
+    > python -m ichrome
+    > ChromeDaemon cmd args: port=9222, {'chrome_path': '', 'host': '127.0.0.1', 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': WindowsPath('C:/Users/root/ichrome_user_data'), 'disable_image': False, 'start_url': 'about:blank', 'extra_config': [], 'max_deaths': 1, 'timeout': 1, 'proc_check_interval': 5, 'debug': False}
 
 Other operations:
     1. kill local chrome process with given port:
         python -m ichrome -s 9222
+        python -m ichrome -k 9222
     2. clear user_data_dir path (remove the folder and files):
         python -m ichrome --clear
         python -m ichrome --clean
+        python -m ichrome -C -p 9222
     3. show ChromeDaemon.__doc__:
         python -m ichrome --doc
     4. crawl the URL, output the HTML DOM:
@@ -44,7 +49,8 @@ Other operations:
         help=
         "chrome executable file path, default to null for automatic searching",
         default="")
-    parser.add_argument("--host",
+    parser.add_argument("-H",
+                        "--host",
                         help="--remote-debugging-address, default to 127.0.0.1",
                         default="127.0.0.1")
     parser.add_argument("-p",
@@ -59,6 +65,7 @@ Other operations:
         action="store_true")
     parser.add_argument(
         "-s",
+        "-k",
         "--shutdown",
         help="shutdown the given port, only for local running chrome",
         type=int)
@@ -138,6 +145,12 @@ Other operations:
                         help="set logger level to DEBUG",
                         default=False,
                         action="store_true")
+    parser.add_argument(
+        "-K",
+        "--killall",
+        help="killall chrome launched local with --remote-debugging-port",
+        default=False,
+        action="store_true")
     args, extra_config = parser.parse_known_args()
     if args.version:
         print(__version__)
@@ -158,6 +171,10 @@ Other operations:
         logger.setLevel(1)
         ChromeDaemon.clear_chrome_process(args.shutdown,
                                           max_deaths=args.max_deaths)
+        return
+    if args.killall:
+        logger.setLevel(1)
+        ChromeDaemon.clear_chrome_process(None, max_deaths=args.max_deaths)
         return
     if args.clean:
         logger.setLevel(1)

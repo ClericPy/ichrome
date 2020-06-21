@@ -6,14 +6,18 @@ import socket
 import subprocess
 import threading
 import time
+from getpass import getuser
 from pathlib import Path
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
-from .base import clear_chrome_process, get_memory_by_port, get_proc, get_dir_size, get_readable_dir_size
+from .base import (clear_chrome_process, get_dir_size, get_memory_by_port,
+                   get_proc, get_readable_dir_size)
 from .logs import logger
+
+
 """
 Sync / block operations for launching chrome processes.
 """
@@ -40,7 +44,7 @@ class ChromeDaemon(object):
 
         on_startup & on_shutdown: function which handled a ChromeDaemon object while startup or shutdown
 
-    default extra_config: ["--disable-gpu", "--no-first-run"]
+    default extra_config: ["--disable-gpu", "--no-first-run"], root user should append "--no-sandbox"
 
     common args:
 
@@ -123,15 +127,8 @@ class ChromeDaemon(object):
         if extra_config and isinstance(extra_config, str):
             extra_config = [extra_config]
         self.extra_config = extra_config or ["--disable-gpu", "--no-first-run"]
-        if '--no-sandbox' not in str(self.extra_config):
-            import getpass
-            if getpass.getuser() == 'root':
-                if extra_config:
-                    self.extra_config.append('--no-sandbox')
-                else:
-                    logger.warning(
-                        'root user without "--no-sandbox" may launch fail for: "Running as root without --no-sandbox is not supported."'
-                    )
+        if '--no-sandbox' not in str(self.extra_config) and getuser() == 'root':
+            self.extra_config.append('--no-sandbox')
         if not isinstance(self.extra_config, list):
             raise TypeError("extra_config type should be list.")
         self.chrome_proc_start_time = time.time()
