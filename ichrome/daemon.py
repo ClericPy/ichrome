@@ -6,13 +6,15 @@ import socket
 import subprocess
 import threading
 import time
+from getpass import getuser
 from pathlib import Path
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
-from torequests.utils import get_readable_size, timepass, ttime
+from torequests.utils import timepass, ttime
 
-from .base import clear_chrome_process, get_memory_by_port, get_proc
+from .base import (clear_chrome_process, get_dir_size, get_memory_by_port,
+                   get_proc, get_readable_dir_size)
 from .logs import logger
 """
 Sync / block operations for launching chrome processes.
@@ -40,7 +42,7 @@ class ChromeDaemon(object):
 
         on_startup & on_shutdown: function which handled a ChromeDaemon object while startup or shutdown
 
-    default extra_config: ["--disable-gpu", "--no-first-run"]
+    default extra_config: ["--disable-gpu", "--no-first-run"], root user should append "--no-sandbox"
 
     common args:
 
@@ -65,7 +67,7 @@ class ChromeDaemon(object):
     """
 
     port_in_using: set = set()
-    PC_UA = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"
+    PC_UA = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"
     MAC_OS_UA = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0_1) Version/8.0.1a Safari/728.28.19"
     )
@@ -114,11 +116,17 @@ class ChromeDaemon(object):
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image
-        self._wrap_user_data_dir(user_data_dir)
+        if '--user-data-dir=' in str(extra_config):
+            # ignore custom user_data_dir by ichrome
+            self.user_data_dir = None
+        else:
+            self._wrap_user_data_dir(user_data_dir)
         self.start_url = start_url
         if extra_config and isinstance(extra_config, str):
             extra_config = [extra_config]
         self.extra_config = extra_config or ["--disable-gpu", "--no-first-run"]
+        if '--no-sandbox' not in str(self.extra_config) and getuser() == 'root':
+            self.extra_config.append('--no-sandbox')
         if not isinstance(self.extra_config, list):
             raise TypeError("extra_config type should be list.")
         self.chrome_proc_start_time = time.time()
@@ -158,48 +166,83 @@ class ChromeDaemon(object):
 
     @staticmethod
     def get_dir_size(path):
-        return sum(f.stat().st_size for f in path.glob("**/*") if f.is_file())
+        return get_dir_size(path)
 
-    def _wrap_user_data_dir(self, user_data_dir):
-        """refactor this function to set accurate dir."""
+    @staticmethod
+    def get_readable_dir_size(path):
+        return get_readable_dir_size(path)
+
+    @classmethod
+    def _ensure_user_dir(cls, user_data_dir):
         if user_data_dir is None:
-            user_data_dir = Path.home() / 'ichrome_user_data'
-        elif user_data_dir in self.IGNORE_USER_DIR_FLAGS:
-            self.user_data_dir = None
+            # use default path
+            return Path.home() / 'ichrome_user_data'
+        elif user_data_dir in cls.IGNORE_USER_DIR_FLAGS:
+            # ignore custom path settings
             logger.debug(
                 'Ignore custom user_data_dir, using default user set by system.'
             )
-            return
+            return None
         else:
-            user_data_dir = Path(user_data_dir)
-        self.user_data_dir = user_data_dir / f"chrome_{self.port}"
+            # valid path string
+            return Path(user_data_dir)
+
+    def _wrap_user_data_dir(self, user_data_dir):
+        main_user_dir = self._ensure_user_dir(user_data_dir)
+        if main_user_dir is None:
+            return
+        port_user_dir = main_user_dir / f"chrome_{self.port}"
+        self.user_data_dir = port_user_dir
         if not self.user_data_dir.is_dir():
             logger.warning(
                 f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
             )
             self.ensure_dir(self.user_data_dir)
-        port_dir_size = get_readable_size(self.get_dir_size(self.user_data_dir),
-                                          rounded=1)
-        total_dir_size = get_readable_size(self.get_dir_size(user_data_dir),
-                                           rounded=1)
+        port_dir_size = get_readable_dir_size(port_user_dir)
+        total_dir_size = get_readable_dir_size(main_user_dir)
         logger.info(
             f'user_data_dir({self.user_data_dir}) size: {port_dir_size} / {total_dir_size}'
         )
 
     @classmethod
     def clear_user_dir(cls, user_data_dir, port=None):
-        return cls.clear_dir(user_data_dir, port=port)
+        main_user_dir = cls._ensure_user_dir(user_data_dir)
+        if port:
+            port_user_dir = main_user_dir / f"chrome_{port}"
+            logger.info(
+                f'Clearing only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
+            )
+            cls.clear_dir_with_shutil(port_user_dir)
+            logger.info(
+                f'Cleared only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
+            )
+        else:
+            logger.info(
+                f'Clearing total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
+            )
+            cls.clear_dir_with_shutil(main_user_dir)
+            logger.info(
+                f'Cleared total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
+            )
+
+    @staticmethod
+    def clear_dir_with_shutil(dir_path):
+        dir_path = Path(dir_path)
+        if not dir_path.is_dir():
+            logger.warning(f'{dir_path} is not exists, ignore.')
+            return
+        import shutil
+        shutil.rmtree(dir_path)
 
     @classmethod
-    def clear_dir(cls, dir_path, port=None):
+    def clear_dir(cls, dir_path):
         dir_path = Path(dir_path)
-        if port:
-            dir_path = dir_path / f'chrome_{port}'
-        logger.info(f'Clear dir: {dir_path}.')
         if not dir_path.is_dir():
-            logger.info(f'Dir is not exist: {dir_path}.')
+            logger.warning(f'{dir_path} not exists, ignore.')
+            return
+        if not dir_path.is_dir():
+            logger.info(f'{dir_path} is not exist:.')
             return True
-        logger.info(f'Cleaning {dir_path}...')
         for f in dir_path.iterdir():
             if f.is_dir():
                 cls.clear_dir(f)
@@ -207,7 +250,6 @@ class ChromeDaemon(object):
                 f.unlink()
                 logger.info(f'File removed: {f}')
         dir_path.rmdir()
-        logger.info(f'Folder removed: {dir_path}')
 
     @property
     def ok(self):
@@ -580,6 +622,20 @@ class AsyncChromeDaemon(ChromeDaemon):
         # awaitable property
         return self.check_chrome_ready()
 
+    @classmethod
+    async def get_free_port(cls,
+                            host="127.0.0.1",
+                            start=9222,
+                            max_tries=100,
+                            timeout=1):
+        return await asyncio.get_running_loop().run_in_executor(
+            None,
+            super().get_free_port,
+            host=host,
+            start=start,
+            max_tries=max_tries,
+            timeout=timeout)
+
     async def check_chrome_ready(self):
         if self.proc_ok and await self.check_connection():
             logger.info(
@@ -651,16 +707,17 @@ class AsyncChromeDaemon(ChromeDaemon):
 
 class ChromeWorkers:
 
-    def __init__(self, args, kwargs):
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(self, start_port=9222, workers=1, kwargs=None):
+        self.start_port = start_port or 9222
+        self.workers = workers or 1
+        self.kwargs = kwargs or {}
         self.daemons = []
 
     async def __aenter__(self):
         return await self.create_chrome_workers()
 
     async def create_chrome_workers(self):
-        for port in range(self.args.port, self.args.port + self.args.workers):
+        for port in range(self.start_port, self.start_port + self.workers):
             logger.info("ChromeDaemon cmd args: port=%s, %s" %
                         (port, self.kwargs))
             self.daemons.append(await
@@ -675,6 +732,6 @@ class ChromeWorkers:
             await daemon.__aexit__()
 
     @classmethod
-    async def run_chrome_workers(cls, args, kwargs):
-        async with cls(args, kwargs):
+    async def run_chrome_workers(cls, start_port, workers, kwargs):
+        async with cls(start_port, workers, kwargs):
             pass

@@ -47,7 +47,7 @@ async def _ensure_awaitable_callback_result(callback_function, result):
         return callback_result
 
 
-class _TabConnectionManager(object):
+class _TabConnectionManager:
 
     def __init__(self, tabs):
         self.tabs = tabs
@@ -65,7 +65,37 @@ class _TabConnectionManager(object):
                 await ws_connection.shutdown()
 
 
-class _WSConnection(object):
+class _SingleTabConnectionManager:
+
+    def __init__(self,
+                 chrome: 'Chrome',
+                 index: Union[None, int, str] = 0,
+                 auto_close: bool = False):
+        self.chrome = chrome
+        self.index = index
+        self.tab: 'Tab' = None
+        self._ws_connection: '_WSConnection' = None
+        self._auto_close = auto_close
+
+    async def __aenter__(self) -> 'Tab':
+        if isinstance(self.index, int):
+            self.tab = await self.chrome.get_tab(self.index)
+        else:
+            self.tab = await self.chrome.new_tab(self.index or "")
+        if not self.tab:
+            raise ValueError(f'Tab not found.')
+        self._ws_connection = _WSConnection(self.tab)
+        await self._ws_connection.__aenter__()
+        return self.tab
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self._ws_connection:
+            if self._auto_close:
+                await self.tab.close(timeout=0)
+            await self._ws_connection.__aexit__()
+
+
+class _WSConnection:
 
     def __init__(self, tab):
         self.tab = tab
@@ -165,6 +195,7 @@ class Tab(GetValueMixin):
     _DEFAULT_RECV_TIMEOUT = 5.0
     # aiohttp ws timeout default to 10.0, here is 5
     _DEFAULT_CONNECT_TIMEOUT = 5.0
+    _RECV_DAEMON_BREAK_CALLBACK = None
 
     def __init__(self,
                  tab_id: str = None,
@@ -179,6 +210,7 @@ class Tab(GetValueMixin):
                  timeout=NotSet,
                  ws_kwargs: dict = None,
                  default_recv_callback: Callable = None,
+                 _recv_daemon_break_callback: Callable = None,
                  **kwargs):
         """
         original Tab JSON::
@@ -214,8 +246,10 @@ class Tab(GetValueMixin):
         :type timeout: [type], optional
         :param ws_kwargs: kwargs for ws connection, defaults to None
         :type ws_kwargs: dict, optional
-        :param default_recv_callback: sync/async function only accept 1 arg of data comes from ws recv, defaults to None
+        :param default_recv_callback: called for each data received, sync/async function only accept 1 arg of data comes from ws recv, defaults to None
         :type default_recv_callback: Callable, optional
+        :param _recv_daemon_break_callback: like the tab_close_callback. sync/async function only accept 1 arg of self while _recv_daemon break, defaults to None
+        :type _recv_daemon_break_callback: Callable, optional
         :raises ValueError: [description]
         """
         tab_id = tab_id or kwargs.pop('id')
@@ -238,6 +272,7 @@ class Tab(GetValueMixin):
         self._message_id = 0
         self.ws = None
         self.default_recv_callback = default_recv_callback
+        self._recv_daemon_break_callback = _recv_daemon_break_callback or self._RECV_DAEMON_BREAK_CALLBACK
         if self.chrome:
             self.req = self.chrome.req
         else:
@@ -378,6 +413,9 @@ class Tab(GetValueMixin):
                 else:
                     del f
         logger.debug(f'[break] {self!r} _recv_daemon loop break.')
+        if self._recv_daemon_break_callback:
+            return await _ensure_awaitable_callback_result(
+                self._recv_daemon_break_callback, self)
 
     async def send(self,
                    method: str,
@@ -645,9 +683,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 timeout=None,
                                 callback_function: Optional[Callable] = None,
                                 timeout_stop_loading=False):
-        return self.wait_loading(timeout=timeout,
-                                 callback_function=callback_function,
-                                 timeout_stop_loading=timeout_stop_loading)
+        return await self.wait_loading(
+            timeout=timeout,
+            callback_function=callback_function,
+            timeout_stop_loading=timeout_stop_loading)
 
     async def wait_event(
         self,
@@ -1085,7 +1124,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
         Demo::
 
-            # no group
+            # no group / (?:) / (?<=) / (?!)
             print(await tab.findall('<title>.*?</title>'))
             # ['<title>123456789</title>']
 
@@ -1108,12 +1147,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         :param timeout: defaults to NotSet
         :type timeout: [type], optional
         """
-        group_count = len(re.findall(r'(?<!\\)\(', regex))
+        if re.search(r'(?<!\\)/', regex):
+            regex = re.sub(r'(?<!\\)/', r'\/', regex)
+        group_count = len(re.findall(r'(?<!\\)\((?!\?)', regex))
+        act = 'matchAll' if 'g' in flags else 'match'
         code = '''
 var group_count = %s
 var result = []
-var regex = new RegExp(`%s`, `%s`)
-var items = [...document.querySelector(`%s`).%s.matchAll(regex)]
+var items = [...document.querySelector(`%s`).%s.%s(/%s/%s)]
 items.forEach((item) => {
     if (group_count <= 1) {
         result.push(item[group_count])
@@ -1126,7 +1167,7 @@ items.forEach((item) => {
     }
 })
 JSON.stringify(result)
-''' % (group_count, regex, flags, cssselector, attribute)
+''' % (group_count, cssselector, attribute, act, regex, flags)
         result = await self.js(code,
                                value_path='result.result.value',
                                timeout=timeout)
@@ -1134,6 +1175,17 @@ JSON.stringify(result)
             return json.loads(result)
         else:
             return []
+
+    async def contains(self,
+                       text,
+                       cssselector: str = 'html',
+                       attribute: str = 'outerHTML',
+                       timeout=NotSet) -> bool:
+        """alias for Tab.includes"""
+        return await self.includes(text=text,
+                                   cssselector=cssselector,
+                                   attribute=attribute,
+                                   timeout=timeout)
 
     async def includes(self,
                        text,
@@ -1146,7 +1198,7 @@ JSON.stringify(result)
         :type text: str
         :param cssselector: css selector for outerHTML, defaults to 'html'
         :type cssselector: str, optional
-        :param attribute: attribute of the selected element, defaults to 'outerHTML'
+        :param attribute: attribute of the selected element, defaults to 'outerHTML'. Sometimes for case-insensitive usage by setting `attribute='textContent.toLowerCase()'`
         :type attribute: str, optional
         :return: whether the outerHTML contains substring.
         :rtype: bool
@@ -1261,10 +1313,15 @@ JSON.stringify(result)""" % (
         )
         response = None
         try:
-            response_items_str = (await self.js(
-                javascript, timeout=timeout,
-                value_path='result.result.value')) or ''
-            items = json.loads(response_items_str)
+            response_items_str = (await
+                                  self.js(javascript,
+                                          timeout=timeout,
+                                          value_path='result.result.value'))
+            try:
+                items = json.loads(
+                    response_items_str) if response_items_str else []
+            except (json.JSONDecodeError, ValueError):
+                items = []
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
                 if result:
@@ -1681,7 +1738,7 @@ JSON.stringify(result)""" % (
                                 timeout=timeout)
 
 
-class OffsetMoveWalker(object):
+class OffsetMoveWalker:
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
 
     def __init__(self, start_x, start_y, tab: Tab, timeout=NotSet):
@@ -1741,7 +1798,7 @@ class OffsetDragWalker(OffsetMoveWalker):
         return self
 
 
-class Listener(object):
+class Listener:
 
     def __init__(self):
         self._registered_futures = WeakValueDictionary()
@@ -1974,6 +2031,23 @@ class Chrome(GetValueMixin):
         if tab_ids is None:
             tab_ids = await self.tabs
         return [await self.close_tab(tab_id) for tab_id in tab_ids]
+
+    def connect_tab(self,
+                    index: Union[None, int, str] = 0,
+                    auto_close: bool = False):
+        '''More easier way to init a connected Tab with `async with`.
+
+        Got a connected Tab object by using `async with chrome.connect_tab(0):`
+
+            index = 0 means the current tab.
+            index = None means create a new tab.
+            index = 'http://python.org' means create a new tab with url.
+
+            If auto_close is True: close this tab while exiting context.
+'''
+        return _SingleTabConnectionManager(chrome=self,
+                                           index=index,
+                                           auto_close=auto_close)
 
     def connect_tabs(self, *tabs) -> '_TabConnectionManager':
         '''async with chrome.connect_tabs([tab1, tab2]):.

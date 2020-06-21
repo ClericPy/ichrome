@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import re
 import time
+from pathlib import Path
 from typing import List
 
 import psutil
+from torequests.utils import get_readable_size
 
 from .logs import logger
-
-
 """
 For base usage with sync utils.
 """
@@ -85,7 +85,7 @@ def get_proc_by_regex(regex, proc_names=None):
 
 
 def get_proc(port=9222) -> List[psutil.Process]:
-    regex = f"--remote-debugging-port={port}"
+    regex = f"--remote-debugging-port={port or ''}"
     proc_names = {"chrome.exe", "chrome"}
     return get_proc_by_regex(regex, proc_names=proc_names)
 
@@ -107,7 +107,6 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
     set timeout to avoid running forever.
     set max_deaths and port, will return before timeout.
     """
-    port = port or ""
     killed_count = 0
     start_time = time.time()
     if timeout is None:
@@ -115,7 +114,8 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
     while 1:
         procs = get_proc(port)
         for proc in procs:
-            logger.debug(f"killing {proc}, port: {port}")
+            logger.debug(
+                f"[Killing] {proc}, port: {port}. {' '.join(proc.cmdline())}")
             try:
                 proc.kill()
             except psutil._exceptions.NoSuchProcess:
@@ -131,3 +131,11 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
             time.sleep(interval)
             continue
         return
+
+
+def get_dir_size(path):
+    return sum(f.stat().st_size for f in Path(path).glob("**/*") if f.is_file())
+
+
+def get_readable_dir_size(path):
+    return get_readable_size(get_dir_size(path), rounded=1)

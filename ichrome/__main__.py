@@ -13,32 +13,44 @@ def main():
     All the unknown args will be appended to extra_config as chrome original args.
 
 Demo:
-    > python -m ichrome --host=127.0.0.1 --window-size=1212,1212 --incognito
-    > ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': '127.0.0.1', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout': 2}
+    > python -m ichrome -H 127.0.0.1 -p 9222 --window-size=1212,1212 --incognito
+    > ChromeDaemon cmd args: port=9222, {'chrome_path': '', 'host': '127.0.0.1', 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': WindowsPath('C:/Users/root/ichrome_user_data'), 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout':1, 'proc_check_interval': 5, 'debug': False}
+
+    > python -m ichrome
+    > ChromeDaemon cmd args: port=9222, {'chrome_path': '', 'host': '127.0.0.1', 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': WindowsPath('C:/Users/root/ichrome_user_data'), 'disable_image': False, 'start_url': 'about:blank', 'extra_config': [], 'max_deaths': 1, 'timeout': 1, 'proc_check_interval': 5, 'debug': False}
 
 Other operations:
     1. kill local chrome process with given port:
         python -m ichrome -s 9222
+        python -m ichrome -k 9222
     2. clear user_data_dir path (remove the folder and files):
         python -m ichrome --clear
         python -m ichrome --clean
+        python -m ichrome -C -p 9222
     3. show ChromeDaemon.__doc__:
         python -m ichrome --doc
     4. crawl the URL, output the HTML DOM:
-        python -m ichrome --crawl --headless --timeout=2 http://myip.ipip.net/
+        python -m ichrome --crawl --timeout=2 http://myip.ipip.net/
 '''
     parser = argparse.ArgumentParser(usage=usage)
-    parser.add_argument("-V",
+    parser.add_argument("-v",
+                        "-V",
                         "--version",
                         help="ichrome version info",
                         action="store_true")
+    parser.add_argument("-c",
+                        "--config",
+                        help="load config dict from JSON file of given path",
+                        default="")
     parser.add_argument(
-        "-c",
+        "-cp",
+        "--chrome-path",
         "--chrome_path",
         help=
         "chrome executable file path, default to null for automatic searching",
         default="")
-    parser.add_argument("--host",
+    parser.add_argument("-H",
+                        "--host",
                         help="--remote-debugging-address, default to 127.0.0.1",
                         default="127.0.0.1")
     parser.add_argument("-p",
@@ -49,38 +61,45 @@ Other operations:
     parser.add_argument(
         "--headless",
         help="--headless and --hide-scrollbars, default to False",
-        default=False,
+        default=argparse.SUPPRESS,
         action="store_true")
     parser.add_argument(
         "-s",
+        "-k",
         "--shutdown",
         help="shutdown the given port, only for local running chrome",
         type=int)
     parser.add_argument(
+        "-A",
+        "--user-agent",
         "--user_agent",
-        help=
-        "--user-agen, default to 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'",
+        help=f"--user-agent, default to Chrome PC: {ChromeDaemon.PC_UA}",
         default="")
-    parser.add_argument("--proxy",
+    parser.add_argument("-x",
+                        "--proxy",
                         help="--proxy-server, default to None",
                         default="")
     parser.add_argument(
+        "-U",
+        "--user-data-dir",
         "--user_data_dir",
-        help=
-        "user_data_dir to save the user data, default to ~/ichrome_user_data",
+        help="user_data_dir to save user data, default to ~/ichrome_user_data",
         default=Path.home() / 'ichrome_user_data')
     parser.add_argument(
+        "--disable-image",
         "--disable_image",
         help="disable image for loading performance, default to False",
         action="store_true")
     parser.add_argument(
+        "-url",
+        "--start-url",
         "--start_url",
         help="start url while launching chrome, default to about:blank",
         default="about:blank")
     parser.add_argument(
+        "--max-deaths",
         "--max_deaths",
-        help=
-        "max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 for without auto-restart",
+        help="restart times. default to 1 for without auto-restart",
         default=1,
         type=int)
     parser.add_argument(
@@ -88,23 +107,25 @@ Other operations:
         help="timeout to connect the remote server, default to 1 for localhost",
         default=1,
         type=int)
+    parser.add_argument("-w",
+                        "--workers",
+                        help="the number of worker processes, default to 1",
+                        default=1,
+                        type=int)
     parser.add_argument(
-        "--workers",
-        help=
-        "the number of worker processes with auto-increment port, default to 1",
-        default=1,
-        type=int)
-    parser.add_argument(
+        "--proc-check-interval",
         "--proc_check_interval",
         dest='proc_check_interval',
         help="check chrome process alive every interval seconds",
         default=5,
         type=int)
-    parser.add_argument("--crawl",
+    parser.add_argument("-crawl",
+                        "--crawl",
                         help="crawl the given URL, output the HTML DOM",
                         default=False,
                         action="store_true")
-    parser.add_argument("--clean",
+    parser.add_argument("-C",
+                        "--clear",
                         "--clear",
                         dest='clean',
                         help="clean user_data_dir",
@@ -120,14 +141,42 @@ Other operations:
                         help="set logger level to DEBUG",
                         default=False,
                         action="store_true")
+    parser.add_argument("-cc",
+                        "--clear-cache",
+                        "--clear_cache",
+                        help="clear cache for given port, port default to 9222",
+                        default=False,
+                        action="store_true")
+    parser.add_argument(
+        "-K",
+        "--killall",
+        help="killall chrome launched local with --remote-debugging-port",
+        default=False,
+        action="store_true")
     args, extra_config = parser.parse_known_args()
     if args.version:
         print(__version__)
+        return
+    if args.config:
+        path = Path(args.config)
+        if not (path.is_file() and path.exists()):
+            logger.error(f'config file not found: {path}')
+            return
+        import json
+        kwargs = json.loads(path.read_text())
+        start_port = kwargs.pop('port', 9222)
+        workers = kwargs.pop('workers', 1)
+        asyncio.run(
+            ChromeWorkers.run_chrome_workers(start_port, workers, kwargs))
         return
     if args.shutdown:
         logger.setLevel(1)
         ChromeDaemon.clear_chrome_process(args.shutdown,
                                           max_deaths=args.max_deaths)
+        return
+    if args.killall:
+        logger.setLevel(1)
+        ChromeDaemon.clear_chrome_process(None, max_deaths=args.max_deaths)
         return
     if args.clean:
         logger.setLevel(1)
@@ -143,7 +192,7 @@ Other operations:
     kwargs.update(
         chrome_path=args.chrome_path,
         host=args.host,
-        headless=args.headless,
+        headless=getattr(args, 'headless', False),
         user_agent=args.user_agent,
         proxy=args.proxy,
         user_data_dir=args.user_data_dir,
@@ -161,13 +210,19 @@ Other operations:
                 kwargs['start_url'] = config
                 kwargs['extra_config'].remove(config)
                 break
-    args.port = getattr(args, 'port', 9222)
     if '--dump-dom' in extra_config or args.crawl:
         logger.setLevel(60)
         from .debugger import crawl_once
+        kwargs['headless'] = getattr(args, 'headless', True)
         asyncio.run(crawl_once(**kwargs))
+    elif args.clear_cache:
+        from .debugger import clear_cache_handler
+        kwargs['headless'] = getattr(args, 'headless', True)
+        asyncio.run(clear_cache_handler(**kwargs))
     else:
-        asyncio.run(ChromeWorkers.run_chrome_workers(args, kwargs))
+        start_port = getattr(args, 'port', 9222)
+        asyncio.run(
+            ChromeWorkers.run_chrome_workers(start_port, args.workers, kwargs))
 
 
 if __name__ == "__main__":
