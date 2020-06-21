@@ -261,6 +261,7 @@ async def test_examples():
             assert chrome.get_memory() > 0
             await test_chrome(chrome)
             # ===================== Tab Test Cases =====================
+            # Duplicate, use async with chrome.connect_tab(None) instead
             tab: Tab = await chrome.new_tab()
             await test_tab_ws(tab)
             # same as: async with tab.connect():
