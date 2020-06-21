@@ -1263,10 +1263,15 @@ JSON.stringify(result)""" % (
         )
         response = None
         try:
-            response_items_str = (await self.js(
-                javascript, timeout=timeout,
-                value_path='result.result.value')) or ''
-            items = json.loads(response_items_str)
+            response_items_str = (await
+                                  self.js(javascript,
+                                          timeout=timeout,
+                                          value_path='result.result.value'))
+            try:
+                items = json.loads(
+                    response_items_str) if response_items_str else []
+            except (json.JSONDecodeError, ValueError):
+                items = []
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
                 if result:
