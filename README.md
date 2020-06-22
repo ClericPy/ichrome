@@ -105,7 +105,7 @@
 
 1. `set_url` / `reload`
     
-    > navigate to a new url. `reload` equals to `set_url(None)`
+    > navigate to a new url(return bool for whether load finished), or send `Page.reload` message.
 2. `wait_event`
     
     > listening the events with given name, and separate from other same-name events with filter_function, finally run the callback_function with result.
@@ -364,23 +364,24 @@ Python 3.7.1 (v3.7.1:260ec2c36a, Oct 20 2018, 14:57:15) [MSC v.1915 64 bit (AMD6
 Type "help", "copyright", "credits" or "license" for more information.
 >>> from ichrome.debugger import *
 >>> tab = get_a_tab()
->>> tab.set_url('http://bing.com')
-{'id': 4, 'result': {'frameId': 'DAC309349D270F07505C3DAB71084292', 'loaderId': '181418C22DB39654507D042627C22698'}}
->>> tab.click('#scpl0')
+>>> tab.set_url('https://github.com/ClericPy')
+True
+>>> tab.click('.pinned-item-list-item-content [href="/ClericPy/ichrome"]')
 Tag(a)
->>> tab.js('document.getElementById("sb_form_q").value = "jordan"')
-{'id': 16, 'result': {'result': {'type': 'string', 'value': 'jordan'}}}
->>> tab.click('#sb_form_go')
-Tag(input)
+>>> tab.wait_loading(2)
+True
+>>> tab.wait_loading(2)
+False
+>>> tab.js('document.body.innerHTML="Updated"')
+{'type': 'string', 'value': 'Updated'}
 >>> tab.history_back()
 True
->>> tab.set_html('hello')
-{'id': 17, 'result': {}}
+>>> tab.set_html('hello world')
+{'id': 21, 'result': {}}
 >>> tab.set_ua('no UA')
-INFO  2020-05-11 20:14:07 [ichrome] async_utils.py(790): [set_ua] <Tab(connected): 08F4AFF9B389B1D5880AF0C0988B6DD4> userAgent => no UA
-{'id': 12, 'result': {}}
+{'id': 22, 'result': {}}
 >>> tab.set_url('http://httpbin.org/user-agent')
-{'id': 14, 'result': {'frameId': '08F4AFF9B389B1D5880AF0C0988B6DD4', 'loaderId': '15761B915F7AC36DC4687C1EED28195B'}}
+True
 >>> tab.html
 '<html><head></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">{\n  "user-agent": "no UA"\n}\n</pre></body></html>'
 ```
