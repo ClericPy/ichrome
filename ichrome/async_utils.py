@@ -196,6 +196,7 @@ class Tab(GetValueMixin):
     # aiohttp ws timeout default to 10.0, here is 5
     _DEFAULT_CONNECT_TIMEOUT = 5.0
     _RECV_DAEMON_BREAK_CALLBACK = None
+    _DEFAULT_WS_KWARGS: Dict = {}
 
     def __init__(self,
                  tab_id: str = None,
@@ -266,7 +267,7 @@ class Tab(GetValueMixin):
         self.chrome = chrome
         self.timeout = self._DEFAULT_RECV_TIMEOUT if timeout is NotSet else timeout
         self._created_time = self.now
-        self.ws_kwargs = ws_kwargs or {}
+        self.ws_kwargs = ws_kwargs or self._DEFAULT_WS_KWARGS
         self.ws_kwargs.setdefault('timeout', self._DEFAULT_CONNECT_TIMEOUT)
         self._closed = False
         self._message_id = 0
