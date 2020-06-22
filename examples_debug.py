@@ -47,7 +47,6 @@ if __name__ == "__main__":
     test_set_ua()
     test_mouse_keyboard()
     test_js()
-    network_sniffer()
     # explicitly stop daemon is not necessary, daemon launched by debugger will auto shutdown after this script quit
     # if the daemon is not launched by this script (using an existing one), the auto-shutdown will not run.
     # daemon.stop()
