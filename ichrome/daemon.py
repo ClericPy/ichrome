@@ -200,7 +200,7 @@ class ChromeDaemon(object):
             self.ensure_dir(self.user_data_dir)
         port_dir_size = get_readable_dir_size(port_user_dir)
         total_dir_size = get_readable_dir_size(main_user_dir)
-        logger.info(
+        logger.debug(
             f'user_data_dir({self.user_data_dir}) size: {port_dir_size} / {total_dir_size}'
         )
 
@@ -209,19 +209,19 @@ class ChromeDaemon(object):
         main_user_dir = cls._ensure_user_dir(user_data_dir)
         if port:
             port_user_dir = main_user_dir / f"chrome_{port}"
-            logger.info(
+            logger.debug(
                 f'Clearing only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
             cls.clear_dir_with_shutil(port_user_dir)
-            logger.info(
+            logger.debug(
                 f'Cleared only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
         else:
-            logger.info(
+            logger.debug(
                 f'Clearing total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
             cls.clear_dir_with_shutil(main_user_dir)
-            logger.info(
+            logger.debug(
                 f'Cleared total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
 
@@ -241,14 +241,14 @@ class ChromeDaemon(object):
             logger.warning(f'{dir_path} not exists, ignore.')
             return
         if not dir_path.is_dir():
-            logger.info(f'{dir_path} is not exist:.')
+            logger.debug(f'{dir_path} is not exist:.')
             return True
         for f in dir_path.iterdir():
             if f.is_dir():
                 cls.clear_dir(f)
             else:
                 f.unlink()
-                logger.info(f'File removed: {f}')
+                logger.debug(f'File removed: {f}')
         dir_path.rmdir()
 
     @property
@@ -317,7 +317,7 @@ class ChromeDaemon(object):
 
     def check_chrome_ready(self):
         if self.ok:
-            logger.info(
+            logger.debug(
                 f"launch_chrome success: {self}, args: {self.proc.args}")
             return True
         else:
@@ -354,7 +354,7 @@ class ChromeDaemon(object):
                                               self._timeout)
             if ok:
                 return True
-            logger.info(f"shutting down chrome using port {self.port}")
+            logger.debug(f"shutting down chrome using port {self.port}")
             self.kill(True)
         else:
             raise ValueError("port in used")
@@ -407,12 +407,12 @@ class ChromeDaemon(object):
         deaths = 0
         while self._use_daemon:
             if self._shutdown:
-                logger.info(
+                logger.debug(
                     f"{self} daemon break after shutdown({ttime(self._shutdown)})."
                 )
                 break
             if deaths >= self.max_deaths:
-                logger.info(
+                logger.debug(
                     f"{self} daemon break for deaths is more than {self.max_deaths} times."
                 )
                 break
@@ -426,7 +426,7 @@ class ChromeDaemon(object):
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
-        logger.info(f"{self} daemon exited. return_code: {return_code}")
+        logger.debug(f"{self} daemon exited. return_code: {return_code}")
         self.update_shutdown_time()
         return return_code
 
@@ -467,7 +467,7 @@ class ChromeDaemon(object):
         self.port_in_using.discard(self.port)
 
     def restart(self):
-        logger.info(f"restarting {self}")
+        logger.debug(f"restarting {self}")
         self.kill()
         return self.launch_chrome()
 
@@ -478,10 +478,10 @@ class ChromeDaemon(object):
 
     def shutdown(self, reason=None):
         if self._shutdown:
-            logger.info(f"{self} shutdown at {ttime(self._shutdown)} yet.")
+            logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
         reason = f' for {reason}' if reason else ''
-        logger.info(
+        logger.debug(
             f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
         )
         self.update_shutdown_time()
@@ -593,7 +593,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         self.proc = subprocess.Popen(**self.cmd_args)
 
     async def restart(self):
-        logger.info(f"restarting {self}")
+        logger.debug(f"restarting {self}")
         await self.loop.run_in_executor(None, super().kill)
         return await self.launch_chrome()
 
@@ -638,7 +638,7 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def check_chrome_ready(self):
         if self.proc_ok and await self.check_connection():
-            logger.info(
+            logger.debug(
                 f"launch_chrome success: {self}, args: {self.proc.args}")
             return True
         else:
@@ -673,12 +673,12 @@ class AsyncChromeDaemon(ChromeDaemon):
         deaths = 0
         while self._use_daemon:
             if self._shutdown:
-                logger.info(
+                logger.debug(
                     f"{self} daemon break after shutdown({ttime(self._shutdown)})."
                 )
                 break
             if deaths >= self.max_deaths:
-                logger.info(
+                logger.debug(
                     f"{self} daemon break for deaths is more than {self.max_deaths} times."
                 )
                 break
@@ -693,7 +693,7 @@ class AsyncChromeDaemon(ChromeDaemon):
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
-        logger.info(f"{self} daemon exited.")
+        logger.debug(f"{self} daemon exited.")
         self.update_shutdown_time()
         return return_code
 
@@ -718,7 +718,7 @@ class ChromeWorkers:
 
     async def create_chrome_workers(self):
         for port in range(self.start_port, self.start_port + self.workers):
-            logger.info("ChromeDaemon cmd args: port=%s, %s" %
+            logger.debug("ChromeDaemon cmd args: port=%s, %s" %
                         (port, self.kwargs))
             self.daemons.append(await
                                 AsyncChromeDaemon(port=port,

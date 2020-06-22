@@ -58,6 +58,10 @@ Other operations:
                         help="--remote-debugging-port, default to 9222",
                         default=argparse.SUPPRESS,
                         type=int)
+    parser.add_argument("--log-level",
+                        "--log_level",
+                        help="logger level, will be overwrited by --debug",
+                        default=argparse.SUPPRESS)
     parser.add_argument(
         "--headless",
         help="--headless and --hide-scrollbars, default to False",
@@ -204,6 +208,9 @@ Other operations:
         proc_check_interval=args.proc_check_interval,
         debug=args.debug,
     )
+    log_level = getattr(args, 'log_level', None)
+    if log_level:
+        logger.setLevel(log_level)
     if args.start_url == 'about:blank' or not args.start_url:
         for config in kwargs['extra_config']:
             if re.match('^https?://', config):
