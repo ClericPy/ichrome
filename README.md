@@ -3,6 +3,8 @@
 
 > Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.7+.
 
+![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
+
 # Why?
 
 - Pyppeteer is awesome, but I don't need so much
@@ -25,9 +27,6 @@
 - Operations on Tabs under stable websocket
   - Package very commonly used functions
 
-# Structure Chart
-
-![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
 
 
 # Install

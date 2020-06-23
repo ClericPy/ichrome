@@ -221,7 +221,7 @@ def get_a_tab(host='127.0.0.1', port=None) -> AsyncTab:
 
 def show_all_log():
     AsyncTab._log_all_recv = True
-    logger.setLevel(0)
+    logger.setLevel(1)
 
 
 def mute_all_log():
