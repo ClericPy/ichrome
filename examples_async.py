@@ -147,6 +147,9 @@ async def test_tab_js(tab: Tab):
     assert (await tab.wait_includes('python-ichrome', max_wait_time=1)) is False
     assert await tab.wait_findall('python')
     assert (await tab.wait_findall('python-ichrome', max_wait_time=1)) == []
+    # test wait_console_value
+    await tab.js('setInterval(() => {console.log(123)}, 2);')
+    assert (await tab.wait_console_value()) == 123
 
 
 async def test_wait_response(tab: Tab):
