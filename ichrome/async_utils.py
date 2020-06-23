@@ -724,6 +724,47 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await _ensure_awaitable_callback_result(callback_function,
                                                        result)
 
+    async def wait_console(
+            self,
+            timeout=None,
+            callback_function: Optional[Callable] = None,
+            filter_function: Optional[Callable] = None) -> Union[None, dict]:
+        """Wait the filted Runtime.consoleAPICalled event.
+
+        consoleAPICalled event types:
+        log, debug, info, error, warning, dir, dirxml, table, trace, clear, startGroup, startGroupCollapsed, endGroup, assert, profile, profileEnd, count, timeEnd
+
+        return dict or None like:
+        {'method':'Runtime.consoleAPICalled','params': {'type':'log','args': [{'type':'string','value':'123'}],'executionContextId':13,'timestamp':1592895800590.75,'stackTrace': {'callFrames': [{'functionName':'','scriptId':'344','url':'','lineNumber':0,'columnNumber':8}]}}}
+"""
+        return await self.wait_event('Runtime.consoleAPICalled',
+                                     timeout=timeout,
+                                     callback_function=callback_function,
+                                     filter_function=filter_function)
+
+    async def wait_console_value(self,
+                                 timeout=None,
+                                 callback_function: Optional[Callable] = None,
+                                 filter_function: Optional[Callable] = None):
+        """Wait the Runtime.consoleAPICalled event, simple data type (null, number, Boolean, string) will try to get value and return.
+
+        This may be very useful for send message from Chrome to Python programs with a JSON string.
+
+        {'method': 'Runtime.consoleAPICalled', 'params': {'type': 'log', 'args': [{'type': 'boolean', 'value': True}], 'executionContextId': 4, 'timestamp': 1592924155017.107, 'stackTrace': {'callFrames': [{'functionName': '', 'scriptId': '343', 'url': '', 'lineNumber': 0, 'columnNumber': 8}]}}}
+        {'method': 'Runtime.consoleAPICalled', 'params': {'type': 'log', 'args': [{'type': 'object', 'subtype': 'null', 'value': None}], 'executionContextId': 4, 'timestamp': 1592924167384.516, 'stackTrace': {'callFrames': [{'functionName': '', 'scriptId': '362', 'url': '', 'lineNumber': 0, 'columnNumber': 8}]}}}
+        {'method': 'Runtime.consoleAPICalled', 'params': {'type': 'log', 'args': [{'type': 'number', 'value': 1, 'description': '1234'}], 'executionContextId': 4, 'timestamp': 1592924176778.166, 'stackTrace': {'callFrames': [{'functionName': '', 'scriptId': '385', 'url': '', 'lineNumber': 0, 'columnNumber': 8}]}}}
+        {'method': 'Runtime.consoleAPICalled', 'params': {'type': 'log', 'args': [{'type': 'string', 'value': 'string'}], 'executionContextId': 4, 'timestamp': 1592924187756.2349, 'stackTrace': {'callFrames': [{'functionName': '', 'scriptId': '404', 'url': '', 'lineNumber': 0, 'columnNumber': 8}]}}}
+        """
+        result = await self.wait_event('Runtime.consoleAPICalled',
+                                       timeout=timeout,
+                                       filter_function=filter_function)
+        try:
+            result = result['params']['args'][0]['value']
+        except (IndexError, KeyError, TypeError):
+            pass
+        return await _ensure_awaitable_callback_result(callback_function,
+                                                       result)
+
     async def wait_response(self,
                             filter_function: Optional[Callable] = None,
                             callback_function: Optional[Callable] = None,
@@ -2082,3 +2123,8 @@ class Chrome(GetValueMixin):
 
     def __del__(self):
         _exhaust_simple_coro(self.close())
+
+
+# alias
+AsyncTab = Tab
+AsyncChrome = Chrome

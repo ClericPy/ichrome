@@ -7,7 +7,9 @@ from typing import Set
 
 from torequests.utils import quote_plus
 
-from . import AsyncChrome, AsyncChromeDaemon, AsyncTab, ChromeDaemon, logger
+from .async_utils import AsyncChrome, AsyncTab
+from .daemon import AsyncChromeDaemon, ChromeDaemon
+from .logs import logger
 
 __doc__ = r'''
 >>> from ichrome.debugger import *
