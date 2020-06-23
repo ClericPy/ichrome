@@ -7,7 +7,9 @@ from typing import Set
 
 from torequests.utils import quote_plus
 
-from . import AsyncChrome, AsyncChromeDaemon, AsyncTab, ChromeDaemon, logger
+from .async_utils import AsyncChrome, AsyncTab
+from .daemon import AsyncChromeDaemon, ChromeDaemon
+from .logs import logger
 
 __doc__ = r'''
 >>> from ichrome.debugger import *
@@ -116,6 +118,8 @@ class Daemon(SyncLoop):
             on_shutdown=on_shutdown,
         )
         self.run_sync(self._self.__aenter__())
+        if not self.daemons:
+            atexit.register(stop_all_daemons)
         self.daemons.add(self)
         self.running = True
 
@@ -221,7 +225,7 @@ def get_a_tab(host='127.0.0.1', port=None) -> AsyncTab:
 
 def show_all_log():
     AsyncTab._log_all_recv = True
-    logger.setLevel(0)
+    logger.setLevel(1)
 
 
 def mute_all_log():
@@ -229,7 +233,6 @@ def mute_all_log():
     logger.setLevel(60)
 
 
-@atexit.register
 def stop_all_daemons():
     if Daemon.daemons:
         logger.info(f'auto shutdown {Daemon.daemons}')
