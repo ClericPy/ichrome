@@ -116,6 +116,8 @@ class Daemon(SyncLoop):
             on_shutdown=on_shutdown,
         )
         self.run_sync(self._self.__aenter__())
+        if not self.daemons:
+            atexit.register(stop_all_daemons)
         self.daemons.add(self)
         self.running = True
 
@@ -229,7 +231,6 @@ def mute_all_log():
     logger.setLevel(60)
 
 
-@atexit.register
 def stop_all_daemons():
     if Daemon.daemons:
         logger.info(f'auto shutdown {Daemon.daemons}')
