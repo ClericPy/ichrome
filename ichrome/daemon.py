@@ -265,7 +265,7 @@ class ChromeDaemon(object):
     def connection_ok(self):
         url = self.server + "/json"
         for _ in range(2):
-            r = self.req.get(url, timeout=self._timeout)
+            r = self.req.head(url, timeout=self._timeout)
             if r.x and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
@@ -604,7 +604,7 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def check_connection(self):
         url = self.server + "/json"
         for _ in range(int(self._timeout) + 1):
-            r = await self.req.get(url, timeout=self._timeout)
+            r = await self.req.head(url, timeout=self._timeout)
             if r and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
