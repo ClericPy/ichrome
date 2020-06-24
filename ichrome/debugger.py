@@ -209,17 +209,17 @@ def launch(*args, **kwargs):
     return Daemon(*args, **kwargs)
 
 
-def get_a_tab(host='127.0.0.1', port=None) -> AsyncTab:
+def get_a_tab(host='127.0.0.1', port=None, **daemon_kwargs) -> AsyncTab:
     if not port:
         for port in ChromeDaemon.port_in_using:
-            return Chrome(port=port).get_tab()
-        port = 9222
+            return Chrome(host=host, port=port).get_tab()
+        port = ChromeDaemon.get_free_port(host=host)
     try:
         return Chrome(host=host, port=port).get_tab()
     except RuntimeError:
         # no existing port, launch a new chrome, and auto quit if chrome process missed.
-        launch()
-        return Chrome(host=host, port=port).get_tab()
+        d = launch(host=host, port=port, **daemon_kwargs)
+        return Chrome(host=host, port=d.port).get_tab()
 
 
 def show_all_log():

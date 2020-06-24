@@ -109,7 +109,10 @@ class ChromeDaemon(object):
         self.ready = False
         self.proc = None
         self.host = host
-        self.port = port
+        if port is None:
+            self.port = self.get_free_port(host=self.host)
+        else:
+            self.port = port
         self.server = f"http://{self.host}:{self.port}"
         self.chrome_path = chrome_path
         self.UA = self.PC_UA if user_agent is None else user_agent
@@ -719,7 +722,7 @@ class ChromeWorkers:
     async def create_chrome_workers(self):
         for port in range(self.start_port, self.start_port + self.workers):
             logger.debug("ChromeDaemon cmd args: port=%s, %s" %
-                        (port, self.kwargs))
+                         (port, self.kwargs))
             self.daemons.append(await
                                 AsyncChromeDaemon(port=port,
                                                   daemon=True,
