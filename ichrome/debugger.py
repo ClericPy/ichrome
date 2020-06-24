@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import atexit
+import os
 from functools import wraps
 from inspect import isawaitable
 from typing import Set
@@ -68,8 +69,6 @@ class SyncLoop:
 def quit_while_daemon_missing(daemon):
     # quit the whole program while missing daemon process for daemon debugger
     if not daemon.get_proc(daemon.port):
-        import os
-        print(f'{daemon} missing process, exit.')
         os._exit(1)
 
 
@@ -235,14 +234,13 @@ def mute_all_log():
 
 def stop_all_daemons():
     if Daemon.daemons:
-        logger.info(f'auto shutdown {Daemon.daemons}')
+        logger.debug(f'auto shutdown {Daemon.daemons}')
         for daemon in Daemon.daemons:
             daemon.stop()
 
 
 def shutdown():
     stop_all_daemons()
-    import os
     os._exit(0)
 
 
@@ -257,7 +255,7 @@ def network_sniffer(timeout=60, filter_function=None, callback_function=None):
                          indent=2)
         req_type = get_data_value(r, 'params.type')
         doc_url = get_data_value(r, 'params.documentURL')
-        print(f'{doc_url} - {req_type}\n{req}', end=f'\n{"="*40}\n')
+        print(f'{doc_url} - {req_type}\n{req}', end=f'\n{"="*40}\n', flush=True)
 
     # listen network flow in 60 s
     timeout = timeout
@@ -282,7 +280,7 @@ async def crawl_once(**kwargs):
             async with chrome.connect_tab(0, auto_close=True) as tab:
                 await tab.set_url(url, timeout=cd._timeout)
                 html = await tab.get_html(timeout=cd._timeout)
-                print(html)
+                print(html, flush=True)
 
 
 async def clear_cache_handler(**kwargs):
