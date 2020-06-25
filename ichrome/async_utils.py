@@ -993,6 +993,23 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         result = await self.send('Page.resetNavigationHistory', timeout=timeout)
         return self.check_error('reset_history', result)
 
+    async def setBlockedURLs(self, urls: List[str], timeout=NotSet):
+        """(Network.setBlockedURLs) Blocks URLs from loading. [EXPERIMENTAL].
+        :param urls: URL patterns to block. Wildcards ('*') are allowed.
+        :type urls: List[str]
+
+        Demo::
+
+            await tab.setBlockedURLs(urls=['*.jpg', '*.png'])
+
+        WARNING: This method is EXPERIMENTAL, the official suggestion is using Fetch.enable, even Fetch is also EXPERIMENTAL, and wait events to control the requests (continue / abort / modify), especially block urls with resourceType: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Other.
+        https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable
+
+
+        """
+        await self.enable('Network')
+        return await self.send('Network.setBlockedURLs', urls=urls, timeout=timeout)
+
     async def set_url(self,
                       url: Optional[str] = None,
                       referrer: Optional[str] = None,
