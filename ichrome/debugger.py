@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import atexit
+import os
 from functools import wraps
 from inspect import isawaitable
 from typing import Set
@@ -68,8 +69,6 @@ class SyncLoop:
 def quit_while_daemon_missing(daemon):
     # quit the whole program while missing daemon process for daemon debugger
     if not daemon.get_proc(daemon.port):
-        import os
-        print(f'{daemon} missing process, exit.')
         os._exit(1)
 
 
@@ -210,17 +209,27 @@ def launch(*args, **kwargs):
     return Daemon(*args, **kwargs)
 
 
-def get_a_tab(host='127.0.0.1', port=None) -> AsyncTab:
+def connect_a_chrome(host='127.0.0.1', port=None, **daemon_kwargs) -> Chrome:
     if not port:
         for port in ChromeDaemon.port_in_using:
-            return Chrome(port=port).get_tab()
-        port = 9222
+            return Chrome(host=host, port=port)
+        port = ChromeDaemon.get_free_port(host=host)
     try:
-        return Chrome(host=host, port=port).get_tab()
+        return Chrome(host=host, port=port)
     except RuntimeError:
         # no existing port, launch a new chrome, and auto quit if chrome process missed.
-        launch()
-        return Chrome(host=host, port=port).get_tab()
+        d = launch(host=host, port=port, **daemon_kwargs)
+        return Chrome(host=host, port=d.port)
+
+
+def get_a_tab(host='127.0.0.1', port=None, **daemon_kwargs) -> AsyncTab:
+    chrome = connect_a_chrome(host=host, port=port, **daemon_kwargs)
+    return chrome.get_tab()
+
+
+def get_a_new_tab(host='127.0.0.1', port=None, **daemon_kwargs) -> AsyncTab:
+    chrome = connect_a_chrome(host=host, port=port, **daemon_kwargs)
+    return chrome.new_tab()
 
 
 def show_all_log():
@@ -235,14 +244,13 @@ def mute_all_log():
 
 def stop_all_daemons():
     if Daemon.daemons:
-        logger.info(f'auto shutdown {Daemon.daemons}')
+        logger.debug(f'auto shutdown {Daemon.daemons}')
         for daemon in Daemon.daemons:
             daemon.stop()
 
 
 def shutdown():
     stop_all_daemons()
-    import os
     os._exit(0)
 
 
@@ -257,7 +265,7 @@ def network_sniffer(timeout=60, filter_function=None, callback_function=None):
                          indent=2)
         req_type = get_data_value(r, 'params.type')
         doc_url = get_data_value(r, 'params.documentURL')
-        print(f'{doc_url} - {req_type}\n{req}', end=f'\n{"="*40}\n')
+        print(f'{doc_url} - {req_type}\n{req}', end=f'\n{"="*40}\n', flush=True)
 
     # listen network flow in 60 s
     timeout = timeout
@@ -276,13 +284,13 @@ async def crawl_once(**kwargs):
     async with AsyncChromeDaemon(**kwargs) as cd:
         async with AsyncChrome(
                 host=kwargs.get('host', '127.0.0.1'),
-                port=kwargs.get('port', 9222),
+                port=cd.port,
                 timeout=cd._timeout or 2,
         ) as chrome:
             async with chrome.connect_tab(0, auto_close=True) as tab:
                 await tab.set_url(url, timeout=cd._timeout)
                 html = await tab.get_html(timeout=cd._timeout)
-                print(html)
+                return html
 
 
 async def clear_cache_handler(**kwargs):
