@@ -46,8 +46,7 @@ Other operations:
         "-cp",
         "--chrome-path",
         "--chrome_path",
-        help=
-        "chrome executable file path, default to null for automatic searching",
+        help="chrome executable file path, default to null(automatic searching)",
         default="")
     parser.add_argument("-H",
                         "--host",
@@ -221,7 +220,8 @@ Other operations:
         logger.setLevel(60)
         from .debugger import crawl_once
         kwargs['headless'] = getattr(args, 'headless', True)
-        asyncio.run(crawl_once(**kwargs))
+        kwargs['timeout'] = max([5, args.timeout])
+        print(asyncio.run(crawl_once(**kwargs)), flush=True)
     elif args.clear_cache:
         from .debugger import clear_cache_handler
         kwargs['headless'] = getattr(args, 'headless', True)

@@ -67,7 +67,7 @@ class ChromeDaemon(object):
     """
 
     port_in_using: set = set()
-    PC_UA = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"
+    PC_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36"
     MAC_OS_UA = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0_1) Version/8.0.1a Safari/728.28.19"
     )
@@ -115,7 +115,7 @@ class ChromeDaemon(object):
             self.port = port
         self.server = f"http://{self.host}:{self.port}"
         self.chrome_path = chrome_path
-        self.UA = self.PC_UA if user_agent is None else user_agent
+        self.UA = user_agent
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image

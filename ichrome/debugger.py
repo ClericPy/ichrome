@@ -284,13 +284,13 @@ async def crawl_once(**kwargs):
     async with AsyncChromeDaemon(**kwargs) as cd:
         async with AsyncChrome(
                 host=kwargs.get('host', '127.0.0.1'),
-                port=kwargs.get('port', 9222),
+                port=cd.port,
                 timeout=cd._timeout or 2,
         ) as chrome:
             async with chrome.connect_tab(0, auto_close=True) as tab:
                 await tab.set_url(url, timeout=cd._timeout)
                 html = await tab.get_html(timeout=cd._timeout)
-                print(html, flush=True)
+                return html
 
 
 async def clear_cache_handler(**kwargs):
