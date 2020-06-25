@@ -30,12 +30,12 @@ class ChromeDaemon(object):
         host="127.0.0.1",     --remote-debugging-address, default to 127.0.0.1
         port,                 --remote-debugging-port, default to 9222
         headless,             --headless and --hide-scrollbars, default to False
-        user_agent,           --user-agent, default to 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'
+        user_agent,           --user-agent, default to None (with the original UA)
         proxy,                --proxy-server, default to None
-        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data. These string will ignore user_data_dir arg: {'null', 'None', '/dev/null', "''", '""'}
+        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data. These strings will ignore user_data_dir arg: {'null', 'None', '/dev/null', "''", '""'}
         disable_image,        disable image for loading performance, default to False
-        start_url,            start url while launching chrome, default to about:blank
-        max_deaths,           max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 for without auto-restart
+        start_url,            start url while launching chrome, default to None
+        max_deaths,           max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 (without auto-restart)
         timeout,              timeout to connect the remote server, default to 1 for localhost
         debug,                set logger level to DEBUG
         proc_check_interval,  check chrome process alive every interval seconds
@@ -67,7 +67,7 @@ class ChromeDaemon(object):
     """
 
     port_in_using: set = set()
-    PC_UA = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"
+    PC_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36"
     MAC_OS_UA = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0_1) Version/8.0.1a Safari/728.28.19"
     )
@@ -86,7 +86,7 @@ class ChromeDaemon(object):
         proxy=None,
         user_data_dir=None,
         disable_image=False,
-        start_url="about:blank",
+        start_url="",
         extra_config=None,
         max_deaths=1,
         daemon=True,
@@ -109,10 +109,13 @@ class ChromeDaemon(object):
         self.ready = False
         self.proc = None
         self.host = host
-        self.port = port
+        if port is None:
+            self.port = self.get_free_port(host=self.host)
+        else:
+            self.port = port
         self.server = f"http://{self.host}:{self.port}"
         self.chrome_path = chrome_path
-        self.UA = self.PC_UA if user_agent is None else user_agent
+        self.UA = user_agent
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image
@@ -265,7 +268,7 @@ class ChromeDaemon(object):
     def connection_ok(self):
         url = self.server + "/json"
         for _ in range(2):
-            r = self.req.get(url, timeout=self._timeout)
+            r = self.req.head(url, timeout=self._timeout)
             if r.x and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
@@ -531,7 +534,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         proxy=None,
         user_data_dir=None,
         disable_image=False,
-        start_url="about:blank",
+        start_url="",
         extra_config=None,
         max_deaths=1,
         daemon=True,
@@ -604,7 +607,7 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def check_connection(self):
         url = self.server + "/json"
         for _ in range(int(self._timeout) + 1):
-            r = await self.req.get(url, timeout=self._timeout)
+            r = await self.req.head(url, timeout=self._timeout)
             if r and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
@@ -719,7 +722,7 @@ class ChromeWorkers:
     async def create_chrome_workers(self):
         for port in range(self.start_port, self.start_port + self.workers):
             logger.debug("ChromeDaemon cmd args: port=%s, %s" %
-                        (port, self.kwargs))
+                         (port, self.kwargs))
             self.daemons.append(await
                                 AsyncChromeDaemon(port=port,
                                                   daemon=True,
