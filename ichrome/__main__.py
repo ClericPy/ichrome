@@ -210,16 +210,24 @@ Other operations:
     log_level = getattr(args, 'log_level', None)
     if log_level:
         logger.setLevel(log_level)
-    if args.start_url == 'about:blank' or not args.start_url:
+    if kwargs['start_url'] == 'about:blank' or not kwargs['start_url']:
+        # reset start_url from extra_config
         for config in kwargs['extra_config']:
             if re.match('^https?://', config):
                 kwargs['start_url'] = config
                 kwargs['extra_config'].remove(config)
                 break
+
     if '--dump-dom' in extra_config or args.crawl:
         logger.setLevel(60)
         from .debugger import crawl_once
+        if kwargs['start_url'] == 'about:blank' or not kwargs['start_url']:
+            kwargs['start_url'] = kwargs['extra_config'].pop(0)
+        if kwargs['start_url'] != 'about:blank' and not kwargs[
+                'start_url'].startswith('http'):
+            kwargs['start_url'] = 'http://' + kwargs['start_url']
         kwargs['headless'] = getattr(args, 'headless', True)
+        kwargs['disable_image'] = True
         kwargs['timeout'] = max([5, args.timeout])
         print(asyncio.run(crawl_once(**kwargs)), flush=True)
     elif args.clear_cache:
