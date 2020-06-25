@@ -30,12 +30,12 @@ class ChromeDaemon(object):
         host="127.0.0.1",     --remote-debugging-address, default to 127.0.0.1
         port,                 --remote-debugging-port, default to 9222
         headless,             --headless and --hide-scrollbars, default to False
-        user_agent,           --user-agent, default to 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'
+        user_agent,           --user-agent, default to None (with the original UA)
         proxy,                --proxy-server, default to None
-        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data. These string will ignore user_data_dir arg: {'null', 'None', '/dev/null', "''", '""'}
+        user_data_dir,        user_data_dir to save the user data, default to ~/ichrome_user_data. These strings will ignore user_data_dir arg: {'null', 'None', '/dev/null', "''", '""'}
         disable_image,        disable image for loading performance, default to False
-        start_url,            start url while launching chrome, default to about:blank
-        max_deaths,           max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 for without auto-restart
+        start_url,            start url while launching chrome, default to None
+        max_deaths,           max deaths in 5 secs, auto restart `max_deaths` times if crash fast in 5 secs. default to 1 (without auto-restart)
         timeout,              timeout to connect the remote server, default to 1 for localhost
         debug,                set logger level to DEBUG
         proc_check_interval,  check chrome process alive every interval seconds
