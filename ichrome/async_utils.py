@@ -37,7 +37,7 @@ INF = float('inf')
 
 
 async def _ensure_awaitable_callback_result(callback_function, result):
-    if callable(callback_function):
+    if callback_function and callable(callback_function):
         callback_result = callback_function(result)
     else:
         return result
@@ -272,7 +272,6 @@ class Tab(GetValueMixin):
         self._closed = False
         self._message_id = 0
         self.ws = None
-        self.default_recv_callback = default_recv_callback
         self._recv_daemon_break_callback = _recv_daemon_break_callback or self._RECV_DAEMON_BREAK_CALLBACK
         if self.chrome:
             self.req = self.chrome.req
@@ -280,6 +279,8 @@ class Tab(GetValueMixin):
             self.req = Requests()
         self._listener = Listener()
         self._enabled_domains: Set[str] = set()
+        self._default_recv_callback: List[Callable] = []
+        self.default_recv_callback = default_recv_callback
 
     def __hash__(self):
         return self.tab_id
@@ -305,6 +306,27 @@ class Tab(GetValueMixin):
             return self._MAX_WAIT_TIMEOUT or INF
         else:
             return timeout
+
+    @property
+    def default_recv_callback(self):
+        return self._default_recv_callback
+
+    @default_recv_callback.setter
+    def default_recv_callback(self, value):
+        if not value:
+            self._default_recv_callback = []
+        elif isinstance(value, list):
+            self._default_recv_callback = value
+        elif callable(value):
+            self._default_recv_callback = [value]
+        else:
+            raise ValueError(
+                'default_recv_callback should be list or callable, and you can use tab.default_recv_callback.append(cb) to add new callback'
+            )
+
+    @default_recv_callback.deleter
+    def default_recv_callback(self):
+        self._default_recv_callback = []
 
     async def close_browser(self, timeout=0):
         return await self.send('Browser.close', timeout=timeout)
@@ -405,8 +427,10 @@ class Tab(GetValueMixin):
                 logger.debug(
                     f'[json] data_str can not be json.loads: {data_str}')
                 continue
-            await _ensure_awaitable_callback_result(self.default_recv_callback,
-                                                    data_dict)
+            if self.default_recv_callback:
+                for cb in self.default_recv_callback:
+                    asyncio.ensure_future(
+                        _ensure_awaitable_callback_result(cb, data_dict))
             f = self._listener.find_future(data_dict)
             if f:
                 if f._state == _PENDING:
@@ -1008,7 +1032,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
         """
         await self.enable('Network')
-        return await self.send('Network.setBlockedURLs', urls=urls, timeout=timeout)
+        return await self.send('Network.setBlockedURLs',
+                               urls=urls,
+                               timeout=timeout)
 
     async def set_url(self,
                       url: Optional[str] = None,
