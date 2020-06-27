@@ -280,7 +280,11 @@ Crawl the given URL, output the HTML DOM
 λ python3 -m ichrome --crawl --headless --timeout=2 http://api.ipify.org/
 <html><head></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">38.143.68.66</pre></body></html>
 ```
-
+To use default user dir (ignore ichrome user-dir settings)
+> ensure the existing Chromes get closed
+```bash
+λ python3 -m ichrome 
+```
 
 Details:
 
