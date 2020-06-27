@@ -309,7 +309,7 @@ class Tab(GetValueMixin):
 
     @property
     def default_recv_callback(self):
-        return self._default_recv_callback
+        return self._default_recv_callback or []
 
     @default_recv_callback.setter
     def default_recv_callback(self, value):
@@ -427,10 +427,9 @@ class Tab(GetValueMixin):
                 logger.debug(
                     f'[json] data_str can not be json.loads: {data_str}')
                 continue
-            if self.default_recv_callback:
-                for cb in self.default_recv_callback:
-                    asyncio.ensure_future(
-                        _ensure_awaitable_callback_result(cb, data_dict))
+            for cb in self.default_recv_callback:
+                asyncio.ensure_future(
+                    _ensure_awaitable_callback_result(cb, data_dict))
             f = self._listener.find_future(data_dict)
             if f:
                 if f._state == _PENDING:

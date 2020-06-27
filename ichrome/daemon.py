@@ -193,6 +193,7 @@ class ChromeDaemon(object):
     def _wrap_user_data_dir(self, user_data_dir):
         main_user_dir = self._ensure_user_dir(user_data_dir)
         if main_user_dir is None:
+            self.user_data_dir = None
             return
         port_user_dir = main_user_dir / f"chrome_{self.port}"
         self.user_data_dir = port_user_dir
