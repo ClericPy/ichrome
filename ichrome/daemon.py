@@ -317,7 +317,14 @@ class ChromeDaemon(object):
 
     def launch_chrome(self):
         self._start_chrome_process()
-        return self.check_chrome_ready()
+        error = None
+        if not self.proc_ok:
+            error = f'launch_chrome failed for proc not ok'
+        elif not self.connection_ok:
+            error = f'launch_chrome failed for connection not ok'
+        if error:
+            logger.error(error)
+            raise RuntimeError(error)
 
     def check_chrome_ready(self):
         if self.ok:
@@ -603,7 +610,14 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def launch_chrome(self):
         await self.loop.run_in_executor(None, self._start_chrome_process)
-        return await self.ok
+        error = None
+        if not self.proc_ok:
+            error = f'launch_chrome failed for proc not ok'
+        elif not await self.connection_ok:
+            error = f'launch_chrome failed for connection not ok'
+        if error:
+            logger.error(error)
+            raise RuntimeError(error)
 
     async def check_connection(self):
         url = self.server + "/json"
