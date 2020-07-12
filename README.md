@@ -283,7 +283,7 @@ Crawl the given URL, output the HTML DOM
 To use default user dir (ignore ichrome user-dir settings)
 > ensure the existing Chromes get closed
 ```bash
-λ python3 -m ichrome 
+λ python -m ichrome -U null
 ```
 
 Details:
