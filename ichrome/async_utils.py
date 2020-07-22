@@ -878,8 +878,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 {'id': 2, 'result': {'body': 'source code', 'base64Encoded': False}}
 
         some ajax request need to await tab.wait_request_loading(request_dict) for
-        loadingFinished (or sleep some secs), 
-        and wait_loading=None will auto check response loaded.'''
+        loadingFinished (or sleep some secs) and wait_loading=None will auto check response loaded.'''
         request_id = self._ensure_request_id(request_dict)
         result = None
         if request_id is None:
@@ -1648,13 +1647,13 @@ JSON.stringify(result)""" % (
                                    timeout=timeout,
                                    **kwargs)
 
-    async def mouse_click_element(self,
-                                  cssselector: str,
-                                  button='left',
-                                  count=1,
-                                  scale=1,
-                                  multiplier=0.5,
-                                  timeout=NotSet):
+    async def mouse_click_element_rect(self,
+                                       cssselector: str,
+                                       button='left',
+                                       count=1,
+                                       scale=1,
+                                       multiplier=0.5,
+                                       timeout=NotSet):
         # dispatchMouseEvent on selected element center
         rect = await self.get_element_clip(cssselector,
                                            scale=scale,
