@@ -1652,15 +1652,15 @@ JSON.stringify(result)""" % (
                                        button='left',
                                        count=1,
                                        scale=1,
-                                       multiplier=0.5,
+                                       multiplier=(0.5, 0.5),
                                        timeout=NotSet):
         # dispatchMouseEvent on selected element center
         rect = await self.get_element_clip(cssselector,
                                            scale=scale,
                                            timeout=timeout)
         if rect:
-            x = rect['x'] + multiplier * rect['width']
-            y = rect['y'] + multiplier * rect['height']
+            x = rect['x'] + multiplier[0] * rect['width']
+            y = rect['y'] + multiplier[1] * rect['height']
             await self.mouse_press(x=x,
                                    y=y,
                                    button=button,
