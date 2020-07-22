@@ -5,7 +5,6 @@ import inspect
 import json
 import re
 import time
-import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
 from base64 import b64decode
@@ -1044,6 +1043,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         Navigate the tab to the URL. If stop loading occurs, return False.
         """
         logger.debug(f'[set_url] {self!r} url => {url}')
+        if timeout == 0:
+            # no need wait loading
+            loaded_task = None
+        else:
+            # register loading event before seting url
+            loaded_task = asyncio.ensure_future(
+                self.wait_loading(timeout=timeout,
+                                  timeout_stop_loading=timeout_stop_loading))
         if url:
             self._url = url
             if referrer is None:
@@ -1058,8 +1065,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         else:
             data = await self.reload(timeout=timeout)
         # loadEventFired return True, else return False
-        return bool(data and (await self.wait_loading(
-            timeout=timeout, timeout_stop_loading=timeout_stop_loading)))
+        return bool(data and loaded_task and (await loaded_task))
 
     async def js(self,
                  javascript: str,
