@@ -129,7 +129,7 @@ Other operations:
                         action="store_true")
     parser.add_argument("-C",
                         "--clear",
-                        "--clear",
+                        "--clean",
                         dest='clean',
                         help="clean user_data_dir",
                         default=False,

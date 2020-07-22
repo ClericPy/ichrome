@@ -228,7 +228,7 @@ async def test_tab_set_ua_headers(tab: Tab):
 async def test_tab_keyboard_mouse(tab: Tab):
     if 'httpbin.org/forms/post' not in (await tab.current_url):
         await tab.set_url('http://httpbin.org/forms/post', timeout=5)
-    rect = await tab.get_bounding_client_rect('[type="email"]')
+    rect = await tab.get_bounding_client_rect('[type="tel"]')
     await tab.mouse_click(rect['left'], rect['top'], count=1)
     await tab.keyboard_send(text='1')
     await tab.keyboard_send(text='2')
@@ -237,6 +237,10 @@ async def test_tab_keyboard_mouse(tab: Tab):
     await tab.mouse_click(rect['left'], rect['top'], count=2)
     selection = await tab.get_variable('window.getSelection().toString()')
     assert selection == '123123'
+    # test mouse_click_element
+    await tab.mouse_click_element_rect('[type="tel"]')
+    selection = await tab.get_variable('window.getSelection().toString()')
+    assert selection == ''
     # test mouse_drag_rel_chain draw a square, sometime witeboard load failed.....
     await tab.set_url('https://zhoushuo.me/drawingborad/', timeout=5)
     await tab.mouse_click(5, 5)

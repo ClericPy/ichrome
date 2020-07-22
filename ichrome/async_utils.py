@@ -5,7 +5,6 @@ import inspect
 import json
 import re
 import time
-import traceback
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
 from base64 import b64decode
@@ -879,8 +878,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 {'id': 2, 'result': {'body': 'source code', 'base64Encoded': False}}
 
         some ajax request need to await tab.wait_request_loading(request_dict) for
-        loadingFinished (or sleep some secs), 
-        and wait_loading=None will auto check response loaded.'''
+        loadingFinished (or sleep some secs) and wait_loading=None will auto check response loaded.'''
         request_id = self._ensure_request_id(request_dict)
         result = None
         if request_id is None:
@@ -1044,6 +1042,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         Navigate the tab to the URL. If stop loading occurs, return False.
         """
         logger.debug(f'[set_url] {self!r} url => {url}')
+        if timeout == 0:
+            # no need wait loading
+            loaded_task = None
+        else:
+            # register loading event before seting url
+            loaded_task = asyncio.ensure_future(
+                self.wait_loading(timeout=timeout,
+                                  timeout_stop_loading=timeout_stop_loading))
         if url:
             self._url = url
             if referrer is None:
@@ -1058,8 +1064,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         else:
             data = await self.reload(timeout=timeout)
         # loadEventFired return True, else return False
-        return bool(data and (await self.wait_loading(
-            timeout=timeout, timeout_stop_loading=timeout_stop_loading)))
+        return bool(data and loaded_task and (await loaded_task))
 
     async def js(self,
                  javascript: str,
@@ -1490,7 +1495,9 @@ JSON.stringify(result)""" % (
                                            timeout=timeout)
 
     async def get_element_clip(self, cssselector: str, scale=1, timeout=NotSet):
-        """Element.getBoundingClientRect"""
+        """Element.getBoundingClientRect.
+        {"x":241,"y":85.59375,"width":165,"height":36,"top":85.59375,"right":406,"bottom":121.59375,"left":241}
+        """
         js_str = 'JSON.stringify(document.querySelector(`%s`).getBoundingClientRect())' % cssselector
         rect = await self.js(js_str,
                              timeout=timeout,
@@ -1639,6 +1646,31 @@ JSON.stringify(result)""" % (
                                    type=type,
                                    timeout=timeout,
                                    **kwargs)
+
+    async def mouse_click_element_rect(self,
+                                       cssselector: str,
+                                       button='left',
+                                       count=1,
+                                       scale=1,
+                                       multiplier=(0.5, 0.5),
+                                       timeout=NotSet):
+        # dispatchMouseEvent on selected element center
+        rect = await self.get_element_clip(cssselector,
+                                           scale=scale,
+                                           timeout=timeout)
+        if rect:
+            x = rect['x'] + multiplier[0] * rect['width']
+            y = rect['y'] + multiplier[1] * rect['height']
+            await self.mouse_press(x=x,
+                                   y=y,
+                                   button=button,
+                                   count=count,
+                                   timeout=timeout)
+            return await self.mouse_release(x=x,
+                                            y=y,
+                                            button=button,
+                                            count=1,
+                                            timeout=timeout)
 
     async def mouse_click(self, x, y, button='left', count=1, timeout=NotSet):
         await self.mouse_press(x=x,

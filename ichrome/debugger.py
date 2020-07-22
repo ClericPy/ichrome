@@ -226,12 +226,12 @@ def connect_a_chrome(host='127.0.0.1', port=None, **daemon_kwargs) -> Chrome:
         return Chrome(host=host, port=d.port)
 
 
-def get_a_tab(host='127.0.0.1', port=None, **daemon_kwargs) -> AsyncTab:
+def get_a_tab(host='127.0.0.1', port=9222, **daemon_kwargs) -> AsyncTab:
     chrome = connect_a_chrome(host=host, port=port, **daemon_kwargs)
     return chrome.get_tab()
 
 
-def get_a_new_tab(host='127.0.0.1', port=None, **daemon_kwargs) -> AsyncTab:
+def get_a_new_tab(host='127.0.0.1', port=9222, **daemon_kwargs) -> AsyncTab:
     chrome = connect_a_chrome(host=host, port=port, **daemon_kwargs)
     return chrome.new_tab()
 
