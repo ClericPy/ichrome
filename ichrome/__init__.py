@@ -6,7 +6,7 @@ from .debugger import get_a_tab
 from .logs import logger
 from .sync_utils import Chrome, Tab
 
-__version__ = "2.3.5"
+__version__ = "2.3.6"
 __tips__ = "[github]: https://github.com/ClericPy/ichrome\n[cdp]: https://chromedevtools.github.io/devtools-protocol/\n[cmd args]: https://peter.sh/experiments/chromium-command-line-switches/"
 __all__ = [
     'Chrome', 'ChromeDaemon', 'Tab', 'Tag', 'AsyncChrome', 'AsyncTab', 'logger',
