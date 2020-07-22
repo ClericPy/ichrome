@@ -1496,7 +1496,9 @@ JSON.stringify(result)""" % (
                                            timeout=timeout)
 
     async def get_element_clip(self, cssselector: str, scale=1, timeout=NotSet):
-        """Element.getBoundingClientRect"""
+        """Element.getBoundingClientRect.
+        {"x":241,"y":85.59375,"width":165,"height":36,"top":85.59375,"right":406,"bottom":121.59375,"left":241}
+        """
         js_str = 'JSON.stringify(document.querySelector(`%s`).getBoundingClientRect())' % cssselector
         rect = await self.js(js_str,
                              timeout=timeout,
@@ -1645,6 +1647,31 @@ JSON.stringify(result)""" % (
                                    type=type,
                                    timeout=timeout,
                                    **kwargs)
+
+    async def mouse_click_element(self,
+                                  cssselector: str,
+                                  button='left',
+                                  count=1,
+                                  scale=1,
+                                  multiplier=0.5,
+                                  timeout=NotSet):
+        # dispatchMouseEvent on selected element center
+        rect = await self.get_element_clip(cssselector,
+                                           scale=scale,
+                                           timeout=timeout)
+        if rect:
+            x = rect['x'] + multiplier * rect['width']
+            y = rect['y'] + multiplier * rect['height']
+            await self.mouse_press(x=x,
+                                   y=y,
+                                   button=button,
+                                   count=count,
+                                   timeout=timeout)
+            return await self.mouse_release(x=x,
+                                            y=y,
+                                            button=button,
+                                            count=1,
+                                            timeout=timeout)
 
     async def mouse_click(self, x, y, button='left', count=1, timeout=NotSet):
         await self.mouse_press(x=x,
