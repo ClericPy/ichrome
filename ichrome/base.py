@@ -114,9 +114,10 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
     while 1:
         procs = get_proc(port)
         for proc in procs:
-            logger.debug(
-                f"[Killing] {proc}, port: {port}. {' '.join(proc.cmdline())}")
             try:
+                logger.debug(
+                    f"[Killing] {proc}, port: {port}. {' '.join(proc.cmdline())}"
+                )
                 proc.kill()
             except (psutil._exceptions.NoSuchProcess, ProcessLookupError):
                 continue
