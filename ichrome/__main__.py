@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from ichrome import ChromeDaemon, ChromeWorkers, __version__, logger
+from ichrome.base import get_readable_dir_size
 
 
 def main():
@@ -233,7 +234,16 @@ Other operations:
     elif args.clear_cache:
         from .debugger import clear_cache_handler
         kwargs['headless'] = getattr(args, 'headless', True)
+        port = kwargs.get('port') or 9222
+        main_user_dir = ChromeDaemon._ensure_user_dir(kwargs['user_data_dir'])
+        port_user_dir = main_user_dir / f"chrome_{port}"
+        print(
+            f'Clearing cache(port={port}): {get_readable_dir_size(port_user_dir)}'
+        )
         asyncio.run(clear_cache_handler(**kwargs))
+        print(
+            f'Cleared  cache(port={port}): {get_readable_dir_size(port_user_dir)}'
+        )
     else:
         start_port = getattr(args, 'port', 9222)
         asyncio.run(
