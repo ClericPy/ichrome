@@ -268,11 +268,15 @@ class ChromeDaemon(object):
     @property
     def connection_ok(self):
         url = self.server + "/json"
-        for _ in range(2):
-            r = self.req.head(url, timeout=self._timeout)
+        for _ in range(3):
+            timeout = self._timeout + _
+            r = self.req.head(url, timeout=timeout)
             if r.x and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
+                if self.timeout != timeout:
+                    logger.warning(f'timeout has been reset: {self._timeout} -> {timeout}')
+                    self._timeout = timeout
                 return True
             time.sleep(1)
         return False
@@ -621,11 +625,15 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def check_connection(self):
         url = self.server + "/json"
-        for _ in range(int(self._timeout) + 1):
-            r = await self.req.head(url, timeout=self._timeout)
+        for _ in range(3):
+            timeout = self._timeout + _
+            r = await self.req.head(url, timeout=timeout)
             if r and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
+                if self.timeout != timeout:
+                    logger.warning(f'timeout has been reset: {self._timeout} -> {timeout}')
+                    self._timeout = timeout
                 return True
             await asyncio.sleep(1)
         return False
