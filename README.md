@@ -12,7 +12,7 @@
   - event-driven programming is not always advisable.
 - Selenium is slow
   - webdrivers often come with memory leak.
-- In desperate need of a stable toolkit to communicate with Chrome browser
+- In desperate need of a stable toolkit to communicate with Chrome browser (or other Blink-based browsers like Chromium)
   - fast http & websocket connections (based on aiohttp) for **asyncio** environment
   - **ichrome.debugger** is a sync tool and depends on the `ichrome.async_utils`
     - a choice for debugging interactively.
