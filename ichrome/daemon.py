@@ -274,7 +274,7 @@ class ChromeDaemon(object):
             if r.x and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
-                if self.timeout != timeout:
+                if self._timeout != timeout:
                     logger.warning(f'timeout has been reset: {self._timeout} -> {timeout}')
                     self._timeout = timeout
                 return True
@@ -631,7 +631,7 @@ class AsyncChromeDaemon(ChromeDaemon):
             if r and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
-                if self.timeout != timeout:
+                if self._timeout != timeout:
                     logger.warning(f'timeout has been reset: {self._timeout} -> {timeout}')
                     self._timeout = timeout
                 return True
