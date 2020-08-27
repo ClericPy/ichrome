@@ -227,6 +227,7 @@ class ChromeDaemon(object):
     def clear_user_dir(cls, user_data_dir, port=None):
         main_user_dir = cls._ensure_user_dir(user_data_dir)
         if port:
+            # clear port dir if port is not None
             port_user_dir = main_user_dir / f"chrome_{port}"
             logger.debug(
                 f'Clearing only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
@@ -236,6 +237,7 @@ class ChromeDaemon(object):
                 f'Cleared only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
         else:
+            # clear whole ichrome dir if port is None
             logger.debug(
                 f'Clearing total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
@@ -244,17 +246,30 @@ class ChromeDaemon(object):
                 f'Cleared total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
 
+    def _clear_user_dir(self):
+        # clear self user dir
+        self.shutdown('_clear_user_dir')
+        return self.clear_dir_with_shutil(self.user_data_dir)
+
     @staticmethod
     def clear_dir_with_shutil(dir_path):
+        errors = []
+
+        def onerror(*args):
+            errors.append(args[2][1])
+
         dir_path = Path(dir_path)
         if not dir_path.is_dir():
             logger.warning(f'{dir_path} is not exists, ignore.')
             return
         import shutil
-        shutil.rmtree(dir_path)
+        shutil.rmtree(dir_path, onerror=onerror)
+        if errors:
+            logger.error(f'clear_dir_with_shutil({dir_path}) error: {errors}')
 
     @classmethod
     def clear_dir(cls, dir_path):
+        # please use clear_dir_with_shutil
         dir_path = Path(dir_path)
         if not dir_path.is_dir():
             logger.warning(f'{dir_path} not exists, ignore.')
@@ -491,7 +506,7 @@ class ChromeDaemon(object):
         if self.proc:
             self.proc.terminate()
             try:
-                self.proc.wait(1)
+                self.proc.wait(self._timeout)
             except subprocess.TimeoutExpired:
                 self.proc.kill()
         if force:
@@ -610,19 +625,6 @@ class AsyncChromeDaemon(ChromeDaemon):
             raise RuntimeError('please use Chrome in `async with`')
         return self._req
 
-    # def _init_chrome_daemon(self):
-    #     self._init_extra_config()
-    #     self._init_port()
-    #     self._wrap_user_data_dir()
-    #     if not self.chrome_path:
-    #         self.chrome_path = self._get_default_path()
-    #     self._ensure_port_free()
-    #     self.req = tPool()
-    #     self.launch_chrome()
-    #     if self._use_daemon:
-    #         self._daemon_thread = self.run_forever(block=self._block)
-    #     if self.on_startup:
-    #         self.on_startup(self)
     async def _init_chrome_daemon(self):
         await async_run(self._init_extra_config)
         await async_run(self._init_port)
@@ -642,7 +644,7 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def restart(self):
         logger.debug(f"restarting {self}")
-        await async_run(super().kill)
+        await async_run(self.kill)
         return await self.launch_chrome()
 
     async def launch_chrome(self):
@@ -759,7 +761,18 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def __aexit__(self, *args, **kwargs):
         if not self._shutdown:
-            await async_run(self.__exit__)
+            await self.shutdown('__aexit__')
+
+    async def shutdown(self, reason=None):
+        if self._shutdown:
+            # logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
+            return
+        reason = f' for {reason}' if reason else ''
+        logger.debug(
+            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
+        )
+        await self.update_shutdown_time()
+        await async_run(self.kill, True)
 
     async def update_shutdown_time(self):
         self._shutdown = time.time()
@@ -767,6 +780,11 @@ class AsyncChromeDaemon(ChromeDaemon):
             _coro = self.on_shutdown(self)
             if isawaitable(_coro):
                 await _coro
+
+    async def _clear_user_dir(self):
+        # clear self user dir
+        await self.shutdown('_clear_user_dir')
+        return async_run(self.clear_dir_with_shutil, self.user_data_dir)
 
 
 class ChromeWorkers:

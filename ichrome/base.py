@@ -80,7 +80,7 @@ def get_proc_by_regex(regex, proc_names=None):
             if (not proc_names or proc.name() in proc_names) and re.search(
                     regex, ' '.join(proc.cmdline())):
                 procs.append(proc)
-        except psutil.Error:
+        except (psutil.Error, OSError):
             pass
     return procs
 
