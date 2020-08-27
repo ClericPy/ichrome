@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import time
+from asyncio import get_running_loop
 from pathlib import Path
 from typing import List
 
@@ -245,3 +246,11 @@ def install_chromium(path, platform_name=None, x64=True, max_threads=5):
         print('Install succeeded.')
     else:
         print('Mission failed.')
+
+
+def async_run(func, *args, **kwargs):
+
+    def function():
+        return func(*args, **kwargs)
+
+    return get_running_loop().run_in_executor(None, function)
