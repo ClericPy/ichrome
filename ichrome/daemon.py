@@ -7,14 +7,15 @@ import subprocess
 import threading
 import time
 from getpass import getuser
+from inspect import isawaitable
 from pathlib import Path
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
-from .base import (clear_chrome_process, get_dir_size, get_memory_by_port,
-                   get_proc, get_readable_dir_size)
+from .base import (async_run, clear_chrome_process, get_dir_size,
+                   get_memory_by_port, get_proc, get_readable_dir_size)
 from .logs import logger
 """
 Sync / block operations for launching chrome processes.
@@ -109,44 +110,53 @@ class ChromeDaemon(object):
         self.ready = False
         self.proc = None
         self.host = host
-        if port is None:
-            self.port = self.get_free_port(host=self.host)
-        else:
-            self.port = port
-        self.server = f"http://{self.host}:{self.port}"
+        self.port = port
         self.chrome_path = chrome_path
         self.UA = user_agent
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image
-        if '--user-data-dir=' in str(extra_config):
-            # ignore custom user_data_dir by ichrome
-            self.user_data_dir = None
-        else:
-            self._wrap_user_data_dir(user_data_dir)
+        self.user_data_dir = user_data_dir
         self.start_url = start_url
-        if extra_config and isinstance(extra_config, str):
-            extra_config = [extra_config]
-        self.extra_config = extra_config or ["--disable-gpu", "--no-first-run"]
-        if '--no-sandbox' not in str(self.extra_config) and getuser() == 'root':
-            self.extra_config.append('--no-sandbox')
-        if not isinstance(self.extra_config, list):
-            raise TypeError("extra_config type should be list.")
-        self.chrome_proc_start_time = time.time()
+        self.extra_config = extra_config
         self.proc_check_interval = proc_check_interval
         self.on_startup = on_startup
         self.on_shutdown = on_shutdown
-        self.init(block)
+        self._block = block
+        self.init()
 
-    def init(self, block):
-        self.chrome_path = self.chrome_path or self._get_default_path()
+    def init(self):
+        self._init_chrome_daemon()
+
+    def _init_chrome_daemon(self):
+        self._init_extra_config()
+        self._init_port()
+        self._wrap_user_data_dir()
+        if not self.chrome_path:
+            self.chrome_path = self._get_default_path()
         self._ensure_port_free()
         self.req = tPool()
         self.launch_chrome()
         if self._use_daemon:
-            self._daemon_thread = self.run_forever(block=block)
+            self._daemon_thread = self.run_forever(block=self._block)
         if self.on_startup:
             self.on_startup(self)
+
+    def _init_extra_config(self):
+        if self.extra_config and isinstance(self.extra_config, str):
+            self.extra_config = [self.extra_config]
+        self.extra_config = self.extra_config or [
+            "--disable-gpu", "--no-first-run"
+        ]
+        if '--no-sandbox' not in str(self.extra_config) and getuser() == 'root':
+            self.extra_config.append('--no-sandbox')
+        if not isinstance(self.extra_config, list):
+            raise TypeError("extra_config type should be list.")
+
+    def _init_port(self):
+        if self.port is None:
+            self.port = self.get_free_port(host=self.host)
+        self.server = f"http://{self.host}:{self.port}"
 
     def get_memory(self, attr='uss', unit='MB'):
         """Only support local Daemon. `uss` is slower than `rss` but useful."""
@@ -190,8 +200,13 @@ class ChromeDaemon(object):
             # valid path string
             return Path(user_data_dir)
 
-    def _wrap_user_data_dir(self, user_data_dir):
-        main_user_dir = self._ensure_user_dir(user_data_dir)
+    def _wrap_user_data_dir(self):
+        if '--user-data-dir=' in str(self.extra_config):
+            # ignore custom user_data_dir by ichrome
+            self.user_data_dir = None
+            return
+        # user_data_dir = self.user_data_dir
+        main_user_dir = self._ensure_user_dir(self.user_data_dir)
         if main_user_dir is None:
             self.user_data_dir = None
             return
@@ -212,6 +227,7 @@ class ChromeDaemon(object):
     def clear_user_dir(cls, user_data_dir, port=None):
         main_user_dir = cls._ensure_user_dir(user_data_dir)
         if port:
+            # clear port dir if port is not None
             port_user_dir = main_user_dir / f"chrome_{port}"
             logger.debug(
                 f'Clearing only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
@@ -221,6 +237,7 @@ class ChromeDaemon(object):
                 f'Cleared only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
         else:
+            # clear whole ichrome dir if port is None
             logger.debug(
                 f'Clearing total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
@@ -229,17 +246,30 @@ class ChromeDaemon(object):
                 f'Cleared total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
             )
 
+    def _clear_user_dir(self):
+        # clear self user dir
+        self.shutdown('_clear_user_dir')
+        return self.clear_dir_with_shutil(self.user_data_dir)
+
     @staticmethod
     def clear_dir_with_shutil(dir_path):
+        errors = []
+
+        def onerror(*args):
+            errors.append(args[2][1])
+
         dir_path = Path(dir_path)
         if not dir_path.is_dir():
             logger.warning(f'{dir_path} is not exists, ignore.')
             return
         import shutil
-        shutil.rmtree(dir_path)
+        shutil.rmtree(dir_path, onerror=onerror)
+        if errors:
+            logger.error(f'clear_dir_with_shutil({dir_path}) error: {errors}')
 
     @classmethod
     def clear_dir(cls, dir_path):
+        # please use clear_dir_with_shutil
         dir_path = Path(dir_path)
         if not dir_path.is_dir():
             logger.warning(f'{dir_path} not exists, ignore.')
@@ -261,6 +291,9 @@ class ChromeDaemon(object):
 
     @property
     def proc_ok(self):
+        return self._proc_ok()
+
+    def _proc_ok(self):
         if self.proc and self.proc.poll() is None:
             return True
         return False
@@ -268,11 +301,16 @@ class ChromeDaemon(object):
     @property
     def connection_ok(self):
         url = self.server + "/json"
-        for _ in range(2):
-            r = self.req.head(url, timeout=self._timeout)
+        for _ in range(3):
+            timeout = self._timeout + _
+            r = self.req.head(url, timeout=timeout)
             if r.x and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
+                if self._timeout != timeout:
+                    logger.warning(
+                        f'timeout has been reset: {self._timeout} -> {timeout}')
+                    self._timeout = timeout
                 return True
             time.sleep(1)
         return False
@@ -313,6 +351,7 @@ class ChromeDaemon(object):
         return kwargs
 
     def _start_chrome_process(self):
+        self.chrome_proc_start_time = time.time()
         self.proc = subprocess.Popen(**self.cmd_args)
 
     def launch_chrome(self):
@@ -467,7 +506,7 @@ class ChromeDaemon(object):
         if self.proc:
             self.proc.terminate()
             try:
-                self.proc.wait(1)
+                self.proc.wait(self._timeout)
             except subprocess.TimeoutExpired:
                 self.proc.kill()
         if force:
@@ -574,10 +613,9 @@ class AsyncChromeDaemon(ChromeDaemon):
             on_shutdown=on_shutdown,
         )
 
-    def init(self, block):
+    def init(self):
         # Please init AsyncChromeDaemon in a running loop with `async with`
         self._req = None
-        self._block = block
         # please use AsyncChromeDaemon in `async with`
         self._init_coro = self._init_chrome_daemon()
 
@@ -588,32 +626,33 @@ class AsyncChromeDaemon(ChromeDaemon):
         return self._req
 
     async def _init_chrome_daemon(self):
-        await self.loop.run_in_executor(None, self._ensure_port_free)
+        await async_run(self._init_extra_config)
+        await async_run(self._init_port)
+        await async_run(self._wrap_user_data_dir)
         if not self.chrome_path:
-            self.chrome_path = await self.loop.run_in_executor(
-                None, self._get_default_path)
+            self.chrome_path = await async_run(self._get_default_path)
+        await async_run(self._ensure_port_free)
         self._req = Requests()
         await self.launch_chrome()
         if self._use_daemon:
             self._daemon_thread = await self.run_forever(block=self._block)
         if self.on_startup:
-            self.on_startup(self)
+            _coro = self.on_startup(self)
+            if isawaitable(_coro):
+                await _coro
         return self
-
-    def _start_chrome_process(self):
-        self.proc = subprocess.Popen(**self.cmd_args)
 
     async def restart(self):
         logger.debug(f"restarting {self}")
-        await self.loop.run_in_executor(None, super().kill)
+        await async_run(self.kill)
         return await self.launch_chrome()
 
     async def launch_chrome(self):
-        await self.loop.run_in_executor(None, self._start_chrome_process)
+        await async_run(self._start_chrome_process)
         error = None
-        if not self.proc_ok:
+        if not await async_run(self._proc_ok):
             error = f'launch_chrome failed for proc not ok'
-        elif not await self.connection_ok:
+        elif not await self.check_connection():
             error = f'launch_chrome failed for connection not ok'
         if error:
             logger.error(error)
@@ -621,11 +660,16 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def check_connection(self):
         url = self.server + "/json"
-        for _ in range(int(self._timeout) + 1):
-            r = await self.req.head(url, timeout=self._timeout)
+        for _ in range(3):
+            timeout = self._timeout + _
+            r = await self.req.head(url, timeout=timeout)
             if r and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
+                if self._timeout != timeout:
+                    logger.warning(
+                        f'timeout has been reset: {self._timeout} -> {timeout}')
+                    self._timeout = timeout
                 return True
             await asyncio.sleep(1)
         return False
@@ -646,13 +690,11 @@ class AsyncChromeDaemon(ChromeDaemon):
                             start=9222,
                             max_tries=100,
                             timeout=1):
-        return await asyncio.get_running_loop().run_in_executor(
-            None,
-            super().get_free_port,
-            host=host,
-            start=start,
-            max_tries=max_tries,
-            timeout=timeout)
+        return await async_run(super().get_free_port,
+                               host=host,
+                               start=start,
+                               max_tries=max_tries,
+                               timeout=timeout)
 
     async def check_chrome_ready(self):
         if self.proc_ok and await self.check_connection():
@@ -706,13 +748,12 @@ class AsyncChromeDaemon(ChromeDaemon):
                 deaths += 1
                 continue
             try:
-                return_code = await self.loop.run_in_executor(
-                    None, self.proc.wait, interval)
+                return_code = await async_run(self.proc.wait, interval)
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
         logger.debug(f"{self} daemon exited.")
-        self.update_shutdown_time()
+        await self.update_shutdown_time()
         return return_code
 
     async def __aenter__(self):
@@ -720,7 +761,30 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def __aexit__(self, *args, **kwargs):
         if not self._shutdown:
-            await self.loop.run_in_executor(None, self.__exit__)
+            await self.shutdown('__aexit__')
+
+    async def shutdown(self, reason=None):
+        if self._shutdown:
+            # logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
+            return
+        reason = f' for {reason}' if reason else ''
+        logger.debug(
+            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
+        )
+        await self.update_shutdown_time()
+        await async_run(self.kill, True)
+
+    async def update_shutdown_time(self):
+        self._shutdown = time.time()
+        if self.on_shutdown:
+            _coro = self.on_shutdown(self)
+            if isawaitable(_coro):
+                await _coro
+
+    async def _clear_user_dir(self):
+        # clear self user dir
+        await self.shutdown('_clear_user_dir')
+        return async_run(self.clear_dir_with_shutil, self.user_data_dir)
 
 
 class ChromeWorkers:

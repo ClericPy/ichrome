@@ -250,7 +250,6 @@ class Tab(GetValueMixin):
         :type default_recv_callback: Callable, optional
         :param _recv_daemon_break_callback: like the tab_close_callback. sync/async function only accept 1 arg of self while _recv_daemon break, defaults to None
         :type _recv_daemon_break_callback: Callable, optional
-        :raises ValueError: [description]
         """
         tab_id = tab_id or kwargs.pop('id')
         if not tab_id:
@@ -561,8 +560,7 @@ class Tab(GetValueMixin):
                              timeout=NotSet):
         """deleteCookies by name, with url / domain / path."""
         if not any((url, domain)):
-            raise ValueError(
-                'At least one of the url and domain needs to be specified')
+            raise ValueError('URL and domain should not be null at the same time.')
         return await self.send("Network.deleteCookies",
                                name=name,
                                url=url,
@@ -606,8 +604,7 @@ httpOnly [boolean] True if cookie is http-only.
 sameSite [CookieSameSite] Cookie SameSite type.
 expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if not any((url, domain)):
-            raise ValueError(
-                'At least one of the url and domain needs to be specified')
+            raise ValueError('URL and domain should not be null at the same time.')
         kwargs: Dict[str, Any] = dict(name=name,
                                       value=value,
                                       url=url,
