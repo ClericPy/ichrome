@@ -8,6 +8,7 @@ from typing import List
 import psutil
 from torequests.utils import get_readable_size
 
+from .exceptions import ChromeValueError
 from .logs import logger
 """
 For base usage with sync utils.
@@ -220,7 +221,7 @@ def install_chromium(path, platform_name=None, x64=True, max_threads=5):
         proc = 0
         for r in responses:
             if not r.ok:
-                raise ValueError(f'Bad request {r!r}')
+                raise ChromeValueError(f'Bad request {r!r}')
             i = r.content
             f.write(i)
             proc += len(i)

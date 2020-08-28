@@ -10,6 +10,7 @@ from torequests import NewFuture, tPool
 from torequests.utils import quote_plus
 
 from .daemon import ChromeDaemon
+from .exceptions import ChromeRuntimeError, ChromeTypeError
 from .logs import logger
 """
 [Archived]: will not update except bugs.
@@ -26,7 +27,7 @@ class Chrome(object):
         self.timeout = timeout
         self.retry = retry
         if not self.ok:
-            raise IOError(f"Can not connect to {self.server}")
+            raise ChromeRuntimeError(f"Can not connect to {self.server}")
 
     @property
     def ok(self):
@@ -599,7 +600,7 @@ class Listener(object):
         arg type: dict.
         """
         if not isinstance(arg, dict):
-            raise TypeError(
+            raise ChromeTypeError(
                 "Listener should register a dict arg, such as {'id': 1} or {'method': 'Page.loadEventFired'}"
             )
         f = NewFuture(timeout=timeout)

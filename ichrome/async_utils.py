@@ -17,8 +17,11 @@ from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import Tag, TagNotFound, clear_chrome_process, get_memory_by_port, async_run
+from .base import (Tag, TagNotFound, async_run, clear_chrome_process,
+                   get_memory_by_port)
+from .exceptions import ChromeRuntimeError, ChromeTypeError, ChromeValueError
 from .logs import logger
+
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
@@ -81,19 +84,20 @@ class _SingleTabConnectionManager:
         else:
             self.tab = await self.chrome.new_tab(self.index or "")
         if not self.tab:
-            raise ValueError(f'Tab not found.')
+            raise ChromeRuntimeError(
+                f'Tab init failed. index={self.index}, chrome={self.chrome}')
         self._ws_connection = _WSConnection(self.tab)
         await self._ws_connection.__aenter__()
         return self.tab
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, *args):
         if self._ws_connection:
             if self._auto_close:
                 await self.tab.close(timeout=0)
             await self._ws_connection.__aexit__()
 
 
-class _SingleTabConnectionManagerDaemon:
+class _SingleTabConnectionManagerDaemon(_SingleTabConnectionManager):
 
     def __init__(self,
                  host,
@@ -102,29 +106,15 @@ class _SingleTabConnectionManagerDaemon:
                  auto_close: bool = False,
                  timeout: int = None):
         self.chrome = Chrome(host=host, port=port, timeout=timeout)
-        self.index = index
-        self.tab: 'Tab' = None
-        self._ws_connection: '_WSConnection' = None
-        self._auto_close = auto_close
+        super().__init__(chrome=self.chrome, index=index, auto_close=auto_close)
 
     async def __aenter__(self) -> 'Tab':
         await self.chrome.__aenter__()
-        if isinstance(self.index, int):
-            self.tab = await self.chrome.get_tab(self.index)
-        else:
-            self.tab = await self.chrome.new_tab(self.index or "")
-        if not self.tab:
-            raise ValueError(f'Tab not found.')
-        self._ws_connection = _WSConnection(self.tab)
-        await self._ws_connection.__aenter__()
-        return self.tab
+        return await super().__aenter__()
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self._ws_connection:
-            if self._auto_close:
-                await self.tab.close(timeout=0)
-            await self._ws_connection.__aexit__()
-        await self.chrome.__aexit__()
+    async def __aexit__(self, *args):
+        await super().__aexit__(*args)
+        await self.chrome.__aexit__(*args)
 
 
 class _WSConnection:
@@ -286,7 +276,7 @@ class Tab(GetValueMixin):
         """
         tab_id = tab_id or kwargs.pop('id')
         if not tab_id:
-            raise ValueError('tab_id should not be null')
+            raise ChromeValueError('tab_id should not be null')
         self.tab_id = tab_id
         self.title = title
         self._url = url
@@ -351,7 +341,7 @@ class Tab(GetValueMixin):
         elif callable(value):
             self._default_recv_callback = [value]
         else:
-            raise ValueError(
+            raise ChromeValueError(
                 'default_recv_callback should be list or callable, and you can use tab.default_recv_callback.append(cb) to add new callback'
             )
 
@@ -442,7 +432,7 @@ class Tab(GetValueMixin):
                 # Message size xxxx exceeds limit 4194304: reset the max_msg_size(default=4*1024*1024) in Tab.ws_kwargs
                 err_msg = f'Receive the {msg.type!r} message which break the recv daemon: "{msg.data}"'
                 logger.error(err_msg)
-                raise RuntimeError(err_msg)
+                raise ChromeRuntimeError(err_msg)
             if msg.type != WSMsgType.TEXT:
                 # ignore
                 continue
@@ -489,7 +479,7 @@ class Tab(GetValueMixin):
         request = {"id": self.msg_id, "method": method, "params": _kwargs}
         try:
             if not self.ws or self.ws.closed:
-                raise RuntimeError(f'[closed] {self} ws has been closed')
+                raise ChromeRuntimeError(f'[closed] {self} ws has been closed')
             logger.debug(f"[send] {self!r} {request}")
             result = await self.ws.send_json(request)
             if timeout != 0:
@@ -505,7 +495,7 @@ class Tab(GetValueMixin):
         except (ClientError, WebSocketError, TypeError) as err:
             err_msg = f'{self} [send] msg {request} failed for {err}'
             logger.error(err_msg)
-            raise RuntimeError(err_msg)
+            raise ChromeRuntimeError(err_msg)
 
     async def recv(self,
                    event_dict: dict,
@@ -593,7 +583,7 @@ class Tab(GetValueMixin):
                              timeout=NotSet):
         """deleteCookies by name, with url / domain / path."""
         if not any((url, domain)):
-            raise ValueError(
+            raise ChromeValueError(
                 'URL and domain should not be null at the same time.')
         return await self.send("Network.deleteCookies",
                                name=name,
@@ -638,7 +628,7 @@ httpOnly [boolean] True if cookie is http-only.
 sameSite [CookieSameSite] Cookie SameSite type.
 expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if not any((url, domain)):
-            raise ValueError(
+            raise ChromeValueError(
                 'URL and domain should not be null at the same time.')
         kwargs: Dict[str, Any] = dict(name=name,
                                       value=value,
@@ -894,7 +884,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         elif isinstance(request_id, dict):
             return Tab.get_data_value(request_id, 'params.requestId')
         else:
-            raise TypeError(
+            raise ChromeTypeError(
                 f"request type should be None or dict or str, but given `{type(request_id)}`"
             )
 
@@ -1013,7 +1003,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             elif relative_index is None:
                 return result['entries'][index]
             else:
-                raise ValueError(
+                raise ChromeValueError(
                     f'index and relative_index should not be both None.')
 
     async def history_back(self, timeout=NotSet):
@@ -2047,7 +2037,7 @@ class Chrome(GetValueMixin):
         if resp:
             return resp.json()
         else:
-            raise resp.error
+            return resp
 
     @property
     def version(self) -> Awaitable[dict]:
@@ -2071,7 +2061,7 @@ class Chrome(GetValueMixin):
     @property
     def req(self):
         if self._req is None:
-            raise RuntimeError('please use Chrome in `async with`')
+            raise ChromeRuntimeError('please use Chrome in `async with`')
         return self._req
 
     async def check(self) -> bool:
@@ -2203,7 +2193,7 @@ class Chrome(GetValueMixin):
         or
         async with chrome.connect_tabs(tab1, tab2)'''
         if not tabs:
-            raise ValueError('tabs should not be null.')
+            raise ChromeValueError('tabs should not be null.')
         tab0 = tabs[0]
         if isinstance(tab0, (list, tuple)):
             tabs_todo = tab0
