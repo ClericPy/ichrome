@@ -86,8 +86,8 @@ async def test_tab_set_url(tab: Tab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
     assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=1))
     assert await tab.set_url('http://httpbin.org/delay/1', timeout=3)
-    ok = await tab.set_url('http://python.org', timeout=5)
-    assert ok or (ok is False)
+    ok = await tab.set_url('http://python.org', timeout=15)
+    assert ok
 
 
 async def test_tab_js(tab: Tab):
