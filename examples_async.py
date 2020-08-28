@@ -86,8 +86,8 @@ async def test_tab_set_url(tab: Tab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
     assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=1))
     assert await tab.set_url('http://httpbin.org/delay/1', timeout=3)
-    ok = await tab.set_url('http://python.org', timeout=5)
-    assert ok or (ok is False)
+    ok = await tab.set_url('http://python.org', timeout=15)
+    assert ok
 
 
 async def test_tab_js(tab: Tab):
@@ -134,7 +134,7 @@ async def test_tab_js(tab: Tab):
     assert (await tab.current_html) == '<html><head></head><body></body></html>'
     # reload the page
     assert await tab.reload()
-    await tab.wait_loading(2)
+    await tab.wait_loading(3)
     assert len(await tab.current_html) > 1000
     # test wait tags
     result = await tab.wait_tags('.python-logo1', max_wait_time=1)
@@ -261,6 +261,11 @@ async def test_examples():
     async with AsyncChromeDaemon(headless=headless,
                                  on_startup=on_startup,
                                  on_shutdown=on_shutdown) as chromed:
+        # test init tab from chromed
+        async with chromed.connect_tab("https://github.com", auto_close=True) as tab:
+            await tab.wait_loading(5)
+            title = await tab.current_title
+            assert 'GitHub' in title
         # test on_startup
         assert chromed.started
         # ===================== Chrome Test Cases =====================

@@ -10,6 +10,7 @@ from torequests.utils import quote_plus
 
 from .async_utils import AsyncChrome, AsyncTab
 from .daemon import AsyncChromeDaemon, ChromeDaemon
+from .exceptions import ChromeRuntimeError, ChromeValueError
 from .logs import logger
 
 __doc__ = r'''
@@ -146,7 +147,7 @@ class Chrome(SyncLoop):
                                  retry=retry)
         ok = self.run_sync(self._self.connect())
         if not ok:
-            raise RuntimeError(
+            raise ChromeRuntimeError(
                 'remote debugging chrome not found, please launch a daemon at first like `python -m ichrome`'
             )
 
@@ -284,7 +285,7 @@ def network_sniffer(timeout=60, filter_function=None, callback_function=None):
 async def crawl_once(**kwargs):
     url = kwargs.pop('start_url', None)
     if not url:
-        raise ValueError('Can not crawl with null start_url')
+        raise ChromeValueError('Can not crawl with null start_url')
     async with AsyncChromeDaemon(**kwargs) as cd:
         async with AsyncChrome(
                 host=kwargs.get('host', '127.0.0.1'),

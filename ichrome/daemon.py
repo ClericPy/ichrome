@@ -9,6 +9,7 @@ import time
 from getpass import getuser
 from inspect import isawaitable
 from pathlib import Path
+from typing import Union
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
@@ -16,6 +17,7 @@ from torequests.utils import timepass, ttime
 
 from .base import (async_run, clear_chrome_process, get_dir_size,
                    get_memory_by_port, get_proc, get_readable_dir_size)
+from .exceptions import ChromeRuntimeError, ChromeTypeError
 from .logs import logger
 """
 Sync / block operations for launching chrome processes.
@@ -151,7 +153,7 @@ class ChromeDaemon(object):
         if '--no-sandbox' not in str(self.extra_config) and getuser() == 'root':
             self.extra_config.append('--no-sandbox')
         if not isinstance(self.extra_config, list):
-            raise TypeError("extra_config type should be list.")
+            raise ChromeTypeError("extra_config type should be list.")
 
     def _init_port(self):
         if self.port is None:
@@ -263,7 +265,10 @@ class ChromeDaemon(object):
             logger.warning(f'{dir_path} is not exists, ignore.')
             return
         import shutil
-        shutil.rmtree(dir_path, onerror=onerror)
+        try:
+            shutil.rmtree(dir_path, onerror=onerror)
+        except FileNotFoundError as err:
+            errors.append(err)
         if errors:
             logger.error(f'clear_dir_with_shutil({dir_path}) error: {errors}')
 
@@ -363,7 +368,7 @@ class ChromeDaemon(object):
             error = f'launch_chrome failed for connection not ok'
         if error:
             logger.error(error)
-            raise RuntimeError(error)
+            raise ChromeRuntimeError(error)
 
     def check_chrome_ready(self):
         if self.ok:
@@ -384,7 +389,8 @@ class ChromeDaemon(object):
             port = start + offset
             if cls._check_host_port_in_use(host, port, timeout):
                 return port
-        raise RuntimeError(f'No free port beteen {start} and {start+max_tries}')
+        raise ChromeRuntimeError(
+            f'No free port beteen {start} and {start+max_tries}')
 
     @staticmethod
     def _check_host_port_in_use(host="127.0.0.1", port=9222, timeout=1):
@@ -407,7 +413,7 @@ class ChromeDaemon(object):
             logger.debug(f"shutting down chrome using port {self.port}")
             self.kill(True)
         else:
-            raise ValueError("port in used")
+            raise ChromeRuntimeError("port in used")
 
     @staticmethod
     def _get_default_path():
@@ -434,7 +440,7 @@ class ChromeDaemon(object):
                     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
                 ]
             else:
-                raise SystemError(
+                raise ChromeRuntimeError(
                     "unknown platform, not found the default chrome path.")
             for path in paths:
                 try:
@@ -446,7 +452,7 @@ class ChromeDaemon(object):
                         return path
                 except (FileNotFoundError, subprocess.TimeoutExpired):
                     continue
-        raise FileNotFoundError("Not found executable chrome file.")
+        raise ChromeRuntimeError("Not found executable chrome file.")
 
     def _daemon(self, interval=None):
         """if chrome proc is killed self.max_deaths times too fast (not raise TimeoutExpired),
@@ -483,7 +489,7 @@ class ChromeDaemon(object):
     def run_forever(self, block=True, interval=None):
         interval = interval or self.proc_check_interval
         if self._shutdown:
-            raise IOError(
+            raise ChromeRuntimeError(
                 f"{self} run_forever failed after shutdown({ttime(self._shutdown)})."
             )
         logger.debug(
@@ -622,7 +628,7 @@ class AsyncChromeDaemon(ChromeDaemon):
     @property
     def req(self):
         if self._req is None:
-            raise RuntimeError('please use Chrome in `async with`')
+            raise ChromeRuntimeError('please use Chrome in `async with`')
         return self._req
 
     async def _init_chrome_daemon(self):
@@ -656,7 +662,7 @@ class AsyncChromeDaemon(ChromeDaemon):
             error = f'launch_chrome failed for connection not ok'
         if error:
             logger.error(error)
-            raise RuntimeError(error)
+            raise ChromeRuntimeError(error)
 
     async def check_connection(self):
         url = self.server + "/json"
@@ -712,7 +718,7 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def run_forever(self, block=True, interval=None):
         interval = interval or self.proc_check_interval
         if self._shutdown:
-            raise IOError(
+            raise ChromeRuntimeError(
                 f"{self} run_forever failed after shutdown({ttime(self._shutdown)})."
             )
         logger.debug(
@@ -785,6 +791,34 @@ class AsyncChromeDaemon(ChromeDaemon):
         # clear self user dir
         await self.shutdown('_clear_user_dir')
         return async_run(self.clear_dir_with_shutil, self.user_data_dir)
+
+    @property
+    def _SingleTabConnectionManagerDaemon(self):
+        return getattr(self, '_SingleTabConnectionManagerDaemonClass',
+                       self.import_SingleTabConnectionManagerDaemon())
+
+    def import_SingleTabConnectionManagerDaemon(self):
+        from .async_utils import _SingleTabConnectionManagerDaemon
+        self._SingleTabConnectionManagerDaemonClass = _SingleTabConnectionManagerDaemon
+        return self._SingleTabConnectionManagerDaemonClass
+
+    def connect_tab(self,
+                    index: Union[None, int, str] = 0,
+                    auto_close: bool = False):
+        '''More easier way to init a connected Tab with `async with`.
+
+        Got a connected Tab object by using `async with chromed.connect_tab(0) as tab:`
+
+            index = 0 means the current tab.
+            index = None means create a new tab.
+            index = 'http://python.org' means create a new tab with url.
+
+            If auto_close is True: close this tab while exiting context.
+'''
+        return self._SingleTabConnectionManagerDaemon(host=self.host,
+                                                      port=self.port,
+                                                      index=index,
+                                                      auto_close=auto_close)
 
 
 class ChromeWorkers:
