@@ -11,14 +11,13 @@ from base64 import b64decode
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Union
 from weakref import WeakValueDictionary
 
-import aiofiles
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import Tag, TagNotFound, clear_chrome_process, get_memory_by_port
+from .base import Tag, TagNotFound, clear_chrome_process, get_memory_by_port, async_run
 from .logs import logger
 """
 Async utils for connections and operations.
@@ -1587,9 +1586,9 @@ JSON.stringify(result)""" % (
 
         clip's keys: x, y, width, height, scale"""
 
-        async def save_file(save_path, file_bytes):
-            async with aiofiles.open(save_path, 'wb') as f:
-                await f.write(file_bytes)
+        def save_file(save_path, file_bytes):
+            with open(save_path, 'wb') as f:
+                f.write(file_bytes)
 
         kwargs: Dict[str, Any] = dict(format=format,
                                       quality=quality,
@@ -1604,7 +1603,7 @@ JSON.stringify(result)""" % (
         base64_img = self.get_data_value(result, value_path='result.data')
         if save_path and base64_img:
             file_bytes = b64decode(base64_img)
-            await save_file(save_path, file_bytes)
+            await async_run(save_file, save_path, file_bytes)
         return base64_img
 
     async def add_js_onload(self, source: str, **kwargs) -> str:
