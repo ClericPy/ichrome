@@ -58,7 +58,7 @@ class _TabConnectionManager:
             await ws_connection.connect()
             self.ws_connections.add(ws_connection)
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, *args):
         for ws_connection in self.ws_connections:
             if not ws_connection._closed:
                 await ws_connection.shutdown()
@@ -92,6 +92,40 @@ class _SingleTabConnectionManager:
             if self._auto_close:
                 await self.tab.close(timeout=0)
             await self._ws_connection.__aexit__()
+
+
+class _SingleTabConnectionManagerDaemon:
+
+    def __init__(self,
+                 host,
+                 port,
+                 index: Union[None, int, str] = 0,
+                 auto_close: bool = False,
+                 timeout: int = None):
+        self.chrome = Chrome(host=host, port=port, timeout=timeout)
+        self.index = index
+        self.tab: 'Tab' = None
+        self._ws_connection: '_WSConnection' = None
+        self._auto_close = auto_close
+
+    async def __aenter__(self) -> 'Tab':
+        await self.chrome.__aenter__()
+        if isinstance(self.index, int):
+            self.tab = await self.chrome.get_tab(self.index)
+        else:
+            self.tab = await self.chrome.new_tab(self.index or "")
+        if not self.tab:
+            raise ValueError(f'Tab not found.')
+        self._ws_connection = _WSConnection(self.tab)
+        await self._ws_connection.__aenter__()
+        return self.tab
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self._ws_connection:
+            if self._auto_close:
+                await self.tab.close(timeout=0)
+            await self._ws_connection.__aexit__()
+        await self.chrome.__aexit__()
 
 
 class _WSConnection:
@@ -560,7 +594,8 @@ class Tab(GetValueMixin):
                              timeout=NotSet):
         """deleteCookies by name, with url / domain / path."""
         if not any((url, domain)):
-            raise ValueError('URL and domain should not be null at the same time.')
+            raise ValueError(
+                'URL and domain should not be null at the same time.')
         return await self.send("Network.deleteCookies",
                                name=name,
                                url=url,
@@ -604,7 +639,8 @@ httpOnly [boolean] True if cookie is http-only.
 sameSite [CookieSameSite] Cookie SameSite type.
 expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if not any((url, domain)):
-            raise ValueError('URL and domain should not be null at the same time.')
+            raise ValueError(
+                'URL and domain should not be null at the same time.')
         kwargs: Dict[str, Any] = dict(name=name,
                                       value=value,
                                       url=url,
@@ -1960,16 +1996,17 @@ class Listener:
 
 class Chrome(GetValueMixin):
     _DEFAULT_CONNECT_TIMEOUT = 2
+    _DEFAULT_RETRY = 1
 
     def __init__(self,
                  host: str = "127.0.0.1",
                  port: int = 9222,
                  timeout: int = None,
-                 retry: int = 1):
+                 retry: int = None):
         self.host = host
         self.port = port
         self.timeout = timeout or self._DEFAULT_CONNECT_TIMEOUT
-        self.retry = retry
+        self.retry = self._DEFAULT_RETRY if retry is None else retry
         self.status = 'init'
         self._req = None
 
@@ -1987,7 +2024,7 @@ class Chrome(GetValueMixin):
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, *args):
         await self.close()
 
     async def close_browser(self):
@@ -2150,7 +2187,7 @@ class Chrome(GetValueMixin):
                     auto_close: bool = False):
         '''More easier way to init a connected Tab with `async with`.
 
-        Got a connected Tab object by using `async with chrome.connect_tab(0):`
+        Got a connected Tab object by using `async with chrome.connect_tab(0) as tab::`
 
             index = 0 means the current tab.
             index = None means create a new tab.

@@ -9,6 +9,7 @@ import time
 from getpass import getuser
 from inspect import isawaitable
 from pathlib import Path
+from typing import Union
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
@@ -785,6 +786,34 @@ class AsyncChromeDaemon(ChromeDaemon):
         # clear self user dir
         await self.shutdown('_clear_user_dir')
         return async_run(self.clear_dir_with_shutil, self.user_data_dir)
+
+    @property
+    def _SingleTabConnectionManagerDaemon(self):
+        return getattr(self, '_SingleTabConnectionManagerDaemonClass',
+                       self.import_SingleTabConnectionManagerDaemon())
+
+    def import_SingleTabConnectionManagerDaemon(self):
+        from .async_utils import _SingleTabConnectionManagerDaemon
+        self._SingleTabConnectionManagerDaemonClass = _SingleTabConnectionManagerDaemon
+        return self._SingleTabConnectionManagerDaemonClass
+
+    def connect_tab(self,
+                    index: Union[None, int, str] = 0,
+                    auto_close: bool = False):
+        '''More easier way to init a connected Tab with `async with`.
+
+        Got a connected Tab object by using `async with chromed.connect_tab(0) as tab:`
+
+            index = 0 means the current tab.
+            index = None means create a new tab.
+            index = 'http://python.org' means create a new tab with url.
+
+            If auto_close is True: close this tab while exiting context.
+'''
+        return self._SingleTabConnectionManagerDaemon(host=self.host,
+                                                      port=self.port,
+                                                      index=index,
+                                                      auto_close=auto_close)
 
 
 class ChromeWorkers:
