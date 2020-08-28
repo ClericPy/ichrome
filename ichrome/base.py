@@ -120,7 +120,7 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
                     f"[Killing] {proc}, port: {port}. {' '.join(proc.cmdline())}"
                 )
                 proc.kill()
-            except (psutil._exceptions.NoSuchProcess, ProcessLookupError):
+            except (psutil.NoSuchProcess, ProcessLookupError):
                 continue
         if port:
             if procs:
