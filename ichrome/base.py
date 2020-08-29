@@ -137,7 +137,14 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
 
 
 def get_dir_size(path):
-    return sum(f.stat().st_size for f in Path(path).glob("**/*") if f.is_file())
+
+    def get_st_size(f):
+        try:
+            return f.stat().st_size
+        except FileNotFoundError:
+            return 0
+
+    return sum(get_st_size(f) for f in Path(path).glob("**/*") if f.is_file())
 
 
 def get_readable_dir_size(path):
