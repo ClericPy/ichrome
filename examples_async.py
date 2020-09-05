@@ -34,8 +34,8 @@ async def test_chrome(chrome: Chrome):
     await chrome.activate_tab(tab0)
     # test batch connect multiple tabs
     async with chrome.connect_tabs([tab0, tab1]):
-        assert (await tab0.current_url) == 'about:blank'
-        assert (await tab1.current_url) == 'about:blank'
+        assert tab0.status == 'connected', tab0.status
+        assert tab1.status == 'connected', tab1.status
         # watch the tabs switch
         await tab1.activate_tab()
         await asyncio.sleep(.2)
@@ -44,7 +44,7 @@ async def test_chrome(chrome: Chrome):
         await tab1.activate_tab()
     # test connect single tab
     async with chrome.connect_tabs(tab0):
-        assert await tab0.current_url == 'about:blank'
+        assert tab0.status == 'connected'
     await chrome.close_tab(tab1)
 
 
@@ -86,7 +86,12 @@ async def test_tab_set_url(tab: Tab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
     assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=1))
     assert await tab.set_url('http://httpbin.org/delay/1', timeout=3)
-    ok = await tab.set_url('http://python.org', timeout=15)
+    ok = False
+    for _ in range(5):
+        await tab.set_url('https://python.org')
+        ok = bool(await tab.wait_tag('.python-logo', max_wait_time=10))
+        if ok:
+            break
     assert ok
 
 
@@ -104,9 +109,10 @@ async def test_tab_js(tab: Tab):
     assert (await tab.findall('<title>(1)(2).*?</title>', 'body')) == []
     new_title = await tab.current_title
     # test refresh_tab_info for tab meta info
-    assert tab.title != new_title
+    assert (await tab.title) == new_title
+    assert tab._title != new_title
     assert await tab.refresh_tab_info()
-    assert tab.title == new_title
+    assert tab._title == new_title
     # inject JS timeout return None
     assert (await tab.js('alert()', timeout=0.1)) is None
     # close the alert dialog
@@ -148,7 +154,7 @@ async def test_tab_js(tab: Tab):
     assert await tab.wait_findall('python')
     assert (await tab.wait_findall('python-ichrome', max_wait_time=1)) == []
     # test wait_console_value
-    await tab.js('setInterval(() => {console.log(123)}, 2);')
+    await tab.js('setTimeout(() => {console.log(123)}, 2);')
     assert (await tab.wait_console_value()) == 123
 
 
@@ -197,6 +203,9 @@ async def test_tab_js_onload(tab: Tab):
     assert (await tab.get_variable('window.title')) != 123456789
     assert (await tab.get_variable('[1, 2, 3]')) != [1, 2, 3]
     assert (await tab.get_variable('[1, 2, 3]', jsonify=True)) == [1, 2, 3]
+    assert (await tab.url) == 'http://p.3.cn/' == (await
+                                                   tab.current_url), (await
+                                                                      tab.url)
 
 
 async def test_tab_current_html(tab: Tab):
@@ -262,7 +271,8 @@ async def test_examples():
                                  on_startup=on_startup,
                                  on_shutdown=on_shutdown) as chromed:
         # test init tab from chromed
-        async with chromed.connect_tab("https://github.com", auto_close=True) as tab:
+        async with chromed.connect_tab("https://github.com",
+                                       auto_close=True) as tab:
             await tab.wait_loading(5)
             title = await tab.current_title
             assert 'GitHub' in title
