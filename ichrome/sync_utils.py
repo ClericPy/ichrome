@@ -157,7 +157,7 @@ class Tab(object):
                  chrome,
                  timeout=5):
         self.tab_id = tab_id
-        self.title = title
+        self._title = title
         self._url = url
         self.webSocketDebuggerUrl = webSocketDebuggerUrl
         self.chrome = chrome
@@ -179,7 +179,7 @@ class Tab(object):
 
     @property
     def url(self):
-        return self._url
+        return self.current_url
 
     def _connect(self):
         self.ws.connect(self.webSocketDebuggerUrl, timeout=self.timeout)
@@ -313,6 +313,10 @@ class Tab(object):
     def current_url(self):
         return json.loads(
             self.js("window.location.href"))["result"]["result"]["value"]
+
+    @property
+    def title(self):
+        return json.loads(self.js("document.title"))["result"]["result"]["value"]
 
     @property
     def html(self):
@@ -530,10 +534,10 @@ class Tab(object):
         return self.querySelectorAll(cssselector, index=index, action=action)
 
     def __str__(self):
-        return f"Tab({self.url})"
+        return f"Tab({self._url})"
 
     def __repr__(self):
-        return f'ChromeTab("{self.tab_id}", "{self.title}", "{self.url}", port: {self.chrome.port})'
+        return f'ChromeTab("{self.tab_id}", "{self._title}", "{self._url}", port: {self.chrome.port})'
 
     def __del__(self):
         with self.lock:

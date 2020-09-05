@@ -21,17 +21,10 @@ from .base import (Tag, TagNotFound, async_run, clear_chrome_process,
                    get_memory_by_port)
 from .exceptions import ChromeRuntimeError, ChromeTypeError, ChromeValueError
 from .logs import logger
-
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
 """
-
-try:
-    from asyncio.futures import TimeoutError
-except ImportError:
-    # for python 3.8+
-    from asyncio.exceptions import TimeoutError
 
 NotSet = object()
 INF = float('inf')
@@ -278,7 +271,7 @@ class Tab(GetValueMixin):
         if not tab_id:
             raise ChromeValueError('tab_id should not be null')
         self.tab_id = tab_id
-        self.title = title
+        self._title = title
         self._url = url
         self.type = type
         self.description = description
@@ -368,23 +361,23 @@ class Tab(GetValueMixin):
         return self.connect()
 
     @property
-    def msg_id(self):
+    def msg_id(self) -> int:
         self._message_id += 1
         return self._message_id
 
     @property
-    def url(self) -> str:
+    def url(self) -> Awaitable[str]:
         """The init url since tab created.
         or using `await self.current_url` for the current url.
         """
-        return self._url
+        return self.get_current_url()
 
     async def refresh_tab_info(self) -> bool:
         r = await self.chrome.get_server('/json')
         if r:
             for tab_info in r.json():
                 if tab_info['id'] == self.tab_id:
-                    self.title = tab_info['title']
+                    self._title = tab_info['title']
                     self.description = tab_info['description']
                     self.type = tab_info['type']
                     self._url = tab_info['url']
@@ -525,7 +518,7 @@ class Tab(GetValueMixin):
         f = self._listener.register(event_dict)
         try:
             result = await asyncio.wait_for(f, timeout=timeout)
-        except TimeoutError:
+        except asyncio.TimeoutError:
             logger.debug(f'[timeout] {event_dict} [recv] timeout.')
         finally:
             return await _ensure_awaitable_callback_result(
@@ -653,7 +646,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return url or ""
 
     @property
-    def current_url(self):
+    def current_url(self) -> Awaitable[str]:
         return self.get_current_url()
 
     async def get_current_title(self, timeout=NotSet) -> str:
@@ -662,6 +655,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
     @property
     def current_title(self) -> Awaitable[str]:
+        return self.get_current_title()
+
+    @property
+    def title(self) -> Awaitable[str]:
         return self.get_current_title()
 
     @property

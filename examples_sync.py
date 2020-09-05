@@ -51,6 +51,8 @@ def test_example():
         tab.set_url("https://www.bing.com/",
                     referrer="https://www.github.com/",
                     timeout=5)
+        assert 'bing' in tab.url, tab.url
+        assert 'Bing' in tab.title, tab.title
         # get_cookies from url
         logger.info(tab.get_cookies("http://cn.bing.com"))
         # test inject_js, if success, will alert jQuery version info 3.3.1
