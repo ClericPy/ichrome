@@ -78,6 +78,7 @@ class ChromeDaemon(object):
     IPAD_UA = "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"
     MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
     IGNORE_USER_DIR_FLAGS = {'null', 'None', '/dev/null', "''", '""'}
+    MAX_WAIT_CHECKING_SECONDS = 60
 
     def __init__(
         self,
@@ -306,7 +307,8 @@ class ChromeDaemon(object):
     @property
     def connection_ok(self):
         url = self.server + "/json"
-        for _ in range(3):
+        start_time = time.time()
+        for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
             timeout = self._timeout + _
             r = self.req.head(url, timeout=timeout)
             if r.x and r.ok:
@@ -317,6 +319,8 @@ class ChromeDaemon(object):
                         f'timeout has been reset: {self._timeout} -> {timeout}')
                     self._timeout = timeout
                 return True
+            if time.time() - start_time > timeout:
+                break
             time.sleep(1)
         return False
 
@@ -363,9 +367,9 @@ class ChromeDaemon(object):
         self._start_chrome_process()
         error = None
         if not self.proc_ok:
-            error = f'launch_chrome failed for proc not ok'
+            error = 'launch_chrome failed for proc not ok'
         elif not self.connection_ok:
-            error = f'launch_chrome failed for connection not ok'
+            error = 'launch_chrome failed for connection not ok'
         if error:
             logger.error(error)
             raise ChromeRuntimeError(error)
@@ -483,7 +487,6 @@ class ChromeDaemon(object):
             except subprocess.TimeoutExpired:
                 deaths = 0
         logger.debug(f"{self} daemon exited. return_code: {return_code}")
-        self.update_shutdown_time()
         return return_code
 
     def run_forever(self, block=True, interval=None):
@@ -529,8 +532,6 @@ class ChromeDaemon(object):
 
     def update_shutdown_time(self):
         self._shutdown = time.time()
-        if self.on_shutdown:
-            self.on_shutdown(self)
 
     def shutdown(self, reason=None):
         if self._shutdown:
@@ -541,14 +542,15 @@ class ChromeDaemon(object):
             f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
         )
         self.update_shutdown_time()
+        if self.on_shutdown:
+            self.on_shutdown(self)
         self.kill()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
-        if not self._shutdown:
-            self.shutdown()
+        self.shutdown()
 
     @staticmethod
     def get_proc(port):
@@ -565,8 +567,7 @@ class ChromeDaemon(object):
                                     interval=interval)
 
     def __del__(self):
-        if not self._shutdown:
-            self.shutdown()
+        self.shutdown()
 
     def __str__(self):
         return f"{self.__class__.__name__}({self.host}:{self.port})"
@@ -657,16 +658,17 @@ class AsyncChromeDaemon(ChromeDaemon):
         await async_run(self._start_chrome_process)
         error = None
         if not await async_run(self._proc_ok):
-            error = f'launch_chrome failed for proc not ok'
+            error = 'launch_chrome failed for proc not ok'
         elif not await self.check_connection():
-            error = f'launch_chrome failed for connection not ok'
+            error = 'launch_chrome failed for connection not ok'
         if error:
             logger.error(error)
             raise ChromeRuntimeError(error)
 
     async def check_connection(self):
         url = self.server + "/json"
-        for _ in range(3):
+        start_time = time.time()
+        for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
             timeout = self._timeout + _
             r = await self.req.head(url, timeout=timeout)
             if r and r.ok:
@@ -677,6 +679,8 @@ class AsyncChromeDaemon(ChromeDaemon):
                         f'timeout has been reset: {self._timeout} -> {timeout}')
                     self._timeout = timeout
                 return True
+            if time.time() - start_time > timeout:
+                break
             await asyncio.sleep(1)
         return False
 
@@ -759,15 +763,13 @@ class AsyncChromeDaemon(ChromeDaemon):
             except subprocess.TimeoutExpired:
                 deaths = 0
         logger.debug(f"{self} daemon exited.")
-        await self.update_shutdown_time()
         return return_code
 
     async def __aenter__(self):
         return await self._init_coro
 
     async def __aexit__(self, *args, **kwargs):
-        if not self._shutdown:
-            await self.shutdown('__aexit__')
+        await self.shutdown('__aexit__')
 
     async def shutdown(self, reason=None):
         if self._shutdown:
@@ -777,15 +779,12 @@ class AsyncChromeDaemon(ChromeDaemon):
         logger.debug(
             f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
         )
-        await self.update_shutdown_time()
-        await async_run(self.kill, True)
-
-    async def update_shutdown_time(self):
-        self._shutdown = time.time()
+        self.update_shutdown_time()
         if self.on_shutdown:
             _coro = self.on_shutdown(self)
             if isawaitable(_coro):
                 await _coro
+        await async_run(self.kill, True)
 
     async def _clear_user_dir(self):
         # clear self user dir
@@ -819,6 +818,9 @@ class AsyncChromeDaemon(ChromeDaemon):
                                                       port=self.port,
                                                       index=index,
                                                       auto_close=auto_close)
+
+    def __del__(self):
+        asyncio.ensure_future(self.shutdown())
 
 
 class ChromeWorkers:
