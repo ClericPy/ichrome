@@ -1052,6 +1052,17 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                urls=urls,
                                timeout=timeout)
 
+    async def goto(self,
+                   url: Optional[str] = None,
+                   referrer: Optional[str] = None,
+                   timeout=NotSet,
+                   timeout_stop_loading: bool = False) -> bool:
+        # alias for self.set_url
+        return await self.set_url(url=url,
+                                  referrer=referrer,
+                                  timeout=timeout,
+                                  timeout_stop_loading=timeout_stop_loading)
+
     async def set_url(self,
                       url: Optional[str] = None,
                       referrer: Optional[str] = None,

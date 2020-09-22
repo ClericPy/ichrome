@@ -95,7 +95,7 @@ class ChromeDaemon(object):
         max_deaths=1,
         daemon=True,
         block=False,
-        timeout=1,
+        timeout=2,
         debug=False,
         proc_check_interval=5,
         on_startup=None,
@@ -309,17 +309,13 @@ class ChromeDaemon(object):
         url = self.server + "/json"
         start_time = time.time()
         for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
-            timeout = self._timeout + _
-            r = self.req.head(url, timeout=timeout)
+            r = self.req.head(url, timeout=self._timeout)
             if r.x and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
-                if self._timeout != timeout:
-                    logger.warning(
-                        f'timeout has been reset: {self._timeout} -> {timeout}')
-                    self._timeout = timeout
                 return True
-            if time.time() - start_time > timeout:
+            if time.time() - start_time > self._timeout:
+                logger.error('waiting for connection but timeout.')
                 break
             time.sleep(1)
         return False
@@ -398,6 +394,7 @@ class ChromeDaemon(object):
 
     @staticmethod
     def _check_host_port_in_use(host="127.0.0.1", port=9222, timeout=1):
+        sock = None
         try:
             sock = socket.socket()
             sock.settimeout(timeout)
@@ -406,7 +403,8 @@ class ChromeDaemon(object):
         except (ConnectionRefusedError, socket.timeout):
             return True
         finally:
-            sock.close()
+            if sock is not None:
+                sock.close()
 
     def _ensure_port_free(self, max_tries=3):
         for _ in range(max_tries):
@@ -669,17 +667,13 @@ class AsyncChromeDaemon(ChromeDaemon):
         url = self.server + "/json"
         start_time = time.time()
         for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
-            timeout = self._timeout + _
-            r = await self.req.head(url, timeout=timeout)
+            r = await self.req.head(url, timeout=self._timeout)
             if r and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
-                if self._timeout != timeout:
-                    logger.warning(
-                        f'timeout has been reset: {self._timeout} -> {timeout}')
-                    self._timeout = timeout
                 return True
-            if time.time() - start_time > timeout:
+            if time.time() - start_time > self._timeout:
+                logger.error('waiting for connection but timeout.')
                 break
             await asyncio.sleep(1)
         return False
@@ -771,6 +765,14 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def __aexit__(self, *args, **kwargs):
         await self.shutdown('__aexit__')
 
+    @property
+    def x(self):
+        # `await self.x` to block until chrome daemon loop finished.
+        if isawaitable(self._daemon_thread):
+            return self._daemon_thread
+        else:
+            return asyncio.sleep(0)
+
     async def shutdown(self, reason=None):
         if self._shutdown:
             # logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
@@ -793,6 +795,7 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     @property
     def _SingleTabConnectionManagerDaemon(self):
+        # lazy import
         return getattr(self, '_SingleTabConnectionManagerDaemonClass',
                        self.import_SingleTabConnectionManagerDaemon())
 
