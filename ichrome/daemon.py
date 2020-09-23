@@ -307,16 +307,12 @@ class ChromeDaemon(object):
     @property
     def connection_ok(self):
         url = self.server + "/json"
-        start_time = time.time()
         for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
             r = self.req.head(url, timeout=self._timeout)
             if r.x and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
                 return True
-            if time.time() - start_time > self._timeout:
-                logger.error('waiting for connection but timeout.')
-                break
             time.sleep(1)
         return False
 
@@ -665,16 +661,12 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def check_connection(self):
         url = self.server + "/json"
-        start_time = time.time()
         for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
             r = await self.req.head(url, timeout=self._timeout)
             if r and r.ok:
                 self.ready = True
                 self.port_in_using.add(self.port)
                 return True
-            if time.time() - start_time > self._timeout:
-                logger.error('waiting for connection but timeout.')
-                break
             await asyncio.sleep(1)
         return False
 
