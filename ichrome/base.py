@@ -144,7 +144,10 @@ def get_dir_size(path):
         except FileNotFoundError:
             return 0
 
-    return sum(get_st_size(f) for f in Path(path).glob("**/*") if f.is_file())
+    target_path = Path(path)
+    if not target_path.is_dir():
+        return 0
+    return sum(get_st_size(f) for f in target_path.glob("**/*") if f.is_file())
 
 
 def get_readable_dir_size(path):

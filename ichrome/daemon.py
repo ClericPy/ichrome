@@ -531,11 +531,11 @@ class ChromeDaemon(object):
         if self._shutdown:
             logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
+        self.update_shutdown_time()
         reason = f' for {reason}' if reason else ''
         logger.debug(
             f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
         )
-        self.update_shutdown_time()
         if self.on_shutdown:
             self.on_shutdown(self)
         self.kill()
@@ -769,11 +769,11 @@ class AsyncChromeDaemon(ChromeDaemon):
         if self._shutdown:
             # logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
+        self.update_shutdown_time()
         reason = f' for {reason}' if reason else ''
         logger.debug(
             f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
         )
-        self.update_shutdown_time()
         if self.on_shutdown:
             _coro = self.on_shutdown(self)
             if isawaitable(_coro):
