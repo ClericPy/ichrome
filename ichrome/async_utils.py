@@ -861,7 +861,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                    timeout=None):
 
         def request_id_filter(event):
-            return event["params"]["requestId"] == request_id
+            if event:
+                return event["params"]["requestId"] == request_id
 
         request_id = self._ensure_request_id(request_dict)
         return await self.wait_event('Network.loadingFinished',
