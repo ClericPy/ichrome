@@ -1884,6 +1884,10 @@ JSON.stringify(result)""" % (
                                 button=button,
                                 timeout=timeout)
 
+    async def gc(self):
+        # HeapProfiler.collectGarbage
+        return await self.send('HeapProfiler.collectGarbage')
+
 
 class OffsetMoveWalker:
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
