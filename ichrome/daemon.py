@@ -813,7 +813,7 @@ class AsyncChromeDaemon(ChromeDaemon):
                                                       auto_close=auto_close)
 
     def __del__(self):
-        asyncio.ensure_future(self.shutdown())
+        pass
 
 
 class ChromeWorkers:
