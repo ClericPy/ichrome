@@ -2,8 +2,9 @@
 import re
 import time
 from asyncio import get_running_loop
+from inspect import isawaitable
 from pathlib import Path
-from typing import List
+from typing import Awaitable, List
 
 import psutil
 from torequests.utils import get_readable_size
@@ -161,6 +162,7 @@ def install_chromium(path, platform_name=None, x64=True, max_threads=5):
     import zipfile
     from io import BytesIO
     from pathlib import Path
+
     from torequests import tPool
     from torequests.utils import get_readable_size
 
@@ -265,3 +267,10 @@ def async_run(func, *args, **kwargs):
         return func(*args, **kwargs)
 
     return get_running_loop().run_in_executor(None, function)
+
+
+async def ensure_awaitable(result):
+    if isawaitable(result):
+        return await result
+    else:
+        return result
