@@ -69,7 +69,6 @@ class ChromeDaemon(object):
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
 
-    port_in_using: set = set()
     PC_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36"
     MAC_OS_UA = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_0_1) Version/8.0.1a Safari/728.28.19"
@@ -311,7 +310,6 @@ class ChromeDaemon(object):
             r = self.req.head(url, timeout=self._timeout)
             if r.x and r.ok:
                 self.ready = True
-                self.port_in_using.add(self.port)
                 return True
             time.sleep(1)
         return False
@@ -517,7 +515,6 @@ class ChromeDaemon(object):
         else:
             max_deaths = 0
         self.clear_chrome_process(self.port, max_deaths=max_deaths)
-        self.port_in_using.discard(self.port)
 
     def restart(self):
         logger.debug(f"restarting {self}")
@@ -659,13 +656,14 @@ class AsyncChromeDaemon(ChromeDaemon):
             logger.error(error)
             raise ChromeRuntimeError(error)
 
+    async def _check_chrome_connection(self):
+        r = await self.req.head(self.server, timeout=self._timeout)
+        return r and r.ok
+
     async def check_connection(self):
-        url = self.server + "/json"
         for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
-            r = await self.req.head(url, timeout=self._timeout)
-            if r and r.ok:
+            if await self._check_chrome_connection():
                 self.ready = True
-                self.port_in_using.add(self.port)
                 return True
             await asyncio.sleep(1)
         return False
