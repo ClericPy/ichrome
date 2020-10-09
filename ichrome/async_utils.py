@@ -1550,14 +1550,17 @@ JSON.stringify(result)""" % (
                                            timeout=timeout)
 
     async def screenshot_element(self,
-                                 cssselector: str,
+                                 cssselector: str = None,
                                  scale=1,
                                  format: str = 'png',
                                  quality: int = 100,
                                  fromSurface: bool = True,
                                  save_path=None,
                                  timeout=NotSet):
-        clip = await self.get_element_clip(cssselector, scale=scale)
+        if cssselector:
+            clip = await self.get_element_clip(cssselector, scale=scale)
+        else:
+            clip = None
         return await self.screenshot(format=format,
                                      quality=quality,
                                      clip=clip,
