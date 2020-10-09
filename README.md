@@ -27,7 +27,55 @@
 - Operations on Tabs under stable websocket
   - Package very commonly used functions
 
+# What's More?
 
+As we known, `Chrome` browsers (including various webdriver versions) will have the following problems **in a long-running scene**:
+   1. memory leak
+   2. missing websocket connections
+   3. infinitely growing cache
+   4. other unpredictable problems...
+
+So you may need a more stable process pool scheduling scheme:
+
+```python
+import asyncio
+from ichrome.pool import ChromeEngine
+
+
+def test_pool():
+
+    async def _test_pool():
+
+        tab_callback1 = r'''async def tab_callback(self, tab, url, timeout):
+            await tab.set_url(url, timeout=5)
+            return 'Bing' in (await tab.title)'''
+
+        async def tab_callback2(self, tab, url, timeout):
+            await tab.set_url(url, timeout=5)
+            return 'Bing' in (await tab.title)
+
+        async with ChromeEngine(max_concurrent_tabs=5,
+                                headless=True,
+                                disable_image=True) as ce:
+            tasks = [
+                asyncio.ensure_future(
+                    ce.do('http://bing.com', tab_callback1, timeout=10))
+                for _ in range(3)
+            ] + [
+                asyncio.ensure_future(
+                    ce.do('http://bing.com', tab_callback2, timeout=10))
+                for _ in range(3)
+            ]
+            for task in tasks:
+                assert (await task) is True
+
+    # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
+    asyncio.get_event_loop().run_until_complete(_test_pool())
+
+
+if __name__ == "__main__":
+    test_pool()
+```
 
 # Install
 
@@ -417,5 +465,6 @@ Test Code: [examples_sync.py](https://github.com/ClericPy/ichrome/blob/master/ex
 - [x] Add some useful examples.
 - [x] Coroutine support (for asyncio).
 - [x] Standard test cases.
+- [x] Stable Chrome Process Pool.
 - [ ] HTTP apis server console [fastapi]. (maybe a new lib)
 - [ ] ~~Complete document.~~

@@ -3,17 +3,20 @@ import random
 import time
 import typing
 from copy import deepcopy
+
 from . import AsyncChromeDaemon, AsyncTab
+from .base import ensure_awaitable
 from .exceptions import ChromeException
 from .logs import logger
-from .base import ensure_awaitable
 
 
-class ExpireFuture(asyncio.Future):
+class ChromeTask(asyncio.Future):
+    """ExpireFuture"""
     _ID = 0
     MAX_TIMEOUT = 60
     MAX_TRIES = 5
     EXEC_GLOBALS: typing.Dict[str, typing.Any] = {}
+    STOP_SIG = object()
 
     def __init__(self,
                  data,
@@ -28,8 +31,9 @@ class ExpireFuture(asyncio.Future):
         self._running_task: asyncio.Task = None
         self._tries = 0
 
-    async def _default_tab_callback(self, tab: AsyncTab, data: typing.Any,
-                                    timeout: float):
+    @staticmethod
+    async def _default_tab_callback(self: 'ChromeTask', tab: AsyncTab,
+                                    data: typing.Any, timeout: float):
         return
 
     def ensure_tab_callback(self, tab_callback):
@@ -39,9 +43,23 @@ class ExpireFuture(asyncio.Future):
             tab_callback = exec_locals['tab_callback']
             if not tab_callback:
                 raise RuntimeError(
-                    'tab_callback source code should has function like `tab_callback(tab: AsyncTab, data: typing.Any, timeout: float)`'
+                    'tab_callback source code should has function like `tab_callback(self: "ChromeTask", tab: AsyncTab, data: typing.Any, timeout: float)`'
                 )
         return tab_callback or self._default_tab_callback
+
+    async def run(self, tab: AsyncTab):
+        self._tries += 1
+        if self._tries > self.MAX_TRIES:
+            logger.info(
+                f'[canceled] {self} for tries more than MAX_TRIES: {self._tries} > {self.MAX_TRIES}'
+            )
+            return self.cancel()
+        self._running_task = asyncio.create_task(
+            ensure_awaitable(
+                self.tab_callback(self, tab, self.data, timeout=self.timeout)))
+        result = await self._running_task
+        if self._state == 'PENDING':
+            self.set_result(result)
 
     @classmethod
     def get_id(cls):
@@ -62,43 +80,26 @@ class ExpireFuture(asyncio.Future):
             pass
 
     def cancel(self):
+        logger.info(f'[canceled] {self}')
         self.cancel_task()
         super().cancel()
-
-    async def run(self, tab: AsyncTab):
-        self._tries += 1
-        if self._tries > self.MAX_TRIES:
-            return self.cancel()
-        self._running_task = asyncio.create_task(
-            ensure_awaitable(
-                self.tab_callback(tab, self.data, timeout=self.timeout)))
-        result = await self._running_task
-        if self._state == 'PENDING':
-            self.set_result(result)
 
     def __lt__(self, other):
         return self.expire_time < other.expire_time
 
     def __str__(self):
-        return f'ChromeTask<{self.id}>'
+        # ChromeTask(<7>, FINISHED)
+        return f'{self.__class__.__name__}(<{self.id}>, {self._state})'
 
     def __repr__(self) -> str:
         return str(self)
 
-    def __del__(self):
-        if not self.done():
-            self.cancel()
-        super().__del__()
-
 
 class ChromeWorker:
-    STOP_SIG = object()
     DEFAULT_DAEMON_KWARGS: typing.Dict[str, typing.Any] = {}
     MAX_CONCURRENT_TABS = 5
-    # auto restart chrome daemon every 8 mins, to avoid zombie processes or memory leakage.
+    # auto restart chrome daemon every 8 mins, to avoid zombie processes and memory leakage.
     RESTART_EVERY = 8 * 60
-    # TODO
-    RESTART_EVERY = 3
 
     def __init__(self,
                  port=None,
@@ -133,7 +134,7 @@ class ChromeWorker:
         while not self._shutdown:
             self._restart_interval = round(
                 self.RESTART_EVERY + self.get_random_secs(), 3)
-            self._need_restart_for_interval = False
+            self._will_restart_peacefully = False
             self._chrome_daemon_ready.clear()
             self._need_restart.clear()
             async with AsyncChromeDaemon(port=self.port,
@@ -141,27 +142,31 @@ class ChromeWorker:
                 self._daemon_start_time = time.time()
                 self.chrome_daemon = chrome_daemon
                 self._chrome_daemon_ready.set()
-                logger.info(f'{self} is online.')
+                logger.info(f'[online] {self} is online.')
                 while 1:
                     await self._need_restart.wait()
-                    if not self._need_restart_for_interval:
-                        break
-                    elif self._need_restart_for_interval and not self._running_futures:
-                        break
                     # waiting for all _running_futures done.
-                logger.info(f'{self} is offline.')
+                    if not self._will_restart_peacefully:
+                        break
+                    elif self._will_restart_peacefully and not self._running_futures:
+                        msg = f'restarting for interval {self._restart_interval}. ({self})'
+                        logger.info(msg)
+                        break
+                logger.info(f'[offline] {self} is offline.')
 
     async def future_consumer(self, index=None):
         while not self._shutdown:
             if time.time() - self._daemon_start_time > self._restart_interval:
-                msg = f'waiting for all the consumers released and restart for interval {self._restart_interval}. ({self}: {self._running_futures})'
-                logger.info(msg)
-                self._need_restart_for_interval = True
+                # stop consuming new futures
                 self._chrome_daemon_ready.clear()
+                for f in self._running_futures:
+                    await f
+                self._will_restart_peacefully = True
+                # time to restart
                 self._need_restart.set()
             await self._chrome_daemon_ready.wait()
-            future: ExpireFuture = await self.q.get()
-            if future.data is self.STOP_SIG:
+            future: ChromeTask = await self.q.get()
+            if future.data is ChromeTask.STOP_SIG:
                 await self.q.put(future)
                 break
             if future.done() or future.expire_time < time.time():
@@ -172,12 +177,12 @@ class ChromeWorker:
                         index=None, auto_close=True) as tab:
                     try:
                         self._running_futures.add(future)
-                        print('add', future)
                         await future.run(tab)
-                        print('done', future)
                         continue
                     except ChromeEngine.ERRORS_NOT_HANDLED as error:
                         raise error
+                    except asyncio.CancelledError:
+                        continue
                     except ChromeException as error:
                         logger.error(f'{self} restarting for error {error!r}')
                         self._need_restart.set()
@@ -186,7 +191,6 @@ class ChromeWorker:
                             f'{self} catch an error {error!r} for {future}')
                     finally:
                         self._running_futures.discard(future)
-                        print('discard', future)
                         if not future.done():
                             # retry
                             future.cancel_task()
@@ -211,16 +215,21 @@ class ChromeWorker:
         return random.choice(range(start * 1000, end * 1000)) / 1000
 
     def __str__(self):
-        return f'ChromeWorker<{self.port}>({len(self._running_futures)}/{self.max_concurrent_tabs})'
+        return f'{self.__class__.__name__}(<{self.port}>, {len(self._running_futures)}/{self.max_concurrent_tabs})'
 
     def __repr__(self) -> str:
         return str(self)
+
+
+class ChromeUtilsMixin:
+    """NotImplemented"""
 
 
 class ChromeEngine:
     START_PORT = 9345
     DEFAULT_WORKERS_AMOUNT = 2
     ERRORS_NOT_HANDLED = (KeyboardInterrupt,)
+    SHORTEN_DATA_LENGTH = 100
 
     def __init__(self, max_concurrent_tabs=None, **daemon_kwargs):
         self._q: typing.Union[asyncio.PriorityQueue, asyncio.Queue] = None
@@ -259,24 +268,33 @@ class ChromeEngine:
     async def start(self):
         return await self.start_workers()
 
+    def shorten_data(self, data):
+        repr_data = repr(data)
+        return f'{repr_data[:self.SHORTEN_DATA_LENGTH]}{"..." if len(repr_data)>self.SHORTEN_DATA_LENGTH else ""}'
+
     async def do(self, data, tab_callback, timeout: float = None):
         if self._shutdown:
-            raise RuntimeError('ChromeEngine has been shutdown.')
-        future = ExpireFuture(data, tab_callback, timeout=timeout)
+            raise RuntimeError(f'{self.__class__.__name__} has been shutdown.')
+        future = ChromeTask(data, tab_callback, timeout=timeout)
+        logger.info(
+            f'[enqueue] {future} with timeout={timeout}, data={self.shorten_data(data)}'
+        )
         await self.q.put(future)
         try:
             return await asyncio.wait_for(future, timeout=future.timeout)
         except asyncio.TimeoutError:
             return None
         finally:
+            logger.info(f'[finished] {future}')
             del future
 
     async def shutdown(self):
         if self._shutdown:
             return
         for _ in self.workers:
-            await self.q.put(ExpireFuture(ChromeWorker.STOP_SIG, 0))
+            await self.q.put(ChromeTask(ChromeTask.STOP_SIG, 0))
         self._shutdown = True
+        self.release()
         for worker in self.workers:
             await worker.shutdown()
         return self
@@ -287,6 +305,8 @@ class ChromeEngine:
     async def __aexit__(self, *_):
         return await self.shutdown()
 
-
-class ChromeUtilsMixin(object):
-    pass
+    def release(self):
+        for future in self.q._queue:
+            if future.data is not ChromeTask.STOP_SIG and not future.done():
+                future.cancel()
+            del future

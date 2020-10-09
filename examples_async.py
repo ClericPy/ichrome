@@ -1,7 +1,7 @@
 import asyncio
 from typing import List
 
-from ichrome import AsyncChromeDaemon
+from ichrome import AsyncChromeDaemon, ChromeEngine
 from ichrome.async_utils import Chrome, Tab, Tag, logger
 
 logger.setLevel('DEBUG')
@@ -327,5 +327,37 @@ async def test_examples():
     assert AsyncChromeDaemon.bye
 
 
+def test_chrome_engine():
+
+    async def _test_chrome_engine():
+
+        tab_callback1 = r'''async def tab_callback(self, tab, url, timeout):
+            await tab.set_url(url, timeout=5)
+            return 'Bing' in (await tab.title)'''
+
+        async def tab_callback2(self, tab, url, timeout):
+            await tab.set_url(url, timeout=5)
+            return 'Bing' in (await tab.title)
+
+        async with ChromeEngine(max_concurrent_tabs=5,
+                                headless=True,
+                                disable_image=True) as ce:
+            tasks = [
+                asyncio.ensure_future(
+                    ce.do('http://bing.com', tab_callback1, timeout=10))
+                for _ in range(3)
+            ] + [
+                asyncio.ensure_future(
+                    ce.do('http://bing.com', tab_callback2, timeout=10))
+                for _ in range(3)
+            ]
+            for task in tasks:
+                assert (await task) is True
+            print('test_chrome_engine ok')
+    # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
+    asyncio.get_event_loop().run_until_complete(_test_chrome_engine())
+
+
 if __name__ == "__main__":
-    asyncio.run(test_examples())
+    test_chrome_engine()
+    asyncio.get_event_loop().run_until_complete(test_examples())
