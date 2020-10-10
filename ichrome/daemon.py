@@ -15,8 +15,9 @@ from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
-from .base import (async_run, clear_chrome_process, get_dir_size,
-                   get_memory_by_port, get_proc, get_readable_dir_size)
+from .base import (async_run, clear_chrome_process, ensure_awaitable,
+                   get_dir_size, get_memory_by_port, get_proc,
+                   get_readable_dir_size)
 from .exceptions import ChromeRuntimeError, ChromeTypeError
 from .logs import logger
 """
@@ -99,6 +100,8 @@ class ChromeDaemon(object):
         proc_check_interval=5,
         on_startup=None,
         on_shutdown=None,
+        before_startup=None,
+        after_shutdown=None,
     ):
         if debug:
             logger.setLevel('DEBUG')
@@ -124,6 +127,8 @@ class ChromeDaemon(object):
         self.proc_check_interval = proc_check_interval
         self.on_startup = on_startup
         self.on_shutdown = on_shutdown
+        self.before_startup = before_startup
+        self.after_shutdown = after_shutdown
         self._block = block
         self.init()
 
@@ -138,6 +143,8 @@ class ChromeDaemon(object):
             self.chrome_path = self._get_default_path()
         self._ensure_port_free()
         self.req = tPool()
+        if self.before_startup:
+            self.before_startup(self)
         self.launch_chrome()
         if self._use_daemon:
             self._daemon_thread = self.run_forever(block=self._block)
@@ -536,6 +543,8 @@ class ChromeDaemon(object):
         if self.on_shutdown:
             self.on_shutdown(self)
         self.kill()
+        if self.after_shutdown:
+            self.after_shutdown(self)
 
     def __enter__(self):
         return self
@@ -609,6 +618,8 @@ class AsyncChromeDaemon(ChromeDaemon):
             proc_check_interval=proc_check_interval,
             on_startup=on_startup,
             on_shutdown=on_shutdown,
+            before_startup=None,
+            after_shutdown=None,
         )
 
     def init(self):
@@ -631,13 +642,13 @@ class AsyncChromeDaemon(ChromeDaemon):
             self.chrome_path = await async_run(self._get_default_path)
         await async_run(self._ensure_port_free)
         self._req = Requests()
+        if self.before_startup:
+            await ensure_awaitable(self.before_startup(self))
         await self.launch_chrome()
         if self._use_daemon:
             self._daemon_thread = await self.run_forever(block=self._block)
         if self.on_startup:
-            _coro = self.on_startup(self)
-            if isawaitable(_coro):
-                await _coro
+            await ensure_awaitable(self.on_startup(self))
         return self
 
     async def restart(self):
@@ -773,10 +784,10 @@ class AsyncChromeDaemon(ChromeDaemon):
             f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
         )
         if self.on_shutdown:
-            _coro = self.on_shutdown(self)
-            if isawaitable(_coro):
-                await _coro
+            await ensure_awaitable(self.on_shutdown(self))
         await async_run(self.kill, True)
+        if self.after_shutdown:
+            await ensure_awaitable(self.after_shutdown(self))
 
     async def _clear_user_dir(self):
         # clear self user dir
