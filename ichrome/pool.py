@@ -361,20 +361,20 @@ class ChromeEngine:
         else:
             return b64decode(image)
 
-    async def load(self,
-                   url,
-                   cssselector: str = None,
-                   wait_tag: str = None,
-                   timeout=None) -> dict:
+    async def download(self,
+                       url,
+                       cssselector: str = None,
+                       wait_tag: str = None,
+                       timeout=None) -> dict:
 
         data = dict(url=url, cssselector=cssselector, wait_tag=wait_tag)
         return await self.do(data=data,
-                             tab_callback=CommonUtils.load,
+                             tab_callback=CommonUtils.download,
                              timeout=timeout,
                              tab_index=None)
 
     async def preview(self, url, wait_tag: str = None, timeout=None) -> bytes:
-        data = await self.load(url, wait_tag=wait_tag, timeout=timeout)
+        data = await self.download(url, wait_tag=wait_tag, timeout=timeout)
         if data:
             return data['html'].encode(data.get('encoding') or 'utf-8')
         else:
@@ -388,7 +388,7 @@ class CommonUtils:
         await tab.set_url(data.pop('url'), timeout=timeout)
         return await tab.screenshot_element(timeout=timeout, **data)
 
-    async def load(self, tab: AsyncTab, data, timeout):
+    async def download(self, tab: AsyncTab, data, timeout):
         start_time = time.time()
         result = {'url': data['url']}
         await tab.set_url(data['url'], timeout=timeout)
