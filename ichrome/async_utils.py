@@ -399,7 +399,11 @@ class Tab(GetValueMixin):
 
     async def close(self, timeout=0) -> Union[dict, None]:
         """close tab with cdp websocket. will lose ws, so timeout default to 0."""
-        return await self.send("Page.close", timeout=timeout)
+        try:
+            return await self.send("Page.close", timeout=timeout)
+        except ChromeRuntimeError as error:
+            logger.error(f'close tab failed for {error!r}')
+            return None
 
     async def crash(self, timeout=0) -> Union[dict, None]:
         """will lose ws, so timeout default to 0."""
