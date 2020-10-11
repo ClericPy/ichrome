@@ -21,10 +21,12 @@ class ChromeTask(asyncio.Future):
     def __init__(self,
                  data,
                  tab_callback: typing.Callable = None,
-                 timeout=None):
+                 timeout=None,
+                 tab_index=None):
         super().__init__()
         self.id = self.get_id()
         self.data = data
+        self.tab_index = tab_index
         self._timeout = self.MAX_TIMEOUT if timeout is None else timeout
         self.expire_time = time.time() + self._timeout
         self.tab_callback = self.ensure_tab_callback(tab_callback)
@@ -174,7 +176,7 @@ class ChromeWorker:
                 continue
             if await self.chrome_daemon._check_chrome_connection():
                 async with self.chrome_daemon.connect_tab(
-                        index=None, auto_close=True) as tab:
+                        index=future.tab_index, auto_close=True) as tab:
                     try:
                         self._running_futures.add(future)
                         await future.run(tab)
@@ -185,7 +187,8 @@ class ChromeWorker:
                         continue
                     except ChromeException as error:
                         logger.error(f'{self} restarting for error {error!r}')
-                        self._need_restart.set()
+                        if not self._need_restart.is_set():
+                            self._need_restart.set()
                     except Exception as error:
                         logger.error(
                             f'{self} catch an error {error!r} for {future}')
@@ -231,11 +234,15 @@ class ChromeEngine:
     ERRORS_NOT_HANDLED = (KeyboardInterrupt,)
     SHORTEN_DATA_LENGTH = 100
 
-    def __init__(self, max_concurrent_tabs=None, **daemon_kwargs):
+    def __init__(self,
+                 workers_amount: int = None,
+                 max_concurrent_tabs=None,
+                 **daemon_kwargs):
         self._q: typing.Union[asyncio.PriorityQueue, asyncio.Queue] = None
         self._shutdown = False
         # max tab currency num
         self._workers: typing.List[ChromeWorker] = []
+        self.workers_amount = workers_amount or self.DEFAULT_WORKERS_AMOUNT
         self.max_concurrent_tabs = max_concurrent_tabs
         self.daemon_kwargs = daemon_kwargs
 
@@ -250,7 +257,7 @@ class ChromeEngine:
         return self._q
 
     def _add_default_workers(self):
-        for offset in range(self.DEFAULT_WORKERS_AMOUNT):
+        for offset in range(self.workers_amount):
             port = self.START_PORT + offset
             worker = ChromeWorker(port=port,
                                   max_concurrent_tabs=self.max_concurrent_tabs,
@@ -272,10 +279,17 @@ class ChromeEngine:
         repr_data = repr(data)
         return f'{repr_data[:self.SHORTEN_DATA_LENGTH]}{"..." if len(repr_data)>self.SHORTEN_DATA_LENGTH else ""}'
 
-    async def do(self, data, tab_callback, timeout: float = None):
+    async def do(self,
+                 data,
+                 tab_callback,
+                 timeout: float = None,
+                 tab_index=None):
         if self._shutdown:
             raise RuntimeError(f'{self.__class__.__name__} has been shutdown.')
-        future = ChromeTask(data, tab_callback, timeout=timeout)
+        future = ChromeTask(data,
+                            tab_callback,
+                            timeout=timeout,
+                            tab_index=tab_index)
         logger.info(
             f'[enqueue] {future} with timeout={timeout}, data={self.shorten_data(data)}'
         )
