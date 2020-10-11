@@ -2,8 +2,9 @@ import asyncio
 import random
 import time
 import typing
-from copy import deepcopy
 from base64 import b64decode
+from copy import deepcopy
+
 from . import AsyncChromeDaemon, AsyncTab
 from .base import ensure_awaitable
 from .exceptions import ChromeException
@@ -336,7 +337,7 @@ class ChromeEngine:
                 break
 
     async def screenshot(self,
-                         url,
+                         url: str,
                          cssselector: str = None,
                          scale=1,
                          format: str = 'png',
@@ -362,7 +363,7 @@ class ChromeEngine:
             return b64decode(image)
 
     async def download(self,
-                       url,
+                       url: str,
                        cssselector: str = None,
                        wait_tag: str = None,
                        timeout=None) -> dict:
@@ -373,7 +374,10 @@ class ChromeEngine:
                              timeout=timeout,
                              tab_index=None)
 
-    async def preview(self, url, wait_tag: str = None, timeout=None) -> bytes:
+    async def preview(self,
+                      url: str,
+                      wait_tag: str = None,
+                      timeout=None) -> bytes:
         data = await self.download(url, wait_tag=wait_tag, timeout=timeout)
         if data:
             return data['html'].encode(data.get('encoding') or 'utf-8')
