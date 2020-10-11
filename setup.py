@@ -29,6 +29,7 @@ setup(
     author="ClericPy",
     author_email="clericpy@gmail.com",
     url="https://github.com/ClericPy/ichrome",
+    extras_require={'web': ['uvicorn', 'fastapi']},
     packages=find_packages(),
     platforms="any",
     classifiers=[

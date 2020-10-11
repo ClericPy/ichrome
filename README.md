@@ -26,6 +26,9 @@
 - Connect to an existing Chrome
 - Operations on Tabs under stable websocket
   - Package very commonly used functions
+- **ChromeEngine** progress pool utils
+  - support HTTP apis with [FastAPI](https://github.com/tiangolo/fastapi)
+
 
 # What's More?
 
@@ -35,39 +38,89 @@ As we known, `Chrome` browsers (including various webdriver versions) will have 
    3. infinitely growing cache
    4. other unpredictable problems...
 
-So you may need a more stable process pool scheduling scheme:
+So you may need a more stable process pool with ChromeEngine(HTTP usage & normal usage):
+
+<details>
+    <summary><b>Show more</b></summary>
+
+## ChromeEngine HTTP usage
+
+### Server
+```python
+import uvicorn
+from fastapi import FastAPI
+
+from ichrome.routers.fastapi_routes import ChromeAPIRouter
+
+app = FastAPI()
+app.include_router(ChromeAPIRouter(headless=True), prefix='/chrome')
+
+uvicorn.run(app)
+
+# view url with your browser
+# http://127.0.0.1:8000/chrome/screenshot?url=http://bing.com
+# http://127.0.0.1:8000/chrome/download?url=http://bing.com
+```
+
+### Client
 
 ```python
+from torequests import tPool
+from inspect import getsource
+req = tPool()
+
+
+async def tab_callback(self, tab, data, timeout):
+    await tab.set_url(data['url'], timeout=timeout)
+    return (await tab.querySelector('h1')).text
+
+
+r = req.post('http://127.0.0.1:8000/chrome/do',
+             json={
+                 'data': {
+                     'url': 'http://httpbin.org/html'
+                 },
+                 'tab_callback': getsource(tab_callback),
+                 'timeout': 10
+             })
+print(r.text)
+# "Herman Melville - Moby-Dick"
+```
+
+
+## ChromeEngine normal usage
+```python
 import asyncio
+from inspect import getsource
+
 from ichrome.pool import ChromeEngine
+
+
+async def tab_callback(self, tab, url, timeout):
+    await tab.set_url(url, timeout=5)
+    return await tab.title
 
 
 def test_pool():
 
     async def _test_pool():
-
-        tab_callback1 = r'''async def tab_callback(self, tab, url, timeout):
-            await tab.set_url(url, timeout=5)
-            return 'Bing' in (await tab.title)'''
-
-        async def tab_callback2(self, tab, url, timeout):
-            await tab.set_url(url, timeout=5)
-            return 'Bing' in (await tab.title)
-
         async with ChromeEngine(max_concurrent_tabs=5,
                                 headless=True,
                                 disable_image=True) as ce:
             tasks = [
                 asyncio.ensure_future(
-                    ce.do('http://bing.com', tab_callback1, timeout=10))
+                    ce.do('http://bing.com', tab_callback, timeout=10))
                 for _ in range(3)
             ] + [
                 asyncio.ensure_future(
-                    ce.do('http://bing.com', tab_callback2, timeout=10))
+                    ce.do(
+                        'http://bing.com', getsource(tab_callback), timeout=10))
                 for _ in range(3)
             ]
             for task in tasks:
-                assert (await task) is True
+                result = await task
+                print(result)
+                assert result
 
     # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
     asyncio.get_event_loop().run_until_complete(_test_pool())
@@ -76,6 +129,9 @@ def test_pool():
 if __name__ == "__main__":
     test_pool()
 ```
+
+</details>
+
 
 # Install
 
@@ -466,5 +522,5 @@ Test Code: [examples_sync.py](https://github.com/ClericPy/ichrome/blob/master/ex
 - [x] Coroutine support (for asyncio).
 - [x] Standard test cases.
 - [x] Stable Chrome Process Pool.
-- [ ] HTTP apis server console [fastapi]. (maybe a new lib)
-- [ ] ~~Complete document.~~
+- [x] HTTP apis server console with [FastAPI](https://github.com/tiangolo/fastapi).
+- [ ] Complete the document.
