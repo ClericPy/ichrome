@@ -27,7 +27,7 @@
 - Operations on Tabs under stable websocket
   - Package very commonly used functions
 - **ChromeEngine** progress pool utils
-  - support HTTP apis with [FastAPI](https://github.com/tiangolo/fastapi)
+  - support HTTP api router with [FastAPI](https://github.com/tiangolo/fastapi)
 
 
 # What's More?
@@ -38,7 +38,7 @@ As we known, `Chrome` browsers (including various webdriver versions) will have 
    3. infinitely growing cache
    4. other unpredictable problems...
 
-So you may need a more stable process pool with ChromeEngine(HTTP usage & normal usage):
+So you may need a more stable process pool with **ChromeEngine(HTTP usage & normal usage)**:
 
 <details>
     <summary><b>Show more</b></summary>
