@@ -276,12 +276,16 @@ async def test_examples():
             await tab.wait_loading(5)
             title = await tab.current_title
             assert 'GitHub' in title
+        logger.info('test init tab from chromed OK.')
         # test on_startup
         assert chromed.started
+        logger.info('test on_startup OK.')
         # ===================== Chrome Test Cases =====================
         async with Chrome() as chrome:
             assert chrome.get_memory() > 0
+            logger.info('get_memory OK.')
             await test_chrome(chrome)
+            logger.info('test_chrome OK.')
             # ===================== Tab Test Cases =====================
             # Duplicate, use async with chrome.connect_tab(None) instead
             tab: Tab = await chrome.new_tab()
@@ -290,34 +294,46 @@ async def test_examples():
             async with tab():
                 # test send raw message
                 await test_send_msg(tab)
+                logger.info('test_send_msg OK.')
                 # test cookies operations
                 await test_tab_cookies(tab)
+                logger.info('test_tab_cookies OK.')
                 # set url
                 await test_tab_set_url(tab)
+                logger.info('test_tab_set_url OK.')
                 # test js
                 await test_tab_js(tab)
+                logger.info('test_tab_js OK.')
                 # test wait_response
                 await test_wait_response(tab)
+                logger.info('test_wait_response OK.')
                 # test add_js_onload remove_js_onload
                 await test_tab_js_onload(tab)
+                logger.info('test_tab_js_onload OK.')
                 # test set ua and set headers
                 await test_tab_set_ua_headers(tab)
+                logger.info('test_tab_set_ua_headers OK.')
                 # load url for other tests
                 await tab.set_url('http://httpbin.org/forms/post')
                 # test current_html
                 await test_tab_current_html(tab)
+                logger.info('test_tab_current_html OK.')
                 # test screenshot
                 await test_tab_screenshot(tab)
+                logger.info('test_tab_screenshot OK.')
                 # test double click some positions. test keyboard_send input
                 await test_tab_keyboard_mouse(tab)
+                logger.info('test_tab_keyboard_mouse OK.')
                 # clear cache
                 assert await tab.clear_browser_cache()
+                logger.info('clear_browser_cache OK.')
                 # close tab
                 await tab.close()
             # test chrome.connect_tab
             async with chrome.connect_tab(chrome.server + '/json', True) as tab:
                 await tab.wait_loading(2)
                 assert 'webSocketDebuggerUrl' in (await tab.current_html)
+            logger.info('test connect_tab OK.')
             # close_browser gracefully, I have no more need of chrome instance
             await chrome.close_browser()
             # await chrome.kill()
@@ -373,7 +389,7 @@ def test_chrome_engine():
             results = [await task for task in tasks]
             assert 1000 < len(results[0]['tags'][0]) < len(results[1]['html'])
 
-            logger.critical('test_chrome_engine ok')
+        logger.critical('test_chrome_engine OK')
 
     # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
     asyncio.get_event_loop().run_until_complete(_test_chrome_engine())
