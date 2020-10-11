@@ -1,6 +1,7 @@
 import asyncio
 import random
 import time
+from tkinter import EXCEPTION
 import typing
 from base64 import b64decode
 from copy import deepcopy
@@ -60,9 +61,14 @@ class ChromeTask(asyncio.Future):
         self._running_task = asyncio.create_task(
             ensure_awaitable(
                 self.tab_callback(self, tab, self.data, timeout=self.timeout)))
-        result = await self._running_task
-        if self._state == 'PENDING':
-            self.set_result(result)
+        result = None
+        try:
+            result = await self._running_task
+        except Exception as error:
+            logger.error(f'{self} catch an error while running task, {error!r}')
+        finally:
+            if self._state == 'PENDING':
+                self.set_result(result)
 
     @classmethod
     def get_id(cls):
@@ -210,6 +216,8 @@ class ChromeWorker:
                             future.cancel_task()
                             await self.q.put(future)
             else:
+                if not self._need_restart.is_set():
+                    self._need_restart.set()
                 await self.q.put(future)
         return f'{self} future_consumer[{index}] done.'
 
