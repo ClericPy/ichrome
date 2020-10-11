@@ -4,7 +4,7 @@ from typing import List
 from ichrome import AsyncChromeDaemon, ChromeEngine
 from ichrome.async_utils import Chrome, Tab, Tag, logger
 
-logger.setLevel('DEBUG')
+# logger.setLevel('DEBUG')
 # Tab._log_all_recv = True
 # headless = False
 headless = True
