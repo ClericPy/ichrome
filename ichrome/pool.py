@@ -3,7 +3,7 @@ import random
 import time
 import typing
 from copy import deepcopy
-
+from base64 import b64decode
 from . import AsyncChromeDaemon, AsyncTab
 from .base import ensure_awaitable
 from .exceptions import ChromeException
@@ -234,15 +234,11 @@ class ChromeWorker:
         return str(self)
 
 
-class ChromeUtilsMixin:
-    """NotImplemented"""
-
-
 class ChromeEngine:
     START_PORT = 9345
     DEFAULT_WORKERS_AMOUNT = 2
     ERRORS_NOT_HANDLED = (KeyboardInterrupt,)
-    SHORTEN_DATA_LENGTH = 100
+    SHORTEN_DATA_LENGTH = 150
 
     def __init__(self,
                  workers_amount: int = None,
@@ -330,7 +326,86 @@ class ChromeEngine:
         return await self.shutdown()
 
     def release(self):
-        for future in self.q._queue:
-            if future.data is not ChromeTask.STOP_SIG and not future.done():
-                future.cancel()
-            del future
+        while not self.q.empty():
+            try:
+                future = self.q.get_nowait()
+                if future.data is not ChromeTask.STOP_SIG and not future.done():
+                    future.cancel()
+                del future
+            except asyncio.QueueEmpty:
+                break
+
+    async def screenshot(self,
+                         url,
+                         cssselector: str = None,
+                         scale=1,
+                         format: str = 'png',
+                         quality: int = 100,
+                         fromSurface: bool = True,
+                         save_path=None,
+                         timeout=None,
+                         as_base64=True) -> typing.Union[str, bytes]:
+        data = dict(url=url,
+                    cssselector=cssselector,
+                    scale=scale,
+                    format=format,
+                    quality=quality,
+                    fromSurface=fromSurface,
+                    save_path=save_path)
+        image = await self.do(data=data,
+                              tab_callback=CommonUtils.screenshot,
+                              timeout=timeout,
+                              tab_index=None)
+        if as_base64 or not image:
+            return image
+        else:
+            return b64decode(image)
+
+    async def load(self,
+                   url,
+                   cssselector: str = None,
+                   wait_tag: str = None,
+                   timeout=None) -> dict:
+
+        data = dict(url=url, cssselector=cssselector, wait_tag=wait_tag)
+        return await self.do(data=data,
+                             tab_callback=CommonUtils.load,
+                             timeout=timeout,
+                             tab_index=None)
+
+    async def preview(self, url, wait_tag: str = None, timeout=None) -> bytes:
+        data = await self.load(url, wait_tag=wait_tag, timeout=timeout)
+        if data:
+            return data['html'].encode(data.get('encoding') or 'utf-8')
+        else:
+            return b''
+
+
+class CommonUtils:
+    """Some frequently-used callback functions."""
+
+    async def screenshot(self, tab: AsyncTab, data, timeout):
+        await tab.set_url(data.pop('url'), timeout=timeout)
+        return await tab.screenshot_element(timeout=timeout, **data)
+
+    async def load(self, tab: AsyncTab, data, timeout):
+        start_time = time.time()
+        result = {'url': data['url']}
+        await tab.set_url(data['url'], timeout=timeout)
+        if data['wait_tag']:
+            timeout = timeout - (time.time() - start_time)
+            if timeout > 0:
+                await tab.wait_tag(data['wait_tag'], max_wait_time=timeout)
+        if data['cssselector']:
+            result['html'] = None
+            tags = await tab.querySelectorAll(data['cssselector'])
+            result['tags'] = [tag.outerHTML for tag in tags]
+        else:
+            result['html'] = await tab.current_html
+            result['tags'] = []
+        title, encoding = await tab.get_value(
+            r'[document.title || document.body.textContent.trim().replace(/\s+/g, " ").slice(0,50), document.charset]',
+            jsonify=True)
+        result['title'] = title
+        result['encoding'] = encoding
+        return result
