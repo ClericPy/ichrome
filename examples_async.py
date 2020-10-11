@@ -6,7 +6,7 @@ from ichrome.async_utils import Chrome, Tab, Tag, logger
 
 logger.setLevel('DEBUG')
 # Tab._log_all_recv = True
-headless = False
+# headless = False
 headless = True
 
 
@@ -342,22 +342,43 @@ def test_chrome_engine():
         async with ChromeEngine(max_concurrent_tabs=5,
                                 headless=True,
                                 disable_image=True) as ce:
+            # test normal usage
             tasks = [
-                asyncio.ensure_future(
+                asyncio.create_task(
                     ce.do('http://bing.com', tab_callback1, timeout=10))
                 for _ in range(3)
             ] + [
-                asyncio.ensure_future(
+                asyncio.create_task(
                     ce.do('http://bing.com', tab_callback2, timeout=10))
                 for _ in range(3)
             ]
             for task in tasks:
                 assert (await task) is True
-            print('test_chrome_engine ok')
+            # test screenshot full screen and partial tag range.
+            tasks = [
+                asyncio.create_task(
+                    ce.screenshot('http://bing.com', '#sbox', timeout=10)),
+                asyncio.create_task(ce.screenshot('http://bing.com',
+                                                  timeout=10))
+            ]
+            results = [await task for task in tasks]
+            assert 1000 < len(results[0]) < len(results[1])
+
+            # test download
+            tasks = [
+                asyncio.create_task(
+                    ce.download('http://bing.com', '#sbox', timeout=10)),
+                asyncio.create_task(ce.download('http://bing.com', timeout=10))
+            ]
+            results = [await task for task in tasks]
+            assert 1000 < len(results[0]['tags'][0]) < len(results[1]['html'])
+
+            logger.critical('test_chrome_engine ok')
+
     # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
     asyncio.get_event_loop().run_until_complete(_test_chrome_engine())
 
 
 if __name__ == "__main__":
     test_chrome_engine()
-    asyncio.get_event_loop().run_until_complete(test_examples())
+    # asyncio.get_event_loop().run_until_complete(test_examples())
