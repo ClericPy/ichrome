@@ -17,17 +17,14 @@ from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import (Tag, TagNotFound, async_run, clear_chrome_process,
-                   get_memory_by_port)
+from .base import (INF, NotSet, Tag, TagNotFound, async_run,
+                   clear_chrome_process, get_memory_by_port)
 from .exceptions import ChromeRuntimeError, ChromeTypeError, ChromeValueError
 from .logs import logger
 """
 Async utils for connections and operations.
 [Recommended] Use daemon and async utils with different scripts.
 """
-
-NotSet = object()
-INF = float('inf')
 
 
 async def _ensure_awaitable_callback_result(callback_function, result):

@@ -15,6 +15,9 @@ from .logs import logger
 For base usage with sync utils.
 """
 
+NotSet = object()
+INF = float('inf')
+
 
 class TagNotFound:
 
