@@ -60,6 +60,7 @@ uvicorn.run(app)
 # view url with your browser
 # http://127.0.0.1:8000/chrome/screenshot?url=http://bing.com
 # http://127.0.0.1:8000/chrome/download?url=http://bing.com
+# http://127.0.0.1:8000/chrome/js?url=http://bing.com&js=document.title
 ```
 
 ### Client

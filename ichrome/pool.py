@@ -392,6 +392,18 @@ class ChromeEngine:
         else:
             return b''
 
+    async def js(self,
+                 url: str,
+                 js: str,
+                 value_path='result.result',
+                 wait_tag: str = None,
+                 timeout=None) -> bytes:
+        data = dict(url=url, js=js, value_path=value_path, wait_tag=wait_tag)
+        return await self.do(data=data,
+                             tab_callback=CommonUtils.js,
+                             timeout=timeout,
+                             tab_index=None)
+
 
 class CommonUtils:
     """Some frequently-used callback functions."""
@@ -421,3 +433,8 @@ class CommonUtils:
         result['title'] = title
         result['encoding'] = encoding
         return result
+
+    async def js(self, tab: AsyncTab, data, timeout):
+        await tab.set_url(data['url'], timeout=timeout)
+        return await tab.js(javascript=data['js'],
+                            value_path=data['value_path'])

@@ -27,6 +27,7 @@ uvicorn.run(app)
 # view url with your browser
 # http://127.0.0.1:8000/chrome/screenshot?url=http://bing.com
 # http://127.0.0.1:8000/chrome/download?url=http://bing.com
+# http://127.0.0.1:8000/chrome/js?url=http://bing.com&js=document.title
 
 # ================================================================
 
@@ -90,6 +91,7 @@ class ChromeAPIRouter(APIRouter):
         self.get('/preview')(self.preview)
         self.get('/download')(self.download)
         self.get('/screenshot')(self.screenshot)
+        self.get('/js')(self.js)
         self.post('/do')(self.do)
         self.add_event_handler('startup', self._chrome_on_startup)
         self.add_event_handler('shutdown', self._chrome_on_shutdown)
@@ -151,3 +153,17 @@ class ChromeAPIRouter(APIRouter):
         result = result or {}
         status_code = 200 if result else 400
         return JSONResponse(content=result, status_code=status_code)
+
+    async def js(self,
+                 url: str,
+                 js: str = None,
+                 value_path='result.result',
+                 wait_tag: str = None,
+                 timeout: typing.Union[float, int] = None):
+        result = await self.chrome_engine.js(url,
+                                             js=js,
+                                             value_path=value_path,
+                                             wait_tag=wait_tag,
+                                             timeout=timeout)
+        status_code = 200 if result else 400
+        return JSONResponse(result or {}, status_code)
