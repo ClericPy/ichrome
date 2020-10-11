@@ -107,10 +107,12 @@ class ChromeWorker:
                  port=None,
                  max_concurrent_tabs: int = None,
                  q: asyncio.PriorityQueue = None,
+                 restart_every: typing.Union[float, int] = None,
                  **daemon_kwargs):
         assert q, 'queue should not be null'
         self.port = port
         self.q = q
+        self.restart_every = restart_every or self.RESTART_EVERY
         self.max_concurrent_tabs = max_concurrent_tabs or self.MAX_CONCURRENT_TABS
         self._tab_sem = None
         self._shutdown = False
@@ -121,6 +123,14 @@ class ChromeWorker:
         self.consumers: typing.List[asyncio.Task] = []
         self._running_futures: typing.Set[int] = set()
         self._daemon_start_time = time.time()
+
+    @property
+    def todos(self):
+        return self.q.qsize()
+
+    @property
+    def runnings(self):
+        return len(self._running_futures)
 
     def start_daemon(self):
         self._chrome_daemon_ready = asyncio.Event()
@@ -135,7 +145,7 @@ class ChromeWorker:
     async def _start_chrome_daemon(self):
         while not self._shutdown:
             self._restart_interval = round(
-                self.RESTART_EVERY + self.get_random_secs(), 3)
+                self.restart_every + self.get_random_secs(), 3)
             self._will_restart_peacefully = False
             self._chrome_daemon_ready.clear()
             self._need_restart.clear()
@@ -218,7 +228,7 @@ class ChromeWorker:
         return random.choice(range(start * 1000, end * 1000)) / 1000
 
     def __str__(self):
-        return f'{self.__class__.__name__}(<{self.port}>, {len(self._running_futures)}/{self.max_concurrent_tabs})'
+        return f'{self.__class__.__name__}(<{self.port}>, {self.runnings}/{self.max_concurrent_tabs}, {self.todos} todos)'
 
     def __repr__(self) -> str:
         return str(self)
@@ -241,14 +251,14 @@ class ChromeEngine:
         self._q: typing.Union[asyncio.PriorityQueue, asyncio.Queue] = None
         self._shutdown = False
         # max tab currency num
-        self._workers: typing.List[ChromeWorker] = []
+        self.workers: typing.List[ChromeWorker] = []
         self.workers_amount = workers_amount or self.DEFAULT_WORKERS_AMOUNT
         self.max_concurrent_tabs = max_concurrent_tabs
         self.daemon_kwargs = daemon_kwargs
 
     @property
-    def workers(self):
-        return self._workers
+    def todos(self):
+        return self.q.qsize()
 
     @property
     def q(self):
@@ -291,7 +301,7 @@ class ChromeEngine:
                             timeout=timeout,
                             tab_index=tab_index)
         logger.info(
-            f'[enqueue] {future} with timeout={timeout}, data={self.shorten_data(data)}'
+            f'[enqueue]({self.todos}) {future} with timeout={timeout}, tab_index={tab_index}, data={self.shorten_data(data)}'
         )
         await self.q.put(future)
         try:
@@ -299,7 +309,7 @@ class ChromeEngine:
         except asyncio.TimeoutError:
             return None
         finally:
-            logger.info(f'[finished] {future}')
+            logger.info(f'[finished]({self.todos}) {future}')
             del future
 
     async def shutdown(self):
