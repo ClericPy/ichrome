@@ -381,4 +381,4 @@ def test_chrome_engine():
 
 if __name__ == "__main__":
     test_chrome_engine()
-    # asyncio.get_event_loop().run_until_complete(test_examples())
+    asyncio.get_event_loop().run_until_complete(test_examples())
