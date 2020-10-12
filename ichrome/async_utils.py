@@ -18,7 +18,7 @@ from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
 from .base import (INF, NotSet, Tag, TagNotFound, async_run,
-                   clear_chrome_process, get_memory_by_port)
+                   clear_chrome_process, ensure_awaitable, get_memory_by_port)
 from .exceptions import ChromeRuntimeError, ChromeTypeError, ChromeValueError
 from .logs import logger
 """
@@ -291,6 +291,7 @@ class Tab(GetValueMixin):
         self._listener = Listener()
         self._enabled_domains: Set[str] = set()
         self._default_recv_callback: List[Callable] = []
+        # using default_recv_callback.setter, default_recv_callback can be list or function
         self.default_recv_callback = default_recv_callback
 
     def __hash__(self):
@@ -320,7 +321,7 @@ class Tab(GetValueMixin):
 
     @property
     def default_recv_callback(self):
-        return self._default_recv_callback or []
+        return self._default_recv_callback
 
     @default_recv_callback.setter
     def default_recv_callback(self, value):
@@ -334,10 +335,27 @@ class Tab(GetValueMixin):
             raise ChromeValueError(
                 'default_recv_callback should be list or callable, and you can use tab.default_recv_callback.append(cb) to add new callback'
             )
+        self.ensure_callback_type(self.default_recv_callback)
 
     @default_recv_callback.deleter
     def default_recv_callback(self):
         self._default_recv_callback = []
+
+    @staticmethod
+    def ensure_callback_type(_default_recv_callback):
+        """
+        Ensure callback function has correct args
+        """
+        must_args = ('tab', 'data_dict')
+        for func in _default_recv_callback:
+            if not callable(func):
+                raise ChromeTypeError(
+                    f'callback function ({getattr(func, "__name__", func)}) should be callable')
+            if not inspect.isbuiltin(func) and len(
+                    inspect.signature(func).parameters) != 2:
+                raise ChromeTypeError(
+                    f'callback function ({getattr(func, "__name__", func)}) should handle two args for {must_args}'
+                )
 
     async def close_browser(self, timeout=0):
         return await self.send('Browser.close', timeout=timeout)
@@ -442,9 +460,9 @@ class Tab(GetValueMixin):
                 logger.debug(
                     f'[json] data_str can not be json.loads: {data_str}')
                 continue
-            for cb in self.default_recv_callback:
+            for callback in self.default_recv_callback:
                 asyncio.ensure_future(
-                    _ensure_awaitable_callback_result(cb, data_dict))
+                    ensure_awaitable(callback(self, data_dict)))
             f = self._listener.find_future(data_dict)
             if f:
                 if f._state == _PENDING:
