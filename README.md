@@ -90,6 +90,38 @@ print(r.text)
 
 
 ## ChromeEngine normal usage
+
+### Connect tab and do something
+```python
+import asyncio
+
+from ichrome.pool import ChromeEngine
+
+
+def test_chrome_engine_connect_tab():
+
+    async def _test_chrome_engine_connect_tab():
+
+        async with ChromeEngine(headless=True, disable_image=True) as ce:
+            async with ce.connect_tab() as tab:
+                await tab.goto('http://pypi.org')
+                print(await tab.title)
+
+    asyncio.get_event_loop().run_until_complete(
+        _test_chrome_engine_connect_tab())
+
+
+if __name__ == "__main__":
+    test_chrome_engine_connect_tab()
+# INFO  2020-10-13 00:43:37 [ichrome] pool.py(438): [enqueue](0) ChromeTask(<1>, PENDING) with timeout=None, tab_index=None, data=<ichrome.pool._TabWorker object at 0x0000018E44F7E970>
+# INFO  2020-10-13 00:43:39 [ichrome] pool.py(168): [online] ChromeWorker(<9345>, 0/5, 1 todos) is online.
+# INFO  2020-10-13 00:43:39 [ichrome] pool.py(192): ChromeWorker(<9345>, 0/5, 0 todos) get a new task ChromeTask(<1>, PENDING).
+# PyPI · The Python Package Index
+# INFO  2020-10-13 00:43:42 [ichrome] pool.py(178): [offline] ChromeWorker(<9345>, 0/5, 0 todos) is offline.
+# INFO  2020-10-13 00:43:42 [ichrome] pool.py(227): [finished](0) ChromeTask(<1>, PENDING)
+```
+
+### Batch Tasks
 ```python
 import asyncio
 from inspect import getsource

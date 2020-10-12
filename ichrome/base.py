@@ -4,7 +4,7 @@ import time
 from asyncio import get_running_loop
 from inspect import isawaitable
 from pathlib import Path
-from typing import Awaitable, List
+from typing import List
 
 import psutil
 from torequests.utils import get_readable_size
