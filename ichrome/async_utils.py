@@ -350,7 +350,8 @@ class Tab(GetValueMixin):
         for func in _default_recv_callback:
             if not callable(func):
                 raise ChromeTypeError(
-                    f'callback function ({getattr(func, "__name__", func)}) should be callable')
+                    f'callback function ({getattr(func, "__name__", func)}) should be callable'
+                )
             if not inspect.isbuiltin(func) and len(
                     inspect.signature(func).parameters) != 2:
                 raise ChromeTypeError(
@@ -1021,7 +1022,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                 return result['entries'][index]
             else:
                 raise ChromeValueError(
-                    f'index and relative_index should not be both None.')
+                    'index and relative_index should not be both None.')
 
     async def history_back(self, timeout=NotSet):
         return await self.goto_history_relative(relative_index=-1,
@@ -1807,10 +1808,10 @@ JSON.stringify(result)""" % (
                                           start_y,
                                           steps_count=steps_count)
         else:
+            interval = 0
             steps = [(target_x, target_y)]
         for x, y in steps:
-            if duration:
-                await asyncio.sleep(interval)
+            await asyncio.sleep(interval)
             await self.send('Input.dispatchMouseEvent',
                             type="mouseMoved",
                             x=int(round(x)),

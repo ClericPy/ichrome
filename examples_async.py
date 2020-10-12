@@ -284,6 +284,7 @@ async def test_examples():
             title = await tab.current_title
             assert TEST_DRC_OK, 'test default_recv_callback failed'
             assert 'GitHub' in title
+            tab.default_recv_callback.clear()
         logger.info('test init tab from chromed OK.')
         # test on_startup
         assert chromed.started
@@ -397,6 +398,11 @@ def test_chrome_engine():
             results = [await task for task in tasks]
             assert 1000 < len(results[0]['tags'][0]) < len(results[1]['html'])
 
+            # test connect_tab
+            async with ce.connect_tab() as tab:
+                await tab.goto('http://pypi.org')
+                title = await tab.title
+                assert 'PyPI' in title, title
         logger.critical('test_chrome_engine OK')
 
     # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324

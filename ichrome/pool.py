@@ -1,7 +1,6 @@
 import asyncio
 import random
 import time
-from tkinter import EXCEPTION
 import typing
 from base64 import b64decode
 from copy import deepcopy
@@ -15,7 +14,7 @@ from .logs import logger
 class ChromeTask(asyncio.Future):
     """ExpireFuture"""
     _ID = 0
-    MAX_TIMEOUT = 60
+    MAX_TIMEOUT = 60 * 5
     MAX_TRIES = 5
     EXEC_GLOBALS: typing.Dict[str, typing.Any] = {}
     STOP_SIG = object()
@@ -64,11 +63,16 @@ class ChromeTask(asyncio.Future):
         result = None
         try:
             result = await self._running_task
+            self.set_result(result)
+        except ChromeException as error:
+            raise error
         except Exception as error:
             logger.error(f'{self} catch an error while running task, {error!r}')
-        finally:
-            if self._state == 'PENDING':
-                self.set_result(result)
+            self.set_result(result)
+
+    def set_result(self, result):
+        if self._state == 'PENDING':
+            super().set_result(result)
 
     @classmethod
     def get_id(cls):
@@ -185,6 +189,7 @@ class ChromeWorker:
                 self._need_restart.set()
             await self._chrome_daemon_ready.wait()
             future: ChromeTask = await self.q.get()
+            logger.info(f'{self} get a new task {future}.')
             if future.data is ChromeTask.STOP_SIG:
                 await self.q.put(future)
                 break
@@ -192,34 +197,57 @@ class ChromeWorker:
                 # overdue task, skip
                 continue
             if await self.chrome_daemon._check_chrome_connection():
+                # should not auto_close for int index (existing tab).
+                auto_close = not isinstance(future.tab_index, int)
                 async with self.chrome_daemon.connect_tab(
-                        index=future.tab_index, auto_close=True) as tab:
-                    try:
-                        self._running_futures.add(future)
-                        await future.run(tab)
-                        continue
-                    except ChromeEngine.ERRORS_NOT_HANDLED as error:
-                        raise error
-                    except asyncio.CancelledError:
-                        continue
-                    except ChromeException as error:
-                        logger.error(f'{self} restarting for error {error!r}')
-                        if not self._need_restart.is_set():
-                            self._need_restart.set()
-                    except Exception as error:
-                        logger.error(
-                            f'{self} catch an error {error!r} for {future}')
-                    finally:
-                        self._running_futures.discard(future)
-                        if not future.done():
-                            # retry
-                            future.cancel_task()
-                            await self.q.put(future)
+                        index=future.tab_index, auto_close=auto_close) as tab:
+                    if isinstance(future.data, _TabWorker):
+                        await self.handle_tab_worker_future(tab, future)
+                    else:
+                        await self.handle_default_future(tab, future)
             else:
                 if not self._need_restart.is_set():
                     self._need_restart.set()
                 await self.q.put(future)
         return f'{self} future_consumer[{index}] done.'
+
+    async def handle_tab_worker_future(self, tab, future):
+        try:
+            tab_worker: _TabWorker = future.data
+            tab_worker.tab_future.set_result(tab)
+            return await asyncio.wait_for(tab_worker._done.wait(),
+                                          timeout=future.timeout)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            return
+        except ChromeException as error:
+            logger.error(f'{self} restarting for error {error!r}')
+            if not self._need_restart.is_set():
+                self._need_restart.set()
+        finally:
+            logger.info(f'[finished]({self.todos}) {future}')
+            del future
+
+    async def handle_default_future(self, tab, future):
+        try:
+            self._running_futures.add(future)
+            await future.run(tab)
+        except ChromeEngine.ERRORS_NOT_HANDLED as error:
+            raise error
+        except asyncio.CancelledError:
+            pass
+        except ChromeException as error:
+            logger.error(f'{self} restarting for error {error!r}')
+            if not self._need_restart.is_set():
+                self._need_restart.set()
+        except Exception as error:
+            # other errors may give a retry
+            logger.error(f'{self} catch an error {error!r} for {future}')
+        finally:
+            self._running_futures.discard(future)
+            if not future.done():
+                # retry
+                future.cancel_task()
+                await self.q.put(future)
 
     def start_tab_worker(self):
         asyncio.create_task(self._start_chrome_daemon())
@@ -245,7 +273,7 @@ class ChromeWorker:
 
 class ChromeEngine:
     START_PORT = 9345
-    DEFAULT_WORKERS_AMOUNT = 2
+    DEFAULT_WORKERS_AMOUNT = 1
     ERRORS_NOT_HANDLED = (KeyboardInterrupt,)
     SHORTEN_DATA_LENGTH = 150
 
@@ -305,10 +333,10 @@ class ChromeEngine:
                             tab_callback,
                             timeout=timeout,
                             tab_index=tab_index)
+        await self.q.put(future)
         logger.info(
             f'[enqueue]({self.todos}) {future} with timeout={timeout}, tab_index={tab_index}, data={self.shorten_data(data)}'
         )
-        await self.q.put(future)
         try:
             return await asyncio.wait_for(future, timeout=future.timeout)
         except asyncio.TimeoutError:
@@ -403,6 +431,34 @@ class ChromeEngine:
                              tab_callback=CommonUtils.js,
                              timeout=timeout,
                              tab_index=None)
+
+    def connect_tab(self, tab_index=None, timeout: float = None):
+        data = _TabWorker()
+        future = ChromeTask(data, timeout=timeout, tab_index=tab_index)
+        logger.info(
+            f'[enqueue]({self.todos}) {future} with timeout={timeout}, tab_index={tab_index}, data={self.shorten_data(data)}'
+        )
+        self.q.put_nowait(future)
+        return data
+
+
+class _TabWorker:
+    """
+    Used with `async with` context for ChromeEngine.
+    """
+
+    def __init__(self):
+        pass
+
+    async def __aenter__(self) -> AsyncTab:
+        self._done = asyncio.Event()
+        self.tab_future: typing.Any = asyncio.Future()
+        # waiting for a tab
+        await self.tab_future
+        return self.tab_future.result()
+
+    async def __aexit__(self, *_):
+        self._done.set()
 
 
 class CommonUtils:
