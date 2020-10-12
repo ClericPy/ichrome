@@ -273,8 +273,16 @@ async def test_examples():
         # test init tab from chromed
         async with chromed.connect_tab("https://github.com",
                                        auto_close=True) as tab:
+            TEST_DRC_OK = False
+
+            def test_drc(tab, data_dict):
+                nonlocal TEST_DRC_OK
+                TEST_DRC_OK = True
+
+            tab.default_recv_callback.append(test_drc)
             await tab.wait_loading(5)
             title = await tab.current_title
+            assert TEST_DRC_OK, 'test default_recv_callback failed'
             assert 'GitHub' in title
         logger.info('test init tab from chromed OK.')
         # test on_startup
