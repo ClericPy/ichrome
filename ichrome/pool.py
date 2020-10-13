@@ -23,7 +23,8 @@ class ChromeTask(asyncio.Future):
                  data,
                  tab_callback: typing.Callable = None,
                  timeout=None,
-                 tab_index=None):
+                 tab_index=None,
+                 port=None):
         super().__init__()
         self.id = self.get_id()
         self.data = data
@@ -31,6 +32,7 @@ class ChromeTask(asyncio.Future):
         self._timeout = self.MAX_TIMEOUT if timeout is None else timeout
         self.expire_time = time.time() + self._timeout
         self.tab_callback = self.ensure_tab_callback(tab_callback)
+        self.port = port
         self._running_task: asyncio.Task = None
         self._tries = 0
 
@@ -102,7 +104,7 @@ class ChromeTask(asyncio.Future):
 
     def __str__(self):
         # ChromeTask(<7>, FINISHED)
-        return f'{self.__class__.__name__}(<{self.id}>, {self._state})'
+        return f'{self.__class__.__name__}(<{self.port}>, {self._state}, id={self.id}, tab={self.tab_index})'
 
     def __repr__(self) -> str:
         return str(self)
@@ -123,6 +125,7 @@ class ChromeWorker:
         assert q, 'queue should not be null'
         self.port = port
         self.q = q
+        self.port_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
         self.restart_every = restart_every or self.RESTART_EVERY
         self.max_concurrent_tabs = max_concurrent_tabs or self.MAX_CONCURRENT_TABS
         self._tab_sem = None
@@ -188,10 +191,17 @@ class ChromeWorker:
                 # time to restart
                 self._need_restart.set()
             await self._chrome_daemon_ready.wait()
-            future: ChromeTask = await self.q.get()
+            try:
+                # try self port queue at first
+                future: ChromeTask = self.port_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                future: ChromeTask = await self.q.get()
             logger.info(f'{self} get a new task {future}.')
             if future.data is ChromeTask.STOP_SIG:
-                await self.q.put(future)
+                if future.port:
+                    await self.port_queue.put(future)
+                else:
+                    await self.q.put(future)
                 break
             if future.done() or future.expire_time < time.time():
                 # overdue task, skip
@@ -208,7 +218,10 @@ class ChromeWorker:
             else:
                 if not self._need_restart.is_set():
                     self._need_restart.set()
-                await self.q.put(future)
+                if future.port:
+                    await self.port_queue.put(future)
+                else:
+                    await self.q.put(future)
         return f'{self} future_consumer[{index}] done.'
 
     async def handle_tab_worker_future(self, tab, future):
@@ -284,9 +297,10 @@ class ChromeEngine:
         self._q: typing.Union[asyncio.PriorityQueue, asyncio.Queue] = None
         self._shutdown = False
         # max tab currency num
-        self.workers: typing.List[ChromeWorker] = []
+        self.workers: typing.Dict[int, ChromeWorker] = {}
         self.workers_amount = workers_amount or self.DEFAULT_WORKERS_AMOUNT
         self.max_concurrent_tabs = max_concurrent_tabs
+        self.start_port = daemon_kwargs.pop('port', None) or self.START_PORT
         self.daemon_kwargs = daemon_kwargs
 
     @property
@@ -301,17 +315,17 @@ class ChromeEngine:
 
     def _add_default_workers(self):
         for offset in range(self.workers_amount):
-            port = self.START_PORT + offset
+            port = self.start_port + offset
             worker = ChromeWorker(port=port,
                                   max_concurrent_tabs=self.max_concurrent_tabs,
                                   q=self.q,
                                   **self.daemon_kwargs)
-            self.workers.append(worker)
+            self.workers[port] = worker
 
     async def start_workers(self):
         if not self.workers:
             self._add_default_workers()
-        for worker in self.workers:
+        for worker in self.workers.values():
             worker.start_daemon()
         return self
 
@@ -326,16 +340,21 @@ class ChromeEngine:
                  data,
                  tab_callback,
                  timeout: float = None,
-                 tab_index=None):
+                 tab_index=None,
+                 port=None):
         if self._shutdown:
             raise RuntimeError(f'{self.__class__.__name__} has been shutdown.')
         future = ChromeTask(data,
                             tab_callback,
                             timeout=timeout,
-                            tab_index=tab_index)
-        await self.q.put(future)
+                            tab_index=tab_index,
+                            port=port)
+        if port:
+            await self.workers[port].port_queue.put(future)
+        else:
+            await self.q.put(future)
         logger.info(
-            f'[enqueue]({self.todos}) {future} with timeout={timeout}, tab_index={tab_index}, data={self.shorten_data(data)}'
+            f'[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}'
         )
         try:
             return await asyncio.wait_for(future, timeout=future.timeout)
@@ -352,7 +371,7 @@ class ChromeEngine:
             await self.q.put(ChromeTask(ChromeTask.STOP_SIG, 0))
         self._shutdown = True
         self.release()
-        for worker in self.workers:
+        for worker in self.workers.values():
             await worker.shutdown()
         return self
 
@@ -432,13 +451,22 @@ class ChromeEngine:
                              timeout=timeout,
                              tab_index=None)
 
-    def connect_tab(self, tab_index=None, timeout: float = None):
+    def connect_tab(self,
+                    tab_index=None,
+                    timeout: float = None,
+                    port: int = None):
         data = _TabWorker()
-        future = ChromeTask(data, timeout=timeout, tab_index=tab_index)
+        future = ChromeTask(data,
+                            timeout=timeout,
+                            tab_index=tab_index,
+                            port=port)
         logger.info(
-            f'[enqueue]({self.todos}) {future} with timeout={timeout}, tab_index={tab_index}, data={self.shorten_data(data)}'
+            f'[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}'
         )
-        self.q.put_nowait(future)
+        if port:
+            self.workers[port].port_queue.put_nowait(future)
+        else:
+            self.q.put_nowait(future)
         return data
 
 

@@ -102,8 +102,9 @@ def test_chrome_engine_connect_tab():
 
     async def _test_chrome_engine_connect_tab():
 
-        async with ChromeEngine(headless=True, disable_image=True) as ce:
-            async with ce.connect_tab() as tab:
+        async with ChromeEngine(port=9234, headless=True,
+                                disable_image=True) as ce:
+            async with ce.connect_tab(port=9234) as tab:
                 await tab.goto('http://pypi.org')
                 print(await tab.title)
 
@@ -113,12 +114,12 @@ def test_chrome_engine_connect_tab():
 
 if __name__ == "__main__":
     test_chrome_engine_connect_tab()
-# INFO  2020-10-13 00:43:37 [ichrome] pool.py(438): [enqueue](0) ChromeTask(<1>, PENDING) with timeout=None, tab_index=None, data=<ichrome.pool._TabWorker object at 0x0000018E44F7E970>
-# INFO  2020-10-13 00:43:39 [ichrome] pool.py(168): [online] ChromeWorker(<9345>, 0/5, 1 todos) is online.
-# INFO  2020-10-13 00:43:39 [ichrome] pool.py(192): ChromeWorker(<9345>, 0/5, 0 todos) get a new task ChromeTask(<1>, PENDING).
+# INFO  2020-10-13 22:18:53 [ichrome] pool.py(464): [enqueue](0) ChromeTask(<9234>, PENDING, id=1, tab=None), timeout=None, data=<ichrome.pool._TabWorker object at 0x000002232841D9A0>
+# INFO  2020-10-13 22:18:55 [ichrome] pool.py(172): [online] ChromeWorker(<9234>, 0/5, 0 todos) is online.
+# INFO  2020-10-13 22:18:55 [ichrome] pool.py(200): ChromeWorker(<9234>, 0/5, 0 todos) get a new task ChromeTask(<9234>, PENDING, id=1, tab=None).
 # PyPI · The Python Package Index
-# INFO  2020-10-13 00:43:42 [ichrome] pool.py(178): [offline] ChromeWorker(<9345>, 0/5, 0 todos) is offline.
-# INFO  2020-10-13 00:43:42 [ichrome] pool.py(227): [finished](0) ChromeTask(<1>, PENDING)
+# INFO  2020-10-13 22:18:57 [ichrome] pool.py(182): [offline] ChromeWorker(<9234>, 0/5, 0 todos) is offline.
+# INFO  2020-10-13 22:18:57 [ichrome] pool.py(241): [finished](0) ChromeTask(<9234>, PENDING, id=1, tab=None)
 ```
 
 ### Batch Tasks
