@@ -46,6 +46,9 @@ So you may need a more stable process pool with **ChromeEngine(HTTP usage & norm
 ## ChromeEngine HTTP usage
 
 ### Server
+
+> pip install -U ichrome[web]
+
 ```python
 import uvicorn
 from fastapi import FastAPI
