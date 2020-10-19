@@ -598,6 +598,8 @@ class AsyncChromeDaemon(ChromeDaemon):
         proc_check_interval=5,
         on_startup=None,
         on_shutdown=None,
+        before_startup=None,
+        after_shutdown=None,
     ):
         super().__init__(
             chrome_path=chrome_path,
@@ -618,8 +620,8 @@ class AsyncChromeDaemon(ChromeDaemon):
             proc_check_interval=proc_check_interval,
             on_startup=on_startup,
             on_shutdown=on_shutdown,
-            before_startup=None,
-            after_shutdown=None,
+            before_startup=before_startup,
+            after_shutdown=after_shutdown,
         )
 
     def init(self):

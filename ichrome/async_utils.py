@@ -353,7 +353,7 @@ class Tab(GetValueMixin):
                     f'callback function ({getattr(func, "__name__", func)}) should be callable'
                 )
             if not inspect.isbuiltin(func) and len(
-                    inspect.signature(func).parameters) != 2:
+                    func.__code__.co_varnames) != 2:
                 raise ChromeTypeError(
                     f'callback function ({getattr(func, "__name__", func)}) should handle two args for {must_args}'
                 )

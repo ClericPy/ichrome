@@ -399,7 +399,7 @@ if __name__ == "__main__":
 
 [More Examples](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
 
-## Command Line Usage
+## Command Line Usage (Daemon Mode)
 
 > Be used for launching a chrome daemon process. The unhandled args will be treated as chrome raw args and appended to extra_config list.
 > 
@@ -500,7 +500,7 @@ optional arguments:
                         port
 ```
 
-## Interactive Debugging
+## Interactive Debugging (REPL Mode)
 
 ```python
 λ python
