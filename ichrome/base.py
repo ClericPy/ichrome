@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+import subprocess
 import time
 from asyncio import get_running_loop
 from inspect import isawaitable
@@ -11,6 +12,7 @@ from torequests.utils import get_readable_size
 
 from .exceptions import ChromeValueError
 from .logs import logger
+
 """
 For base usage with sync utils.
 """
@@ -124,7 +126,11 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
                 logger.debug(
                     f"[Killing] {proc}, port: {port}. {' '.join(proc.cmdline())}"
                 )
-                proc.kill()
+                proc.terminate()
+                try:
+                    proc.wait(1)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
             except (psutil.NoSuchProcess, ProcessLookupError):
                 continue
         if port:
@@ -148,10 +154,20 @@ def get_dir_size(path):
         except FileNotFoundError:
             return 0
 
+    result = 0
     target_path = Path(path)
-    if not target_path.is_dir():
-        return 0
-    return sum(get_st_size(f) for f in target_path.glob("**/*") if f.is_file())
+    try:
+        if not target_path.is_dir():
+            return result
+    except FileNotFoundError:
+        pass
+    for f in target_path.glob("**/*"):
+        try:
+            if f.is_file():
+                result += get_st_size(f)
+        except FileNotFoundError:
+            pass
+    return result
 
 
 def get_readable_dir_size(path):
