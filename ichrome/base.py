@@ -128,7 +128,7 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
                 )
                 proc.terminate()
                 try:
-                    proc.wait(1)
+                    proc.wait(timeout)
                 except subprocess.TimeoutExpired:
                     proc.kill()
             except (psutil.NoSuchProcess, ProcessLookupError):
@@ -161,7 +161,7 @@ def get_dir_size(path):
             return result
     except FileNotFoundError:
         pass
-    for f in target_path.glob("**/*"):
+    for f in list(target_path.glob("**/*")):
         try:
             if f.is_file():
                 result += get_st_size(f)
