@@ -267,9 +267,11 @@ async def test_examples():
     def on_shutdown(chromed):
         chromed.__class__.bye = 1
 
-    async with AsyncChromeDaemon(headless=headless,
-                                 on_startup=on_startup,
-                                 on_shutdown=on_shutdown) as chromed:
+    async with AsyncChromeDaemon(
+            headless=headless,
+            on_startup=on_startup,
+            on_shutdown=on_shutdown,
+            after_shutdown=lambda cd: cd._clear_user_dir()) as chromed:
         # test init tab from chromed
         async with chromed.connect_tab("https://github.com",
                                        auto_close=True) as tab:

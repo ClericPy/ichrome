@@ -794,12 +794,8 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def _clear_user_dir(self):
         # clear self user dir
         await self.shutdown('_clear_user_dir')
-        # wait 2 seconds for killing chrome
-        for _ in range(10):
-            if not await async_run(get_proc, self.port):
-                break
-            await asyncio.sleep(0.2)
-        return async_run(self.clear_dir_with_shutil, self.user_data_dir)
+
+        return await async_run(self.clear_dir_with_shutil, self.user_data_dir)
 
     @property
     def _SingleTabConnectionManagerDaemon(self):
