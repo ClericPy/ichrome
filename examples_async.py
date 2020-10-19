@@ -364,9 +364,11 @@ def test_chrome_engine():
             await tab.set_url(url, timeout=5)
             return 'Bing' in (await tab.title)
 
-        async with ChromeEngine(max_concurrent_tabs=5,
-                                headless=True,
-                                disable_image=True) as ce:
+        async with ChromeEngine(
+                max_concurrent_tabs=5,
+                headless=True,
+                disable_image=True,
+                after_shutdown=lambda cd: cd._clear_user_dir()) as ce:
             # test normal usage
             tasks = [
                 asyncio.create_task(
