@@ -125,7 +125,7 @@ class Daemon(SyncLoop):
 
     def stop(self):
         if self.running:
-            return self.__exit__()
+            return self.__aexit__(None, None, None)
         self.running = False
 
     def __str__(self):
