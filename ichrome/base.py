@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import re
-import subprocess
 import time
 from asyncio import get_running_loop
 from inspect import isawaitable
@@ -12,7 +11,6 @@ from torequests.utils import get_readable_size
 
 from .exceptions import ChromeValueError
 from .logs import logger
-
 """
 For base usage with sync utils.
 """
@@ -118,7 +116,7 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
     killed_count = 0
     start_time = time.time()
     if timeout is None:
-        timeout = max_deaths or 3
+        timeout = max_deaths or 2
     while 1:
         procs = get_proc(port)
         for proc in procs:
@@ -126,11 +124,11 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
                 logger.debug(
                     f"[Killing] {proc}, port: {port}. {' '.join(proc.cmdline())}"
                 )
-                proc.terminate()
+                proc.kill()
                 try:
                     proc.wait(timeout)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
+                except psutil.TimeoutExpired:
+                    pass
             except (psutil.NoSuchProcess, ProcessLookupError):
                 continue
         if port:
