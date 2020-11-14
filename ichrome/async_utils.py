@@ -443,7 +443,7 @@ class Tab(GetValueMixin):
                 logger.debug(f'[recv] {self!r} {msg}')
             if msg.type in (WSMsgType.CLOSED, WSMsgType.ERROR):
                 # Message size xxxx exceeds limit 4194304: reset the max_msg_size(default=4*1024*1024) in Tab.ws_kwargs
-                err_msg = f'Receive the {msg.type!r} message which break the recv daemon: "{msg.data}"'
+                err_msg = f'Receive the {msg.type!r} message which break the recv daemon: "{msg.data}", reset the max_msg_size(default=4*1024*1024) in Tab._DEFAULT_WS_KWARGS by AsyncTab._DEFAULT_WS_KWARGS["max_msg_size"] = 10 * 1024**2.'
                 logger.error(err_msg)
                 raise ChromeRuntimeError(err_msg)
             if msg.type != WSMsgType.TEXT:

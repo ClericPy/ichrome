@@ -66,6 +66,7 @@ class ChromeDaemon(object):
         --single-process
         --proxy-pac-url=xxx. Nonsense for headless mode.
         --kiosk
+        --window-size=1920,1080
 
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
