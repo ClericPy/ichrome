@@ -13,25 +13,32 @@ except ImportError as error:
     )
     raise error
 """
-# server code
+# ======================= server code ===========================
+
+import os
+
 import uvicorn
 from fastapi import FastAPI
 
+from ichrome import AsyncTab
 from ichrome.routers.fastapi_routes import ChromeAPIRouter
 
 app = FastAPI()
-app.include_router(ChromeAPIRouter(headless=True), prefix='/chrome')
+# reset max_msg_size and window size for a large size screenshot
+AsyncTab._DEFAULT_WS_KWARGS['max_msg_size'] = 10 * 1024**2
+app.include_router(ChromeAPIRouter(workers_amount=os.cpu_count(),
+                                   headless=True,
+                                   extra_config=['--window-size=1920,1080']),
+                   prefix='/chrome')
 
 uvicorn.run(app)
 
 # view url with your browser
 # http://127.0.0.1:8000/chrome/screenshot?url=http://bing.com
 # http://127.0.0.1:8000/chrome/download?url=http://bing.com
-# http://127.0.0.1:8000/chrome/js?url=http://bing.com&js=document.title
 
-# ================================================================
+# ======================= client code ===========================
 
-# client code
 from torequests import tPool
 from inspect import getsource
 req = tPool()
