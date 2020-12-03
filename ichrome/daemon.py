@@ -199,7 +199,11 @@ class ChromeDaemon(object):
     def _ensure_user_dir(cls, user_data_dir):
         if user_data_dir is None:
             # use default path
-            return Path.home() / 'ichrome_user_data'
+            env_path = os.getenv('USER_DATA_DIR')
+            if env_path:
+                return Path(env_path)
+            else:
+                return Path.home() / 'ichrome_user_data'
         elif user_data_dir in cls.IGNORE_USER_DIR_FLAGS:
             # ignore custom path settings
             logger.debug(
