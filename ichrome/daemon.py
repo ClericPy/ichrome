@@ -230,7 +230,8 @@ class ChromeDaemon(object):
             logger.warning(
                 f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
             )
-            self.ensure_dir(self.user_data_dir)
+            self.user_data_dir.mkdir(parents=True, exist_ok=True)
+            # self.ensure_dir(self.user_data_dir)
         port_dir_size = get_readable_dir_size(port_user_dir)
         total_dir_size = get_readable_dir_size(main_user_dir)
         logger.debug(
@@ -238,27 +239,14 @@ class ChromeDaemon(object):
         )
 
     @classmethod
-    def clear_user_dir(cls, user_data_dir, port=None):
+    def clear_user_dir(cls, user_data_dir=None, port=None):
         main_user_dir = cls._ensure_user_dir(user_data_dir)
-        if port:
-            # clear port dir if port is not None
-            port_user_dir = main_user_dir / f"chrome_{port}"
-            logger.debug(
-                f'Clearing only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
-            )
-            cls.clear_dir_with_shutil(port_user_dir)
-            logger.debug(
-                f'Cleared only port dir: {port_user_dir} => {get_readable_dir_size(port_user_dir)} / {get_readable_dir_size(main_user_dir)}'
-            )
-        else:
+        if port is None:
             # clear whole ichrome dir if port is None
-            logger.debug(
-                f'Clearing total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
-            )
             cls.clear_dir_with_shutil(main_user_dir)
-            logger.debug(
-                f'Cleared total user dir: {main_user_dir} => {get_readable_dir_size(main_user_dir)} / {get_readable_dir_size(main_user_dir)}'
-            )
+        else:
+            # clear port dir if port is not None
+            cls.clear_dir_with_shutil(main_user_dir / f"chrome_{port}")
 
     def _clear_user_dir(self):
         # clear self user dir
@@ -277,10 +265,13 @@ class ChromeDaemon(object):
             logger.warning(f'{dir_path} is not exists, ignore.')
             return
         import shutil
-        try:
-            shutil.rmtree(dir_path, onerror=onerror)
-        except FileNotFoundError as err:
-            errors.append(err)
+        for _ in range(2):
+            try:
+                shutil.rmtree(dir_path, onerror=onerror)
+                if not dir_path.is_dir():
+                    break
+            except FileNotFoundError as err:
+                errors.append(err)
         if errors:
             logger.error(f'clear_dir_with_shutil({dir_path}) error: {errors}')
 
