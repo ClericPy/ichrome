@@ -184,13 +184,6 @@ class Chrome(SyncLoop):
         else:
             return None
 
-    def __del__(self):
-        try:
-            self.run_sync(self._self.__aexit__(None, None, None))
-        except RuntimeError:
-            # for running loop error
-            pass
-
     def __str__(self):
         return f"{self.__class__.__name__}({self._self.host}:{self._self.port})"
 

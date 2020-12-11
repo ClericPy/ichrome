@@ -396,6 +396,7 @@ async def main():
                 # output: <html><head></head><body><h1>Document updated.</h1></body></html>
                 # will auto_close tab while exiting context
                 # await tab.close()
+                # await tab.close_browser()
             # close_browser gracefully, I have no more need of chrome instance
             await chrome.close_browser()
 
