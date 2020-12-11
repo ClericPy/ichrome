@@ -42,7 +42,13 @@ __all__ = [
 
 class SyncLoop:
 
-    loop = asyncio.get_event_loop()
+    _loop: asyncio.AbstractEventLoop = None
+
+    @property
+    def loop(self):
+        if not self._loop:
+            self.__class__._loop = asyncio.get_event_loop()
+        return self._loop
 
     def run_sync(self, future):
         return self.loop.run_until_complete(future)
