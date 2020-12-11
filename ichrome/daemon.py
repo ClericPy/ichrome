@@ -80,30 +80,30 @@ class ChromeDaemon(object):
     MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
     IGNORE_USER_DIR_FLAGS = {'null', 'None', '/dev/null', "''", '""'}
     MAX_WAIT_CHECKING_SECONDS = 60
+    DEFAULT_USER_DIR_PATH = Path.home() / 'ichrome_user_data'
 
-    def __init__(
-        self,
-        chrome_path=None,
-        host="127.0.0.1",
-        port=9222,
-        headless=False,
-        user_agent=None,
-        proxy=None,
-        user_data_dir=None,
-        disable_image=False,
-        start_url="",
-        extra_config=None,
-        max_deaths=1,
-        daemon=True,
-        block=False,
-        timeout=2,
-        debug=False,
-        proc_check_interval=5,
-        on_startup=None,
-        on_shutdown=None,
-        before_startup=None,
-        after_shutdown=None,
-    ):
+    def __init__(self,
+                 chrome_path=None,
+                 host="127.0.0.1",
+                 port=9222,
+                 headless=False,
+                 user_agent=None,
+                 proxy=None,
+                 user_data_dir=None,
+                 disable_image=False,
+                 start_url="",
+                 extra_config=None,
+                 max_deaths=1,
+                 daemon=True,
+                 block=False,
+                 timeout=2,
+                 debug=False,
+                 proc_check_interval=5,
+                 on_startup=None,
+                 on_shutdown=None,
+                 before_startup=None,
+                 after_shutdown=None,
+                 clear_after_shutdown=False):
         if debug:
             logger.setLevel('DEBUG')
         self.debug = debug
@@ -131,6 +131,7 @@ class ChromeDaemon(object):
         self.before_startup = before_startup
         self.after_shutdown = after_shutdown
         self._block = block
+        self.clear_after_shutdown = clear_after_shutdown
         self.init()
 
     def init(self):
@@ -203,7 +204,7 @@ class ChromeDaemon(object):
             if env_path:
                 return Path(env_path)
             else:
-                return Path.home() / 'ichrome_user_data'
+                return cls.DEFAULT_USER_DIR_PATH
         elif user_data_dir in cls.IGNORE_USER_DIR_FLAGS:
             # ignore custom path settings
             logger.debug(
@@ -227,7 +228,7 @@ class ChromeDaemon(object):
         port_user_dir = main_user_dir / f"chrome_{self.port}"
         self.user_data_dir = port_user_dir
         if not self.user_data_dir.is_dir():
-            logger.warning(
+            logger.debug(
                 f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
             )
             self.user_data_dir.mkdir(parents=True, exist_ok=True)
@@ -262,7 +263,7 @@ class ChromeDaemon(object):
 
         dir_path = Path(dir_path)
         if not dir_path.is_dir():
-            logger.warning(f'{dir_path} is not exists, ignore.')
+            logger.debug(f'{dir_path} is not exists, ignore.')
             return
         import shutil
         for _ in range(2):
@@ -273,14 +274,14 @@ class ChromeDaemon(object):
             except FileNotFoundError as err:
                 errors.append(err)
         if errors:
-            logger.error(f'clear_dir_with_shutil({dir_path}) error: {errors}')
+            logger.debug(f'clear_dir_with_shutil({dir_path}) error: {errors}')
 
     @classmethod
     def clear_dir(cls, dir_path):
         # please use clear_dir_with_shutil
         dir_path = Path(dir_path)
         if not dir_path.is_dir():
-            logger.warning(f'{dir_path} not exists, ignore.')
+            logger.debug(f'{dir_path} not exists, ignore.')
             return
         if not dir_path.is_dir():
             logger.debug(f'{dir_path} is not exist:.')
@@ -373,7 +374,7 @@ class ChromeDaemon(object):
                 f"launch_chrome success: {self}, args: {self.proc.args}")
             return True
         else:
-            logger.error(f"launch_chrome failed: {self}, args: {self.cmd}")
+            logger.debug(f"launch_chrome failed: {self}, args: {self.cmd}")
             return False
 
     @classmethod
@@ -538,6 +539,8 @@ class ChromeDaemon(object):
         self.kill()
         if self.after_shutdown:
             self.after_shutdown(self)
+        if self.clear_after_shutdown:
+            self._clear_user_dir()
 
     def __enter__(self):
         return self
@@ -571,51 +574,49 @@ class ChromeDaemon(object):
 
 class AsyncChromeDaemon(ChromeDaemon):
 
-    def __init__(
-        self,
-        chrome_path=None,
-        host="127.0.0.1",
-        port=9222,
-        headless=False,
-        user_agent=None,
-        proxy=None,
-        user_data_dir=None,
-        disable_image=False,
-        start_url="",
-        extra_config=None,
-        max_deaths=1,
-        daemon=True,
-        block=False,
-        timeout=1,
-        debug=False,
-        proc_check_interval=5,
-        on_startup=None,
-        on_shutdown=None,
-        before_startup=None,
-        after_shutdown=None,
-    ):
-        super().__init__(
-            chrome_path=chrome_path,
-            host=host,
-            port=port,
-            headless=headless,
-            user_agent=user_agent,
-            proxy=proxy,
-            user_data_dir=user_data_dir,
-            disable_image=disable_image,
-            start_url=start_url,
-            extra_config=extra_config,
-            max_deaths=max_deaths,
-            daemon=daemon,
-            block=block,
-            timeout=timeout,
-            debug=debug,
-            proc_check_interval=proc_check_interval,
-            on_startup=on_startup,
-            on_shutdown=on_shutdown,
-            before_startup=before_startup,
-            after_shutdown=after_shutdown,
-        )
+    def __init__(self,
+                 chrome_path=None,
+                 host="127.0.0.1",
+                 port=9222,
+                 headless=False,
+                 user_agent=None,
+                 proxy=None,
+                 user_data_dir=None,
+                 disable_image=False,
+                 start_url="",
+                 extra_config=None,
+                 max_deaths=1,
+                 daemon=True,
+                 block=False,
+                 timeout=1,
+                 debug=False,
+                 proc_check_interval=5,
+                 on_startup=None,
+                 on_shutdown=None,
+                 before_startup=None,
+                 after_shutdown=None,
+                 clear_after_shutdown=False):
+        super().__init__(chrome_path=chrome_path,
+                         host=host,
+                         port=port,
+                         headless=headless,
+                         user_agent=user_agent,
+                         proxy=proxy,
+                         user_data_dir=user_data_dir,
+                         disable_image=disable_image,
+                         start_url=start_url,
+                         extra_config=extra_config,
+                         max_deaths=max_deaths,
+                         daemon=daemon,
+                         block=block,
+                         timeout=timeout,
+                         debug=debug,
+                         proc_check_interval=proc_check_interval,
+                         on_startup=on_startup,
+                         on_shutdown=on_shutdown,
+                         before_startup=before_startup,
+                         after_shutdown=after_shutdown,
+                         clear_after_shutdown=clear_after_shutdown)
 
     def init(self):
         # Please init AsyncChromeDaemon in a running loop with `async with`
@@ -702,7 +703,7 @@ class AsyncChromeDaemon(ChromeDaemon):
                 f"launch_chrome success: {self}, args: {self.proc.args}")
             return True
         else:
-            logger.error(f"launch_chrome failed: {self}, args: {self.cmd}")
+            logger.debug(f"launch_chrome failed: {self}, args: {self.cmd}")
             return False
 
     @property
@@ -783,11 +784,12 @@ class AsyncChromeDaemon(ChromeDaemon):
         await async_run(self.kill, True)
         if self.after_shutdown:
             await ensure_awaitable(self.after_shutdown(self))
+        if self.clear_after_shutdown:
+            await self._clear_user_dir()
 
     async def _clear_user_dir(self):
         # clear self user dir
         await self.shutdown('_clear_user_dir')
-
         return await async_run(self.clear_dir_with_shutil, self.user_data_dir)
 
     @property
