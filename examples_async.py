@@ -267,11 +267,10 @@ async def test_examples():
     def on_shutdown(chromed):
         chromed.__class__.bye = 1
 
-    async with AsyncChromeDaemon(
-            headless=headless,
-            on_startup=on_startup,
-            on_shutdown=on_shutdown,
-            after_shutdown=lambda cd: cd._clear_user_dir()) as chromed:
+    async with AsyncChromeDaemon(headless=headless,
+                                 on_startup=on_startup,
+                                 on_shutdown=on_shutdown,
+                                 clear_after_shutdown=True) as chromed:
         # test init tab from chromed
         async with chromed.connect_tab("https://github.com",
                                        auto_close=True) as tab:
@@ -352,6 +351,11 @@ async def test_examples():
             logger.critical(
                 f'{sep}Congratulations, all test cases passed.{sep}')
     assert AsyncChromeDaemon.bye
+    # test clear_after_shutdown
+    _user_dir_path = AsyncChromeDaemon.DEFAULT_USER_DIR_PATH / 'chrome_9222'
+    dir_cleared = not _user_dir_path.is_dir()
+    # print(dir_cleared)
+    assert dir_cleared
 
 
 def test_chrome_engine():
@@ -408,6 +412,10 @@ def test_chrome_engine():
                 title = await tab.title
                 assert 'PyPI' in title, title
         logger.critical('test_chrome_engine OK')
+        _user_dir_path = AsyncChromeDaemon.DEFAULT_USER_DIR_PATH / f'chrome_{ChromeEngine.START_PORT}'
+        dir_cleared = not _user_dir_path.is_dir()
+        # print(dir_cleared)
+        assert dir_cleared
 
     # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
     asyncio.get_event_loop().run_until_complete(_test_chrome_engine())
