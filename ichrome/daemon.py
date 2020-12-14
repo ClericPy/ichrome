@@ -79,7 +79,7 @@ class ChromeDaemon(object):
     IPAD_UA = "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1"
     MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
     IGNORE_USER_DIR_FLAGS = {'null', 'None', '/dev/null', "''", '""'}
-    MAX_WAIT_CHECKING_SECONDS = 60
+    MAX_WAIT_CHECKING_SECONDS = 15
     DEFAULT_USER_DIR_PATH = Path.home() / 'ichrome_user_data'
 
     def __init__(self,
@@ -309,13 +309,12 @@ class ChromeDaemon(object):
 
     @property
     def connection_ok(self):
-        url = self.server + "/json"
-        for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
-            r = self.req.head(url, timeout=self._timeout)
+        for _ in range(int(self.MAX_WAIT_CHECKING_SECONDS * 2)):
+            r = self.req.head(self.server, timeout=self._timeout)
             if r.x and r.ok:
                 self.ready = True
                 return True
-            time.sleep(1)
+            time.sleep(0.5)
         return False
 
     @property
@@ -360,9 +359,16 @@ class ChromeDaemon(object):
     def launch_chrome(self):
         self._start_chrome_process()
         error = None
-        if not self.proc_ok:
-            error = 'launch_chrome failed for proc not ok'
-        elif not self.connection_ok:
+        for _ in range(int(self.MAX_WAIT_CHECKING_SECONDS * 2)):
+            if not self.proc_ok:
+                error = 'launch_chrome failed for proc not ok'
+                break
+            r = self.req.head(self.server, timeout=self._timeout)
+            if r.x and r.ok:
+                self.ready = True
+                break
+            time.sleep(0.5)
+        else:
             error = 'launch_chrome failed for connection not ok'
         if error:
             logger.error(error)
@@ -655,9 +661,15 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def launch_chrome(self):
         await async_run(self._start_chrome_process)
         error = None
-        if not await async_run(self._proc_ok):
-            error = 'launch_chrome failed for proc not ok'
-        elif not await self.check_connection():
+        for _ in range(int(self.MAX_WAIT_CHECKING_SECONDS * 2)):
+            if not await async_run(self._proc_ok):
+                error = 'launch_chrome failed for proc not ok'
+                break
+            if await self._check_chrome_connection():
+                self.ready = True
+                break
+            await asyncio.sleep(0.5)
+        else:
             error = 'launch_chrome failed for connection not ok'
         if error:
             logger.error(error)
@@ -668,11 +680,11 @@ class AsyncChromeDaemon(ChromeDaemon):
         return r and r.ok
 
     async def check_connection(self):
-        for _ in range(self.MAX_WAIT_CHECKING_SECONDS):
+        for _ in range(int(self.MAX_WAIT_CHECKING_SECONDS * 2)):
             if await self._check_chrome_connection():
                 self.ready = True
                 return True
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
         return False
 
     @property

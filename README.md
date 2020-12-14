@@ -188,6 +188,12 @@ if __name__ == "__main__":
         $ python3 -m ichrome --clean
         $ pip uninstall ichrome
 
+## Download & unzip the latest version of Chromium browser (Linux or Windows)
+
+> python3 -m ichrome --install="/home/root/chrome_bin"
+
+WARNING: maybe need add `--no-sandbox` to extra_configs while running, unless you really need sandbox and then view [Chromium: "Running without the SUID sandbox!" error - Ask Ubuntu](https://askubuntu.com/questions/329320/chromium-running-without-the-suid-sandbox-error)
+
 <details>
     <summary><b>AsyncChrome feature list</b></summary>
 
