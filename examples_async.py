@@ -72,12 +72,14 @@ async def test_send_msg(tab: Tab):
 
 async def test_tab_cookies(tab: Tab):
     await tab.clear_browser_cookies()
-    assert len(await tab.get_cookies(urls='http://python.org')) == 0
-    assert await tab.set_cookie('test', 'test_value', url='http://python.org')
-    assert await tab.set_cookie('test2', 'test_value', url='http://python.org')
-    assert len(await tab.get_cookies(urls='http://python.org')) == 2
-    assert await tab.delete_cookies('test', url='http://python.org')
-    assert len(await tab.get_cookies(urls='http://python.org')) == 1
+    assert len(await tab.get_cookies(urls='https://github.com/')) == 0
+    assert await tab.set_cookie('test', 'test_value', url='https://github.com/')
+    assert await tab.set_cookie('test2',
+                                'test_value',
+                                url='https://github.com/')
+    assert len(await tab.get_cookies(urls='https://github.com/')) == 2
+    assert await tab.delete_cookies('test', url='https://github.com/')
+    assert len(await tab.get_cookies(urls='https://github.com/')) == 1
     # get all Browser cookies
     assert len(await tab.get_all_cookies()) > 0
 
@@ -88,8 +90,8 @@ async def test_tab_set_url(tab: Tab):
     assert await tab.set_url('http://httpbin.org/delay/1', timeout=3)
     ok = False
     for _ in range(5):
-        await tab.set_url('https://python.org')
-        ok = bool(await tab.wait_tag('.python-logo', max_wait_time=10))
+        await tab.set_url('https://github.com/')
+        ok = bool(await tab.wait_tag('#user_email', max_wait_time=10))
         if ok:
             break
     assert ok
@@ -114,7 +116,7 @@ async def test_tab_js(tab: Tab):
     assert await tab.refresh_tab_info()
     assert tab._title == new_title
     # inject JS timeout return None
-    assert (await tab.js('alert()', timeout=0.1)) is None
+    assert (await tab.js('alert()')) is None
     # close the alert dialog
     assert await tab.handle_dialog(accept=True)
     # inject js url: vue.js
@@ -130,28 +132,28 @@ async def test_tab_js(tab: Tab):
     tag = await tab.querySelector('#not-exist')
     assert not tag
     # querySelectorAll with JS, return list of Tag object
-    tags = await tab.querySelectorAll('#id-search-field')
+    tags = await tab.querySelectorAll('ul > li')
     assert tags, f'{[tags, type(tags)]}'
     assert isinstance(tags[0], Tag), f'{[tags[0], type(tags[0])]}'
     # querySelectorAll with JS, index arg is Not None, return Tag or None
-    one_tag = await tab.querySelectorAll('#id-search-field', index=0)
+    one_tag = await tab.querySelectorAll('input.header-search-input', index=0)
     assert isinstance(one_tag, Tag)
     assert await tab.set_html('')
     assert (await tab.current_html) == '<html><head></head><body></body></html>'
     # reload the page
     assert await tab.reload()
-    await tab.wait_loading(3)
-    assert len(await tab.current_html) > 1000
+    await tab.wait_loading(5)
+    assert len(await tab.html) > 1000, await tab.html
     # test wait tags
-    result = await tab.wait_tags('.python-logo1', max_wait_time=1)
+    result = await tab.wait_tags('input.header-search-input1', max_wait_time=1)
     assert result == []
-    result = await tab.wait_tags('.python-logo', max_wait_time=3)
+    result = await tab.wait_tags('input.header-search-input', max_wait_time=3)
     assert result
-    assert await tab.includes('python-logo')
+    assert await tab.includes('Why GitHub?')
     assert not (await tab.includes('python-ichrome'))
-    assert await tab.wait_includes('python')
+    assert await tab.wait_includes('Why GitHub?')
     assert (await tab.wait_includes('python-ichrome', max_wait_time=1)) is False
-    assert await tab.wait_findall('python')
+    assert await tab.wait_findall('GitHub')
     assert (await tab.wait_findall('python-ichrome', max_wait_time=1)) == []
     # test wait_console_value
     await tab.js('setTimeout(() => {console.log(123)}, 2);')
