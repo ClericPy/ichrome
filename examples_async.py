@@ -142,8 +142,9 @@ async def test_tab_js(tab: Tab):
     assert (await tab.current_html) == '<html><head></head><body></body></html>'
     # reload the page
     assert await tab.reload()
-    await tab.wait_loading(5)
-    assert len(await tab.html) > 1000, await tab.html
+    await tab.wait_loading(8)
+    current_html = await tab.html
+    assert len(current_html) > 1000, current_html
     # test wait tags
     result = await tab.wait_tags('input.header-search-input1', max_wait_time=1)
     assert result == []
