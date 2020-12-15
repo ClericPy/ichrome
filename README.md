@@ -188,11 +188,15 @@ if __name__ == "__main__":
         $ python3 -m ichrome --clean
         $ pip uninstall ichrome
 
-## Download & unzip the latest version of Chromium browser (Linux or Windows)
+## Download & unzip the latest version of Chromium browser
 
 > python3 -m ichrome --install="/home/root/chrome_bin"
 
-WARNING: maybe need add `--no-sandbox` to extra_configs while running, unless you really need sandbox and then view [Chromium: "Running without the SUID sandbox!" error - Ask Ubuntu](https://askubuntu.com/questions/329320/chromium-running-without-the-suid-sandbox-error)
+WARNING: 
+
+1. install the missing packages yourself
+   1. use `ldd chrome | grep not` on linux to check and install them, or view the link: [Checking out and building Chromium on Linux](https://chromium.googlesource.com/chromium/src/+/master/docs/linux/build_instructions.md#Install-additional-build-dependencies)
+2. add `--no-sandbox` to extra_configs to avoid `No usable sandbox` errors, unless you really need `sandbox`: [Chromium: "Running without the SUID sandbox!" error - Ask Ubuntu](https://askubuntu.com/questions/329320/chromium-running-without-the-suid-sandbox-error)
 
 <details>
     <summary><b>AsyncChrome feature list</b></summary>
@@ -224,7 +228,7 @@ WARNING: maybe need add `--no-sandbox` to extra_configs while running, unless yo
     ```python
     await chrome.kill()
     ```
-1. `connect_tabs`
+8. `connect_tabs`
     > connect websockets for multiple tabs in one `with` context, and disconnect before exiting.
     ```python
     tab0: AsyncTab = (await chrome.tabs)[0]
@@ -233,7 +237,7 @@ WARNING: maybe need add `--no-sandbox` to extra_configs while running, unless yo
         assert (await tab0.current_url) == 'about:blank'
         assert (await tab1.current_url) == 'about:blank'
     ```
-1. `connect_tab`
+9. `connect_tab`
     > The easiest way to get a connected tab.
     > get an existing tab
     ```python
