@@ -34,8 +34,8 @@ async def test_chrome(chrome: Chrome):
     await chrome.activate_tab(tab0)
     # test batch connect multiple tabs
     async with chrome.connect_tabs([tab0, tab1]):
-        assert tab0.status == 'connected', tab0.status
-        assert tab1.status == 'connected', tab1.status
+        assert tab0.status == 'connected', (tab0.status, await tab0.title)
+        assert tab1.status == 'connected', (tab1.status, await tab1.title)
         # watch the tabs switch
         await tab1.activate_tab()
         await asyncio.sleep(.2)

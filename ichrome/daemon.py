@@ -232,12 +232,6 @@ class ChromeDaemon(object):
                 f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
             )
             self.user_data_dir.mkdir(parents=True, exist_ok=True)
-            # self.ensure_dir(self.user_data_dir)
-        port_dir_size = get_readable_dir_size(port_user_dir)
-        total_dir_size = get_readable_dir_size(main_user_dir)
-        logger.debug(
-            f'user_data_dir({self.user_data_dir}) size: {port_dir_size} / {total_dir_size}'
-        )
 
     @classmethod
     def clear_user_dir(cls, user_data_dir=None, port=None):
