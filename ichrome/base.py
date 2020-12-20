@@ -159,12 +159,12 @@ def get_dir_size(path):
             return result
     except FileNotFoundError:
         pass
-    for f in list(target_path.glob("**/*")):
-        try:
+    try:
+        for f in target_path.glob("**/*"):
             if f.is_file():
                 result += get_st_size(f)
-        except FileNotFoundError:
-            pass
+    except FileNotFoundError:
+        pass
     return result
 
 
