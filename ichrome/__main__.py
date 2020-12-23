@@ -160,13 +160,18 @@ Other operations:
     parser.add_argument("--install",
                         help="download chromium and unzip it to given path",
                         default="")
+    parser.add_argument(
+        "--install-version",
+        help=
+        "install version code, like 812852. view more: https://omahaproxy.appspot.com/",
+        default="")
     args, extra_config = parser.parse_known_args()
 
     if args.version:
         print(__version__)
         return
     if args.install:
-        return install_chromium(args.install)
+        return install_chromium(args.install, version=args.install_version)
     if args.config:
         path = Path(args.config)
         if not (path.is_file() and path.exists()):
