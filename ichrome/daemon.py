@@ -322,7 +322,8 @@ class ChromeDaemon(object):
             args.append("--headless")
             args.append("--hide-scrollbars")
         if self.user_data_dir:
-            args.append(f"--user-data-dir={self.user_data_dir}")
+            # user_data_dir absolute path is faster while running
+            args.append(f"--user-data-dir={self.user_data_dir.absolute()}")
         if self.UA:
             args.append(f"--user-agent={self.UA}")
         if self.proxy:
