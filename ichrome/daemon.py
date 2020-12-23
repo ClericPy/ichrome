@@ -115,7 +115,7 @@ class ChromeDaemon(object):
                  max_deaths=1,
                  daemon=True,
                  block=False,
-                 timeout=2,
+                 timeout=3,
                  debug=False,
                  proc_check_interval=5,
                  on_startup=None,
@@ -355,8 +355,7 @@ class ChromeDaemon(object):
             args.append(self.start_url)
         return args
 
-    @property
-    def cmd_args(self):
+    def get_cmd_args(self):
         # list2cmdline for linux use args list failed...
         cmd_string = subprocess.list2cmdline(self.cmd)
         logger.debug(f"running with: {cmd_string}")
@@ -364,11 +363,12 @@ class ChromeDaemon(object):
         if not self.debug:
             kwargs["stdout"] = subprocess.DEVNULL
             kwargs["stderr"] = subprocess.DEVNULL
+        self.cmd_args = kwargs
         return kwargs
 
     def _start_chrome_process(self):
         self.chrome_proc_start_time = time.time()
-        self.proc = subprocess.Popen(**self.cmd_args)
+        self.proc = subprocess.Popen(**self.get_cmd_args())
 
     def launch_chrome(self):
         self._start_chrome_process()
@@ -608,7 +608,7 @@ class AsyncChromeDaemon(ChromeDaemon):
                  max_deaths=1,
                  daemon=True,
                  block=False,
-                 timeout=1,
+                 timeout=3,
                  debug=False,
                  proc_check_interval=5,
                  on_startup=None,
