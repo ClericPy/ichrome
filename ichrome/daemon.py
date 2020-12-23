@@ -46,15 +46,14 @@ class ChromeDaemon(object):
 
         on_startup & on_shutdown: function which handled a ChromeDaemon object while startup or shutdown
 
-    default extra_config: ["--disable-gpu", "--no-first-run"], root user should append "--no-sandbox"
+    default extra_config: ["--disable-gpu", "--no-first-run"], root user may need append "--no-sandbox"
 
     common args:
 
         --incognito: Causes the browser to launch directly in incognito mode
         --mute-audio: Mutes audio sent to the audio device so it is not audible during automated testing.
         --blink-settings=imagesEnabled=false: disable image loading.
-
-        --no-sandbox: headless mode will need this arg.
+        --no-sandbox
         --disable-javascript
         --disable-extensions
         --disable-background-networking
@@ -66,7 +65,27 @@ class ChromeDaemon(object):
         --single-process
         --proxy-pac-url=xxx. Nonsense for headless mode.
         --kiosk
-        --window-size=1920,1080
+        --window-size=800,600
+        --disable-logging
+        --disable-component-extensions-with-background-pages
+        --disable-default-apps
+        --disable-login-animations
+        --disable-notifications
+        --disable-print-preview
+        --disable-prompt-on-repost
+        --disable-setuid-sandbox
+        --disable-system-font-check
+        --disable-dev-shm-usage
+        --aggressive-cache-discard
+        --aggressive-tab-discard
+        --mem-pressure-system-reserved-kb=80000
+        --disable-shared-workers
+        --disable-gl-drawing-for-tests
+        --use-gl=swiftshader
+        -disable-canvas-aa
+        --disable-2d-canvas-clip-aa
+        --disable-breakpad
+        --no-zygote
 
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
