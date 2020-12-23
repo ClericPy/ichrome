@@ -121,15 +121,17 @@ class _WSConnection:
 
     async def connect(self) -> 'Tab':
         """Connect to websocket, and set tab.ws as aiohttp.client_ws.ClientWebSocketResponse."""
-        try:
-            self.tab.ws = await self.tab.req.session.ws_connect(
-                self.tab.webSocketDebuggerUrl, **self.tab.ws_kwargs)
-            asyncio.ensure_future(self.tab._recv_daemon())
-            logger.debug(
-                f'[connected] {self.tab} websocket connection created.')
-        except (ClientError, WebSocketError) as err:
-            # tab missing(closed)
-            logger.error(f'[missing] {self.tab} missing ws connection. {err}')
+        for _ in range(2):
+            try:
+                self.tab.ws = await self.tab.req.session.ws_connect(
+                    self.tab.webSocketDebuggerUrl, **self.tab.ws_kwargs)
+                asyncio.ensure_future(self.tab._recv_daemon())
+                logger.debug(
+                    f'[connected] {self.tab} websocket connection created.')
+                break
+            except (ClientError, WebSocketError) as err:
+                # tab missing(closed)
+                logger.error(f'[missing] {self.tab} missing ws connection. {err}')
         # start the daemon background.
         return self.tab
 
@@ -2020,7 +2022,7 @@ class Listener:
 
 
 class Chrome(GetValueMixin):
-    _DEFAULT_CONNECT_TIMEOUT = 2
+    _DEFAULT_CONNECT_TIMEOUT = 3
     _DEFAULT_RETRY = 1
 
     def __init__(self,
