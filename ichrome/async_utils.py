@@ -131,7 +131,8 @@ class _WSConnection:
                 break
             except (ClientError, WebSocketError) as err:
                 # tab missing(closed)
-                logger.error(f'[missing] {self.tab} missing ws connection. {err}')
+                logger.error(
+                    f'[missing] {self.tab} missing ws connection. {err}')
         # start the daemon background.
         return self.tab
 
@@ -632,7 +633,8 @@ class Tab(GetValueMixin):
                          httpOnly: Optional[bool] = False,
                          sameSite: Optional[str] = '',
                          expires: Optional[int] = None,
-                         timeout=NotSet):
+                         timeout=NotSet,
+                         **_):
         """name [string] Cookie name.
 value [string] Cookie value.
 url [string] The request-URI to associate with the setting of the cookie. This value can affect the default domain and path values of the created cookie.
