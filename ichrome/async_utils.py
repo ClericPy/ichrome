@@ -483,6 +483,7 @@ class Tab(GetValueMixin):
                    timeout=NotSet,
                    callback_function: Optional[Callable] = None,
                    kwargs: Dict[str, Any] = None,
+                   auto_enable=True,
                    **_kwargs) -> Union[None, dict]:
         '''Send message to Tab. callback_function only work whlie timeout!=0.
         If timeout is not None: wait for recv event.
@@ -496,6 +497,8 @@ class Tab(GetValueMixin):
         try:
             if not self.ws or self.ws.closed:
                 raise ChromeRuntimeError(f'[closed] {self} ws has been closed')
+            if auto_enable:
+                await self.auto_enable(method, timeout=timeout)
             logger.debug(f"[send] {self!r} {request}")
             result = await self.ws.send_json(request)
             if timeout != 0:
@@ -529,11 +532,7 @@ class Tab(GetValueMixin):
         :rtype: dict
         """
         timeout = self.ensure_timeout(timeout)
-        method = event_dict.get('method')
-        if method:
-            # ensure the domain of method is enabled
-            domain = method.split('.', 1)[0]
-            await self.enable(domain)
+        await self.auto_enable(event_dict, timeout=timeout)
         result = None
         if isinstance(timeout, (float, int)) and timeout <= 0:
             # no wait
@@ -551,13 +550,24 @@ class Tab(GetValueMixin):
     def now(self) -> int:
         return int(time.time())
 
+    async def auto_enable(self, event_or_method, timeout=NotSet):
+        if isinstance(event_or_method, dict):
+            method = event_or_method.get('method')
+        else:
+            method = event_or_method
+        if isinstance(event_or_method, str):
+            domain = method.split('.', 1)[0]
+            await self.enable(domain, timeout=timeout)
+
     async def enable(self, domain: str, force: bool = False, timeout=None):
         '''domain: Network / Page and so on, will send `domain.enable`. Will check for duplicated sendings if not force.'''
         if not force:
             # no need for duplicated enable.
             if domain not in self._domains_can_be_enabled or domain in self._enabled_domains:
                 return True
-        result = await self.send(f'{domain}.enable', timeout=timeout)
+        result = await self.send(f'{domain}.enable',
+                                 timeout=timeout,
+                                 auto_enable=False)
         if result is not None:
             self._enabled_domains.add(domain)
         return result
@@ -568,7 +578,9 @@ class Tab(GetValueMixin):
             # no need for duplicated enable.
             if domain in self._domains_can_be_enabled or domain not in self._enabled_domains:
                 return True
-        result = await self.send(f'{domain}.disable', timeout=timeout)
+        result = await self.send(f'{domain}.disable',
+                                 timeout=timeout,
+                                 auto_enable=False)
         if result is not None:
             self._enabled_domains.discard(domain)
         return result
@@ -1072,7 +1084,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
 
 
         """
-        await self.enable('Network')
         return await self.send('Network.setBlockedURLs',
                                urls=urls,
                                timeout=timeout)
@@ -1914,6 +1925,9 @@ JSON.stringify(result)""" % (
     async def gc(self):
         # HeapProfiler.collectGarbage
         return await self.send('HeapProfiler.collectGarbage')
+
+    async def alert(self, text):
+        return await self.js('alert(`%s`)' % text)
 
 
 class OffsetMoveWalker:

@@ -15,14 +15,12 @@ from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
+from .async_utils import _SingleTabConnectionManagerDaemon
 from .base import (async_run, clear_chrome_process, ensure_awaitable,
                    get_dir_size, get_memory_by_port, get_proc,
                    get_readable_dir_size)
-from .exceptions import ChromeRuntimeError, ChromeTypeError
+from .exceptions import ChromeException, ChromeRuntimeError, ChromeTypeError
 from .logs import logger
-"""
-Sync / block operations for launching chrome processes.
-"""
 
 
 class ChromeDaemon(object):
@@ -86,6 +84,9 @@ class ChromeDaemon(object):
         --disable-2d-canvas-clip-aa
         --disable-breakpad
         --no-zygote
+        --disable-reading-from-canvas
+        --disable-remote-fonts
+        --renderer-process-limit=1
 
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
@@ -254,6 +255,7 @@ class ChromeDaemon(object):
 
     @classmethod
     def clear_user_dir(cls, user_data_dir=None, port=None):
+        """WARNING: this is a sync class method, if you want to clear only user dir, use self.clear_user_data_dir instead"""
         main_user_dir = cls._ensure_user_dir(user_data_dir)
         if port is None:
             # clear whole ichrome dir if port is None
@@ -263,6 +265,10 @@ class ChromeDaemon(object):
             cls.clear_dir_with_shutil(main_user_dir / f"chrome_{port}")
 
     def _clear_user_dir(self):
+        # Deprecated
+        return self._clear_user_data_dir()
+
+    def clear_user_data_dir(self):
         # clear self user dir
         self.shutdown('_clear_user_dir')
         return self.clear_dir_with_shutil(self.user_data_dir)
@@ -560,7 +566,7 @@ class ChromeDaemon(object):
         if self.after_shutdown:
             self.after_shutdown(self)
         if self.clear_after_shutdown:
-            self._clear_user_dir()
+            self.clear_user_data_dir()
 
     def __enter__(self):
         return self
@@ -811,23 +817,15 @@ class AsyncChromeDaemon(ChromeDaemon):
         if self.after_shutdown:
             await ensure_awaitable(self.after_shutdown(self))
         if self.clear_after_shutdown:
-            await self._clear_user_dir()
+            await self.clear_user_data_dir()
 
     async def _clear_user_dir(self):
-        # clear self user dir
+        # Deprecated
+        return await self.clear_user_data_dir()
+
+    async def clear_user_data_dir(self):
         await self.shutdown('_clear_user_dir')
         return await async_run(self.clear_dir_with_shutil, self.user_data_dir)
-
-    @property
-    def _SingleTabConnectionManagerDaemon(self):
-        # lazy import
-        return getattr(self, '_SingleTabConnectionManagerDaemonClass',
-                       self.import_SingleTabConnectionManagerDaemon())
-
-    def import_SingleTabConnectionManagerDaemon(self):
-        from .async_utils import _SingleTabConnectionManagerDaemon
-        self._SingleTabConnectionManagerDaemonClass = _SingleTabConnectionManagerDaemon
-        return self._SingleTabConnectionManagerDaemonClass
 
     def connect_tab(self,
                     index: Union[None, int, str] = 0,
@@ -842,10 +840,18 @@ class AsyncChromeDaemon(ChromeDaemon):
 
             If auto_close is True: close this tab while exiting context.
 '''
-        return self._SingleTabConnectionManagerDaemon(host=self.host,
-                                                      port=self.port,
-                                                      index=index,
-                                                      auto_close=auto_close)
+        return _SingleTabConnectionManagerDaemon(host=self.host,
+                                                 port=self.port,
+                                                 index=index,
+                                                 auto_close=auto_close)
+
+    async def close_browser(self):
+        try:
+            async with self.connect_tab(0) as tab:
+                await tab.close_browser()
+                return True
+        except ChromeException:
+            return False
 
     def __del__(self):
         pass

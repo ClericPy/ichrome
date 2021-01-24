@@ -81,14 +81,15 @@ class Tag:
 def get_proc_by_regex(regex, proc_names=None):
     # win32 and linux chrome proc_names
     procs = []
-    try:
-        for proc in psutil.process_iter():
-            if (not proc_names or proc.name() in proc_names) and re.search(
-                    regex, ' '.join(proc.cmdline())):
-                procs.append(proc)
-    except (psutil.Error, OSError, TypeError, AttributeError):
-        pass
-    return procs
+    for _ in range(3):
+        try:
+            for proc in psutil.process_iter():
+                if (not proc_names or proc.name() in proc_names) and re.search(
+                        regex, ' '.join(proc.cmdline())):
+                    procs.append(proc)
+            return procs
+        except (psutil.Error, OSError, TypeError, AttributeError):
+            procs.clear()
 
 
 def get_proc(port=9222) -> List[psutil.Process]:
