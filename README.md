@@ -376,7 +376,8 @@ WARNING:
 
    or launch chrome daemon in code
 
-        async with AsyncChromeDaemon():
+        async with AsyncChromeDaemon() as cd:
+            async with cd.connect_tab() as tab:
 
 2. Create the connection to exist chrome browser
    
@@ -386,29 +387,42 @@ WARNING:
 4. Close the browser GRACEFULLY instead of killing process
 
 ```python
-from ichrome import AsyncChromeDaemon, AsyncChrome
+from ichrome import AsyncChromeDaemon
 import asyncio
 
 
 async def main():
     # If there is an existing daemon, such as `python -m ichrome`, the `async with AsyncChromeDaemon` context can be omitted.
-    async with AsyncChromeDaemon():
-        # connect to an opened chrome, default host=127.0.0.1, port=9222, headless=False
-        async with AsyncChrome() as chrome:
-            # If you need reuse an existing tab, set index with int like 0 for activated tab, such as `async with chrome.connect_tab(0) as tab:`
-            async with chrome.connect_tab(index='https://github.com/ClericPy',
-                                          auto_close=True) as tab:
-                await tab.wait_loading(2)
-                await tab.js("document.write('<h1>Document updated.</h1>')")
-                await asyncio.sleep(1)
-                # await tab.js('alert("test ok")')
-                print('output:', await tab.html)
-                # output: <html><head></head><body><h1>Document updated.</h1></body></html>
-                # will auto_close tab while exiting context
-                # await tab.close()
-                # await tab.close_browser()
-            # close_browser gracefully, I have no more need of chrome instance
-            await chrome.close_browser()
+    async with AsyncChromeDaemon(headless=0, disable_image=False) as cd:
+        # index: 0=current activate tab, 1=tab 1, None=new tab, $URL=new tab for url
+        async with cd.connect_tab(index=0, auto_close=True) as tab:
+            # tab: AsyncTab
+            await tab.alert(
+                'Now using the default tab and goto the url, click to continue.'
+            )
+            print(await tab.goto('https://github.com/ClericPy/ichrome',
+                                 timeout=5))
+            # wait tag appeared
+            await tab.wait_tag('[data-content="Issues"]', max_wait_time=5)
+            await tab.alert(
+                'Here the Issues tag appeared, I will click that button.')
+            # click the issues tag
+            await tab.click('[data-content="Issues"]')
+            await tab.wait_tag('#js-issues-search')
+            await tab.alert('Now will input some text and search the issues.')
+            await tab.mouse_click_element_rect('#js-issues-search')
+            await tab.keyboard_send(string='chromium')
+            await tab.js(
+                r'''document.querySelector('[role="search"]').submit()''')
+            await tab.wait_loading(5)
+            await asyncio.sleep(2)
+            await tab.alert('demo finished.')
+            # no need to close tab for auto_close=True
+            # await tab.close()
+        # # close browser gracefully
+        # await cd.close_browser()
+        print('clearing the user data cache.')
+        await cd.clear_user_data_dir()
 
 
 if __name__ == "__main__":
