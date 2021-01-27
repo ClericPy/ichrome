@@ -73,11 +73,18 @@ async def test_send_msg(tab: Tab):
 async def test_tab_cookies(tab: Tab):
     await tab.clear_browser_cookies()
     assert len(await tab.get_cookies(urls='https://github.com/')) == 0
+    assert len(await tab.get_cookies(urls='http://httpbin.org/get')) == 0
     assert await tab.set_cookie('test', 'test_value', url='https://github.com/')
     assert await tab.set_cookie('test2',
                                 'test_value',
                                 url='https://github.com/')
+    assert await tab.set_cookies([{
+        'name': 'a',
+        'value': 'b',
+        'url': 'http://httpbin.org/get'
+    }])
     assert len(await tab.get_cookies(urls='https://github.com/')) == 2
+    assert len(await tab.get_cookies(urls='http://httpbin.org/get')) == 1
     assert await tab.delete_cookies('test', url='https://github.com/')
     assert len(await tab.get_cookies(urls='https://github.com/')) == 1
     # get all Browser cookies

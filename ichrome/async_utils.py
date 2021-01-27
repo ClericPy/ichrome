@@ -484,11 +484,14 @@ class Tab(GetValueMixin):
                    callback_function: Optional[Callable] = None,
                    kwargs: Dict[str, Any] = None,
                    auto_enable=True,
+                   force=None,
                    **_kwargs) -> Union[None, dict]:
         '''Send message to Tab. callback_function only work whlie timeout!=0.
         If timeout is not None: wait for recv event.
-        If not force: will check the domain enabled automatically.
+        If auto_enable: will check the domain enabled automatically.
         If callback_function: run while received the response msg.
+
+        the `force` arg is deprecated, use auto_enable instead.
         '''
         timeout = self.ensure_timeout(timeout)
         if kwargs:
@@ -497,7 +500,7 @@ class Tab(GetValueMixin):
         try:
             if not self.ws or self.ws.closed:
                 raise ChromeRuntimeError(f'[closed] {self} ws has been closed')
-            if auto_enable:
+            if auto_enable or force is False:
                 await self.auto_enable(method, timeout=timeout)
             logger.debug(f"[send] {self!r} {request}")
             result = await self.ws.send_json(request)
@@ -635,6 +638,28 @@ class Tab(GetValueMixin):
             result = await self.send("Network.getCookies", timeout=timeout)
         return self.get_data_value(result, 'result.cookies', [])
 
+    async def set_cookies(self,
+                          cookies: List,
+                          ensure_keys=False,
+                          timeout=NotSet):
+        """Network.setCookies"""
+        for cookie in cookies:
+            if not ('url' in cookie or 'domain' in cookie):
+                raise ChromeValueError(
+                    'URL and domain should not be null at the same time.')
+        if ensure_keys:
+            valid_keys = {
+                'name', 'value', 'url', 'domain', 'path', 'secure', 'httpOnly',
+                'sameSite', 'expires', 'priority'
+            }
+            cookies = [{k: v
+                        for k, v in cookie.items()
+                        if k in valid_keys}
+                       for cookie in cookies]
+        return await self.send("Network.setCookies",
+                               cookies=cookies,
+                               timeout=timeout)
+
     async def set_cookie(self,
                          name: str,
                          value: str,
@@ -674,7 +699,6 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.send("Network.setCookie",
                                timeout=timeout,
                                callback_function=None,
-                               force=False,
                                **kwargs)
 
     async def get_current_url(self, timeout=NotSet) -> str:
@@ -1635,7 +1659,6 @@ JSON.stringify(result)""" % (
         result = await self.send('Page.captureScreenshot',
                                  timeout=timeout,
                                  callback_function=None,
-                                 force=False,
                                  **kwargs)
         base64_img = self.get_data_value(result, value_path='result.data')
         if save_path and base64_img:
