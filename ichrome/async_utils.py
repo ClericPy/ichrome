@@ -112,6 +112,7 @@ class _WSConnection:
     def __init__(self, tab):
         self.tab = tab
         self._closed = None
+        self._recv_task: Future = None
 
     def __str__(self):
         return f'<{self.__class__.__name__}: {None if self._closed is None else not self._closed}>'
@@ -125,7 +126,7 @@ class _WSConnection:
             try:
                 self.tab.ws = await self.tab.req.session.ws_connect(
                     self.tab.webSocketDebuggerUrl, **self.tab.ws_kwargs)
-                asyncio.ensure_future(self.tab._recv_daemon())
+                self._recv_task = asyncio.ensure_future(self.tab._recv_daemon())
                 logger.debug(
                     f'[connected] {self.tab} websocket connection created.')
                 break
@@ -137,6 +138,9 @@ class _WSConnection:
         return self.tab
 
     async def shutdown(self):
+        # stop daemon if shutdown
+        if self._recv_task and not self._recv_task.done():
+            self._recv_task.cancel()
         if self.tab.ws and not self.tab.ws.closed:
             await self.tab.ws.close()
             self._closed = self.tab.ws.closed
