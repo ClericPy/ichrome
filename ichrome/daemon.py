@@ -137,7 +137,7 @@ class ChromeDaemon(object):
         self.proc = None
         self.host = host
         self.port = port
-        self.chrome_path = chrome_path
+        self.chrome_path = chrome_path or os.getenv('CHROME_PATH')
         self.UA = user_agent
         self.headless = headless
         self.proxy = proxy
