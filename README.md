@@ -371,20 +371,16 @@ WARNING:
 ## Quick Start
 
 1. Start a new chrome daemon process with headless=False
+   1. `python -m ichrome`
+   2. Then connect to an exist chrome instance
+      1. `async with AsyncChrome() as cd:`
 
-        python -m ichrome
-
-   or launch chrome daemon in code
+   or launching the chrome daemon in code may be a better choice
 
         async with AsyncChromeDaemon() as cd:
             async with cd.connect_tab() as tab:
-
-2. Create the connection to exist chrome browser
-   
-        async with AsyncChrome() as chrome:
-
-3. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
-4. Close the browser GRACEFULLY instead of killing process
+2. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
+3. Close the browser GRACEFULLY instead of killing process
 
 ```python
 from ichrome import AsyncChromeDaemon
@@ -392,7 +388,6 @@ import asyncio
 
 
 async def main():
-    # If there is an existing daemon, such as `python -m ichrome`, the `async with AsyncChromeDaemon` context can be omitted.
     async with AsyncChromeDaemon(headless=0, disable_image=False) as cd:
         # index: 0=current activate tab, 1=tab 1, None=new tab, $URL=new tab for url
         async with cd.connect_tab(index=0, auto_close=True) as tab:
