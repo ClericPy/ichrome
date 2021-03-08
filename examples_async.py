@@ -23,11 +23,11 @@ async def test_chrome(chrome: Chrome):
     assert isinstance(resp.json(), list)
     tabs1: List[Tab] = await chrome.get_tabs()
     tabs2: List[Tab] = await chrome.tabs
-    assert tabs1 == tabs2
+    assert tabs1 == tabs2 and tabs1 and tabs2, (tabs1, tabs2)
     tab0: Tab = await chrome.get_tab(0)
     tab0_by_getitem = await chrome[0]
     assert tab0 == tab0_by_getitem
-    assert tabs1[0] == tab0
+    assert tabs1 == [tab0], (tabs1, tab0)
     tab1: Tab = await chrome.new_tab()
     assert isinstance(tab1, Tab)
     await asyncio.sleep(0.2)
@@ -282,8 +282,7 @@ async def test_examples():
                                  on_shutdown=on_shutdown,
                                  clear_after_shutdown=True) as chromed:
         # test init tab from chromed
-        async with chromed.connect_tab("https://github.com",
-                                       auto_close=True) as tab:
+        async with chromed.connect_tab(index=None, auto_close=True) as tab:
             TEST_DRC_OK = False
 
             def test_drc(tab, data_dict):
@@ -291,10 +290,10 @@ async def test_examples():
                 TEST_DRC_OK = True
 
             tab.default_recv_callback.append(test_drc)
-            await tab.wait_loading(5)
+            await tab.goto("https://github.com", timeout=5)
             title = await tab.current_title
             assert TEST_DRC_OK, 'test default_recv_callback failed'
-            assert 'GitHub' in title
+            assert 'GitHub' in title, title
             tab.default_recv_callback.clear()
         logger.info('test init tab from chromed OK.')
         # test on_startup
