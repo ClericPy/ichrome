@@ -188,6 +188,12 @@ if __name__ == "__main__":
         $ python3 -m ichrome --clean
         $ pip uninstall ichrome
 
+## Have a Try?
+
+> Simple REPL mode to try some functions of Tab
+
+    python3 -m ichrome -t
+
 ## Download & unzip the latest version of Chromium browser
 
 > python3 -m ichrome --install="/home/root/chrome_bin"
@@ -461,6 +467,7 @@ Details:
 ```
 usage:
     All the unknown args will be appended to extra_config as chrome original args.
+    Maybe you can have a try by typing: `python3 -m ichrome --try`
 
 Demo:
     > python -m ichrome -H 127.0.0.1 -p 9222 --window-size=1212,1212 --incognito
@@ -525,6 +532,8 @@ optional arguments:
   --debug               set logger level to DEBUG
   -K, --killall         killall chrome launched local with --remote-debugging-
                         port
+  -t, --try, --demo, --repl
+                        Have a try for ichrome with repl mode.
 ```
 
 ## Interactive Debugging (REPL Mode)
