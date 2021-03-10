@@ -12,6 +12,7 @@ from ichrome.base import get_readable_dir_size, install_chromium
 def main():
     usage = '''
     All the unknown args will be appended to extra_config as chrome original args.
+    Maybe you can have a try by typing: `python3 -m ichrome --try`
 
 Demo:
     > python -m ichrome -H 127.0.0.1 -p 9222 --window-size=1212,1212 --incognito
@@ -160,15 +161,26 @@ Other operations:
     parser.add_argument("--install",
                         help="download chromium and unzip it to given path",
                         default="")
-    parser.add_argument(
-        "--install-version",
-        help=
-        "install version code, like 812852. view more: https://omahaproxy.appspot.com/",
-        default="")
+    parser.add_argument("--install-version",
+                        help="install version code, like 812852. "
+                        "view more: https://omahaproxy.appspot.com/",
+                        default="")
+    parser.add_argument("-t",
+                        "--try",
+                        "--demo",
+                        "--repl",
+                        help="Have a try for ichrome with repl mode.",
+                        default=False,
+                        dest='demo',
+                        action="store_true")
     args, extra_config = parser.parse_known_args()
 
     if args.version:
         print(__version__)
+        return
+    if args.demo:
+        from .debugger import repl_tab
+        repl_tab()
         return
     if args.install:
         return install_chromium(args.install, version=args.install_version)

@@ -122,7 +122,7 @@ class _WSConnection:
 
     async def connect(self) -> 'Tab':
         """Connect to websocket, and set tab.ws as aiohttp.client_ws.ClientWebSocketResponse."""
-        for _ in range(2):
+        for _ in range(3):
             try:
                 self.tab.ws = await self.tab.req.session.ws_connect(
                     self.tab.webSocketDebuggerUrl, **self.tab.ws_kwargs)
