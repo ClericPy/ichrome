@@ -190,9 +190,11 @@ if __name__ == "__main__":
 
 ## Have a Try?
 
-> Simple REPL mode to try some functions of Tab
+Simple REPL mode to try some functions of Tab
 
     python3 -m ichrome -t
+
+And you can debug your tab with one-line code `from ichrome import repl; await repl()` after `(ichrome>=2.7.2)`.
 
 ## Download & unzip the latest version of Chromium browser
 
