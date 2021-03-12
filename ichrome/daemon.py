@@ -441,6 +441,13 @@ class ChromeDaemon(object):
         else:
             raise ChromeRuntimeError("port in used")
 
+    @classmethod
+    def get_chrome_path(cls):
+        try:
+            return cls._get_default_path()
+        except ChromeRuntimeError:
+            return None
+
     @staticmethod
     def _get_default_path():
         current_platform = platform.system()
