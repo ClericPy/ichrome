@@ -300,6 +300,8 @@ class Tab(GetValueMixin):
         self._default_recv_callback: List[Callable] = []
         # using default_recv_callback.setter, default_recv_callback can be list or function
         self.default_recv_callback = default_recv_callback
+        # alias of methods
+        self.mouse_click_tag = self.mouse_click_element_rect
 
     def __hash__(self):
         return self.tab_id
@@ -1209,6 +1211,21 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                 result,
                                 accept=accept,
                                 promptText=promptText)
+
+    async def wait_tag_click(self,
+                             cssselector: str,
+                             max_wait_time: Optional[float] = None,
+                             interval: float = 1,
+                             timeout=NotSet):
+        tag = await self.wait_tag(cssselector,
+                                  max_wait_time=max_wait_time,
+                                  interval=interval,
+                                  timeout=timeout)
+        if tag:
+            result = await self.click(cssselector=cssselector, timeout=timeout)
+            return (tag, result)
+        else:
+            return (tag, None)
 
     async def wait_tag(self,
                        cssselector: str,
