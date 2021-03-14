@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 from typing import List
 
 from ichrome import AsyncChromeDaemon, ChromeEngine
@@ -72,7 +73,6 @@ async def test_send_msg(tab: Tab):
 
 async def test_tab_cookies(tab: Tab):
     await tab.clear_browser_cookies()
-    assert len(await tab.get_cookies(urls='https://github.com/')) == 0
     assert len(await tab.get_cookies(urls='http://httpbin.org/get')) == 0
     assert await tab.set_cookie('test', 'test_value', url='https://github.com/')
     assert await tab.set_cookie('test2',
@@ -93,15 +93,12 @@ async def test_tab_cookies(tab: Tab):
 
 async def test_tab_set_url(tab: Tab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
-    assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=1))
-    assert await tab.set_url('http://httpbin.org/delay/1', timeout=3)
-    ok = False
-    for _ in range(5):
-        await tab.set_url('https://github.com/')
-        ok = bool(await tab.wait_tag('#user_email', max_wait_time=10))
-        if ok:
-            break
-    assert ok
+    assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=2))
+    assert await tab.set_url('http://httpbin.org/delay/0', timeout=3)
+    await tab.goto('https://httpbin.org/forms/post')
+    assert await tab.wait_tag(
+        '[name="custemail"]',
+        max_wait_time=10), 'wait_tag failed for [name="custemail"]'
 
 
 async def test_tab_js(tab: Tab):
@@ -139,11 +136,12 @@ async def test_tab_js(tab: Tab):
     tag = await tab.querySelector('#not-exist')
     assert not tag
     # querySelectorAll with JS, return list of Tag object
-    tags = await tab.querySelectorAll('ul > li')
+    tags = await tab.querySelectorAll('label')
     assert tags, f'{[tags, type(tags)]}'
     assert isinstance(tags[0], Tag), f'{[tags[0], type(tags[0])]}'
+    assert tags[0].tagName == 'label', f'{[tags[0], tags[0].tagName]}'
     # querySelectorAll with JS, index arg is Not None, return Tag or None
-    one_tag = await tab.querySelectorAll('input.header-search-input', index=0)
+    one_tag = await tab.querySelectorAll('label', index=0)
     assert isinstance(one_tag, Tag)
     assert await tab.set_html('')
     assert (await tab.current_html) == '<html><head></head><body></body></html>'
@@ -151,17 +149,16 @@ async def test_tab_js(tab: Tab):
     assert await tab.reload()
     await tab.wait_loading(8)
     current_html = await tab.html
-    assert len(current_html) > 1000, current_html
+    assert len(current_html) > 100, current_html
     # test wait tags
-    result = await tab.wait_tags('input.header-search-input1', max_wait_time=1)
+    result = await tab.wait_tags('labels', max_wait_time=1)
     assert result == []
-    result = await tab.wait_tags('input.header-search-input', max_wait_time=3)
-    assert result
-    assert await tab.includes('Why GitHub?')
+    assert await tab.wait_tag('label', max_wait_time=3)
+    assert await tab.includes('Telephone')
     assert not (await tab.includes('python-ichrome'))
-    assert await tab.wait_includes('Why GitHub?')
+    assert await tab.wait_includes('Telephone')
     assert (await tab.wait_includes('python-ichrome', max_wait_time=1)) is False
-    assert await tab.wait_findall('GitHub')
+    assert await tab.wait_findall('Telephone')
     assert (await tab.wait_findall('python-ichrome', max_wait_time=1)) == []
     # test wait_console_value
     await tab.js('setTimeout(() => {console.log(123)}, 2);')
@@ -179,20 +176,21 @@ async def test_wait_response(tab: Tab):
             logger.warning(f'check wait_response callback, get_response {ok}')
             assert ok, f'{result} not contains "User-Agent"'
         else:
-            raise ValueError(f'{request} is not True')
+            raise ValueError(f'{request} is not a valid request')
 
     # listening response
     def filter_function(r):
-        ok = 'httpbin.org' in r['params']['response']['url']
-        return print('get response url:', r['params']['response']['url'],
-                     ok) or ok
+        url = r['params']['response']['url']
+        ok = 'httpbin.org' in url
+        print('get response url:', url, ok)
+        return ok
 
     task = asyncio.ensure_future(
         tab.wait_response(filter_function=filter_function,
                           callback_function=cb,
                           timeout=10))
     await tab.set_url('http://httpbin.org/get')
-    await tab.wait_loading(2)
+    await tab.wait_loading(5)
     await task
     # click download link, without wait_loading.
     # request
@@ -205,17 +203,17 @@ async def test_tab_js_onload(tab: Tab):
     # add js onload
     js_id = await tab.add_js_onload(source='window.title=123456789')
     assert js_id
-    await tab.set_url('http://p.3.cn')
+    await tab.set_url('http://httpbin.org/get')
     assert (await tab.get_variable('window.title')) == 123456789
     # remove js onload
     assert await tab.remove_js_onload(js_id)
-    await tab.set_url('http://p.3.cn')
+    await tab.set_url('http://httpbin.org/get')
     assert (await tab.get_variable('window.title')) != 123456789
     assert (await tab.get_variable('[1, 2, 3]')) != [1, 2, 3]
     assert (await tab.get_variable('[1, 2, 3]', jsonify=True)) == [1, 2, 3]
-    assert (await tab.url) == 'http://p.3.cn/' == (await
-                                                   tab.current_url), (await
-                                                                      tab.url)
+    current_url = await tab.current_url
+    url = await tab.url
+    assert url == 'http://httpbin.org/get' == current_url, url
 
 
 async def test_tab_current_html(tab: Tab):
@@ -269,6 +267,23 @@ async def test_tab_keyboard_mouse(tab: Tab):
     await walker.move(50 * 1.414, 50 * 1.414, 0.2)
 
 
+async def test_init_tab(chromed):
+    # test init tab from chromed, create new tab and auto_close=True
+    async with chromed.connect_tab(index=None, auto_close=True) as tab:
+        TEST_DRC_OK = False
+
+        def test_drc(tab, data_dict):
+            nonlocal TEST_DRC_OK
+            TEST_DRC_OK = True
+
+        tab.default_recv_callback.append(test_drc)
+        await tab.goto("https://httpbin.org", timeout=5)
+        title = await tab.current_title
+        assert TEST_DRC_OK, 'test default_recv_callback failed'
+        assert title == 'httpbin.org', title
+        tab.default_recv_callback.clear()
+
+
 async def test_examples():
 
     def on_startup(chromed):
@@ -277,32 +292,24 @@ async def test_examples():
     def on_shutdown(chromed):
         chromed.__class__.bye = 1
 
-    async with AsyncChromeDaemon(headless=headless,
+    host = '127.0.0.1'
+    port = 9222
+    async with AsyncChromeDaemon(host=host,
+                                 port=port,
+                                 headless=headless,
                                  on_startup=on_startup,
                                  on_shutdown=on_shutdown,
                                  clear_after_shutdown=True) as chromed:
-        # test init tab from chromed
-        async with chromed.connect_tab(index=None, auto_close=True) as tab:
-            TEST_DRC_OK = False
-
-            def test_drc(tab, data_dict):
-                nonlocal TEST_DRC_OK
-                TEST_DRC_OK = True
-
-            tab.default_recv_callback.append(test_drc)
-            await tab.goto("https://github.com", timeout=5)
-            title = await tab.current_title
-            assert TEST_DRC_OK, 'test default_recv_callback failed'
-            assert 'GitHub' in title, title
-            tab.default_recv_callback.clear()
+        await test_init_tab(chromed)
         logger.info('test init tab from chromed OK.')
         # test on_startup
         assert chromed.started
         logger.info('test on_startup OK.')
         # ===================== Chrome Test Cases =====================
-        async with Chrome() as chrome:
-            assert chrome.get_memory() > 0
-            logger.info('get_memory OK.')
+        async with Chrome(host=host, port=port) as chrome:
+            memory = chrome.get_memory()
+            assert memory > 0
+            logger.info('get_memory OK. (%s MB)' % memory)
             await test_chrome(chrome)
             logger.info('test_chrome OK.')
             # ===================== Tab Test Cases =====================
@@ -431,5 +438,6 @@ def test_chrome_engine():
 
 
 if __name__ == "__main__":
+    AsyncChromeDaemon.DEFAULT_USER_DIR_PATH = Path('./ichrome_user_data')
     test_chrome_engine()
     asyncio.get_event_loop().run_until_complete(test_examples())

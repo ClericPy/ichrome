@@ -196,6 +196,8 @@ Simple REPL mode to try some functions of Tab
 
 And you can debug your tab with one-line code `from ichrome import repl; await repl()` after `(ichrome>=2.7.2)`.
 
+Or view the [demo.py](https://github.com/ClericPy/ichrome/blob/master/demo.py)
+
 ## Download & unzip the latest version of Chromium browser
 
 > python3 -m ichrome --install="/home/root/chrome_bin"
