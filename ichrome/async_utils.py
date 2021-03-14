@@ -564,7 +564,7 @@ class Tab(GetValueMixin):
             method = event_or_method.get('method')
         else:
             method = event_or_method
-        if isinstance(event_or_method, str):
+        if isinstance(method, str):
             domain = method.split('.', 1)[0]
             await self.enable(domain, timeout=timeout)
 
@@ -815,6 +815,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             # avoid same method but different event occured, use filter_function
             event = {"method": event_name}
             _result = await self.recv(event, timeout=timeout)
+            if _result is None:
+                continue
             if filter_function:
                 try:
                     ok = await _ensure_awaitable_callback_result(
@@ -1223,9 +1225,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                   timeout=timeout)
         if tag:
             result = await self.click(cssselector=cssselector, timeout=timeout)
-            return (tag, result)
+            return result
         else:
-            return (tag, None)
+            return None
 
     async def wait_tag(self,
                        cssselector: str,
@@ -2310,10 +2312,10 @@ class Chrome(GetValueMixin):
         return f"<Chrome({self.status}): {self.server}>"
 
     async def close(self):
-        if self.status == 'closed':
-            return
         if self.req:
             await self.req.close()
+        if self.status == 'closed':
+            return
         self.status = 'closed'
 
     def __del__(self):
