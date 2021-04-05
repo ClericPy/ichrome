@@ -282,7 +282,7 @@ def network_sniffer(timeout=60, filter_function=None, callback_function=None):
 async def crawl_once(**kwargs):
     url = kwargs.pop('start_url', None)
     if not url:
-        raise ChromeValueError('Can not crawl with null start_url')
+        raise ChromeValueError(f'Can not crawl with null start_url: {url}')
     async with AsyncChromeDaemon(**kwargs) as cd:
         async with AsyncChrome(
                 host=kwargs.get('host', '127.0.0.1'),

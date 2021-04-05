@@ -182,7 +182,9 @@ class ChromeDaemon(object):
         if '--no-sandbox' not in str(self.extra_config) and getuser() == 'root':
             self.extra_config.append('--no-sandbox')
         if not isinstance(self.extra_config, list):
-            raise ChromeTypeError("extra_config type should be list.")
+            raise ChromeTypeError(
+                f"extra_config type should be list, but {type(self.extra_config)} was given."
+            )
 
     def _init_port(self):
         if self.port is None:
@@ -439,7 +441,8 @@ class ChromeDaemon(object):
             logger.debug(f"shutting down chrome using port {self.port}")
             self.kill(True)
         else:
-            raise ChromeRuntimeError("port in used")
+            raise ChromeRuntimeError(
+                f"port in used {self.port} for host {self.host}")
 
     @classmethod
     def get_chrome_path(cls):
@@ -474,7 +477,7 @@ class ChromeDaemon(object):
                 ]
             else:
                 raise ChromeRuntimeError(
-                    "unknown platform, not found the default chrome path.")
+                    "unknown platform, could not find the default chrome path.")
             for path in paths:
                 try:
                     out = subprocess.check_output([path, "--version"],
@@ -485,7 +488,7 @@ class ChromeDaemon(object):
                         return path
                 except (FileNotFoundError, subprocess.TimeoutExpired):
                     continue
-        raise ChromeRuntimeError("Not found executable chrome file.")
+        raise ChromeRuntimeError("Executable chrome file was not found.")
 
     def _daemon(self, interval=None):
         """if chrome proc is killed self.max_deaths times too fast (not raise TimeoutExpired),
