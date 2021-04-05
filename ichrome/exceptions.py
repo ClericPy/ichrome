@@ -12,3 +12,7 @@ class ChromeRuntimeError(RuntimeError, ChromeException):
 
 class ChromeTypeError(TypeError, ChromeException):
     pass
+
+
+class TabConnectionError(ChromeRuntimeError):
+    pass

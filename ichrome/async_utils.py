@@ -19,7 +19,8 @@ from torequests.utils import UA, quote_plus, urljoin
 
 from .base import (INF, NotSet, Tag, TagNotFound, async_run,
                    clear_chrome_process, ensure_awaitable, get_memory_by_port)
-from .exceptions import ChromeRuntimeError, ChromeTypeError, ChromeValueError
+from .exceptions import (ChromeRuntimeError, ChromeTypeError, ChromeValueError,
+                         TabConnectionError)
 from .logs import logger
 """
 Async utils for connections and operations.
@@ -126,7 +127,6 @@ class _WSConnection:
             try:
                 self.tab.ws = await self.tab.req.session.ws_connect(
                     self.tab.webSocketDebuggerUrl, **self.tab.ws_kwargs)
-                self._recv_task = asyncio.ensure_future(self.tab._recv_daemon())
                 logger.debug(
                     f'[connected] {self.tab} websocket connection created.')
                 break
@@ -134,13 +134,28 @@ class _WSConnection:
                 # tab missing(closed)
                 logger.error(
                     f'[missing] {self.tab} missing ws connection. {err}')
+        else:
+            raise TabConnectionError(f'Connect to tab failed, {self.tab}')
+        await self._start_tasks()
         # start the daemon background.
         return self.tab
 
-    async def shutdown(self):
-        # stop daemon if shutdown
+    async def _heartbeat_daemon(self):
+        while not self.tab.ws.closed:
+            await asyncio.sleep(self.tab.heartbeat)
+        raise KeyboardInterrupt(
+            f'Tab missed connection before closed, {self.tab}')
+
+    async def _start_tasks(self):
+        self._recv_task = asyncio.ensure_future(self.tab._recv_daemon())
+
+    async def _stop_tasks(self):
         if self._recv_task and not self._recv_task.done():
             self._recv_task.cancel()
+
+    async def shutdown(self):
+        # stop daemon if shutdown
+        await self._stop_tasks()
         if self.tab.ws and not self.tab.ws.closed:
             await self.tab.ws.close()
             self._closed = self.tab.ws.closed
