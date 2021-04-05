@@ -273,7 +273,7 @@ class Tab(GetValueMixin):
         """
         tab_id = tab_id or kwargs.pop('id')
         if not tab_id:
-            raise ChromeValueError('tab_id should not be null')
+            raise ChromeValueError(f'tab_id should not be null, {tab_id}')
         self.tab_id = tab_id
         self._title = title
         self._url = url
@@ -620,8 +620,7 @@ class Tab(GetValueMixin):
                              timeout=NotSet):
         """deleteCookies by name, with url / domain / path."""
         if not any((url, domain)):
-            raise ChromeValueError(
-                'URL and domain should not be null at the same time.')
+            raise ChromeValueError('URL and domain should not be both null.')
         return await self.send("Network.deleteCookies",
                                name=name,
                                url=url,
@@ -652,7 +651,7 @@ class Tab(GetValueMixin):
         for cookie in cookies:
             if not ('url' in cookie or 'domain' in cookie):
                 raise ChromeValueError(
-                    'URL and domain should not be null at the same time.')
+                    'URL and domain should not be both null.')
         if ensure_keys:
             valid_keys = {
                 'name', 'value', 'url', 'domain', 'path', 'secure', 'httpOnly',
@@ -688,8 +687,7 @@ httpOnly [boolean] True if cookie is http-only.
 sameSite [CookieSameSite] Cookie SameSite type.
 expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         if not any((url, domain)):
-            raise ChromeValueError(
-                'URL and domain should not be null at the same time.')
+            raise ChromeValueError('URL and domain should not be both null.')
         kwargs: Dict[str, Any] = dict(name=name,
                                       value=value,
                                       url=url,
@@ -951,7 +949,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             return Tab.get_data_value(request_id, 'params.requestId')
         else:
             raise ChromeTypeError(
-                f"request type should be None or dict or str, but given `{type(request_id)}`"
+                f"request type should be None or dict or str, but `{type(request_id)}` was given."
             )
 
     async def get_response(
@@ -2161,7 +2159,8 @@ class Chrome(GetValueMixin):
     @property
     def req(self):
         if self._req is None:
-            raise ChromeRuntimeError('please use Chrome in `async with`')
+            raise ChromeRuntimeError(
+                'please use Chrome in `async with` context')
         return self._req
 
     async def check(self) -> bool:
@@ -2202,7 +2201,7 @@ class Chrome(GetValueMixin):
                     if (rjson["type"] == "page" or filt_page_type is not True)
                 ]
         except Exception as error:
-            logger.error(f'fail to get_tabs {self.server}, {error!r}')
+            logger.error(f'fail to get_tabs from {self.server}, {error!r}')
             raise error
         return []
 
@@ -2293,7 +2292,8 @@ class Chrome(GetValueMixin):
         or
         async with chrome.connect_tabs(tab1, tab2)'''
         if not tabs:
-            raise ChromeValueError('tabs should not be null.')
+            raise ChromeValueError(
+                f'tabs should not be null, but `{tabs!r}` was given.')
         tab0 = tabs[0]
         if isinstance(tab0, (list, tuple)):
             tabs_todo = tab0
