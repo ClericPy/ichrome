@@ -99,6 +99,8 @@ async def test_tab_set_url(tab: Tab):
     assert await tab.wait_tag(
         '[name="custemail"]',
         max_wait_time=10), 'wait_tag failed for [name="custemail"]'
+    mhtml_len = len(await tab.snapshot_mhtml())
+    assert mhtml_len == 2273, f'test snapshot failed {mhtml_len}'
 
 
 async def test_tab_js(tab: Tab):
