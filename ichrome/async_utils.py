@@ -1629,6 +1629,26 @@ JSON.stringify(result)""" % (
                                            scale=scale,
                                            timeout=timeout)
 
+    async def snapshot_mhtml(self,
+                             save_path=None,
+                             encoding='utf-8',
+                             timeout=NotSet,
+                             **kwargs):
+        """Page.captureSnapshot EXPERIMENTAL"""
+        result = await self.send('Page.captureSnapshot',
+                                 timeout=timeout,
+                                 callback_function=lambda r: self.
+                                 get_data_value(r, 'result.data', default=''),
+                                 **kwargs)
+        if result and save_path:
+
+            def save_file():
+                with open(save_path, 'w', encoding=encoding) as f:
+                    f.write(result)
+
+            await async_run(save_file)
+        return result
+
     async def screenshot_element(self,
                                  cssselector: str = None,
                                  scale=1,
@@ -1636,7 +1656,8 @@ JSON.stringify(result)""" % (
                                  quality: int = 100,
                                  fromSurface: bool = True,
                                  save_path=None,
-                                 timeout=NotSet):
+                                 timeout=NotSet,
+                                 **kwargs):
         if cssselector:
             clip = await self.get_element_clip(cssselector, scale=scale)
         else:
@@ -1646,7 +1667,8 @@ JSON.stringify(result)""" % (
                                      clip=clip,
                                      fromSurface=fromSurface,
                                      save_path=save_path,
-                                     timeout=timeout)
+                                     timeout=timeout,
+                                     **kwargs)
 
     async def screenshot(self,
                          format: str = 'png',
@@ -1654,7 +1676,8 @@ JSON.stringify(result)""" % (
                          clip: dict = None,
                          fromSurface: bool = True,
                          save_path=None,
-                         timeout=NotSet):
+                         timeout=NotSet,
+                         **kwargs):
         """Page.captureScreenshot.
 
         :param format: Image compression format (defaults to png)., defaults to 'png'
@@ -1672,9 +1695,7 @@ JSON.stringify(result)""" % (
             with open(save_path, 'wb') as f:
                 f.write(file_bytes)
 
-        kwargs: Dict[str, Any] = dict(format=format,
-                                      quality=quality,
-                                      fromSurface=fromSurface)
+        kwargs.update(format=format, quality=quality, fromSurface=fromSurface)
         if clip:
             kwargs['clip'] = clip
         result = await self.send('Page.captureScreenshot',
