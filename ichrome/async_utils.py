@@ -136,8 +136,8 @@ class _WSConnection:
                     f'[missing] {self.tab} missing ws connection. {err}')
         else:
             raise TabConnectionError(f'Connect to tab failed, {self.tab}')
-        await self._start_tasks()
         # start the daemon background.
+        await self._start_tasks()
         return self.tab
 
     async def _heartbeat_daemon(self):
@@ -2008,6 +2008,90 @@ JSON.stringify(result)""" % (
 
     async def alert(self, text):
         return await self.js('alert(`%s`)' % text)
+
+    @staticmethod
+    async def repl(f_globals=None, f_locals=None, auto_await=True):
+        """Give a simple way to debug your code with ichrome."""
+        import sys
+        import traceback
+        from inspect import isawaitable
+
+        f_globals = f_globals or sys._getframe(1).f_globals
+        f_locals = f_locals or sys._getframe(1).f_locals
+        doc = r'''
+    Here is ichrome repl demo version, the features is not as good as python pbd, but this is very easy to use.
+
+    Shortcuts:
+        -h: show more help.
+        -q: quit the repl mode.
+        CTRL-C: clear current line.
+
+    Some simple `await` expression can ignore the `await` syntax like: `await tab.title => tab.title`
+    but not support complex ones.
+
+    More usages: `from ichrome import repl` and use it wherever you want it to be, like some lines of your async functions.
+    Demo source code:
+
+    ```python
+    from ichrome import AsyncChromeDaemon, repl
+    import asyncio
+
+
+    async def main():
+        async with AsyncChromeDaemon() as cd:
+            async with cd.connect_tab() as tab:
+                await repl()
+
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+    So debug your code with ichrome is only `await repl()`.
+
+    For example:
+
+    >>> tab.goto('https://cn.bing.com/')
+    True
+    >>> tab.title
+    '微软 Bing 搜索 - 国内版'
+    >>> tab.js(r'document.getElementById("sb_form_q").value="ichrome clericpy"')
+    {'type': 'string', 'value': 'ichrome clericpy'}
+    >>> tab.click('#sb_form_go')
+    Tag(input)
+    >>> tab.includes("ClericPy")
+    True
+    '''
+        while 1:
+            try:
+                is_await = False
+                code = input('>>> ')
+                if code == '-q':
+                    break
+                elif code == '-h':
+                    print(doc)
+                    continue
+                if code.startswith('await '):
+                    is_await = True
+                    code = code[6:]
+                try:
+                    result = eval(code, f_globals, f_locals)
+                    output = True
+                except SyntaxError:
+                    output = False
+                    result = exec(code, f_globals, f_locals)
+                if is_await or (auto_await and isawaitable(result)):
+                    result = await result
+                if output:
+                    print(repr(result))
+                f_globals['_'] = result
+            except KeyboardInterrupt:
+                print()
+                continue
+            except EOFError:
+                break
+            except Exception:
+                traceback.print_exc()
+        print()
 
 
 class OffsetMoveWalker:
