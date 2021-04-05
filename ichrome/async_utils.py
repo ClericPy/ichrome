@@ -15,7 +15,7 @@ from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
-from torequests.utils import UA, quote_plus, urljoin
+from torequests.utils import UA, find_one, quote_plus, urljoin
 
 from .base import (INF, NotSet, Tag, TagNotFound, async_run,
                    clear_chrome_process, ensure_awaitable, get_memory_by_port)
@@ -2064,6 +2064,7 @@ JSON.stringify(result)""" % (
         while 1:
             try:
                 is_await = False
+                var_name = None
                 code = input('>>> ')
                 if code == '-q':
                     break
@@ -2074,8 +2075,14 @@ JSON.stringify(result)""" % (
                     is_await = True
                     code = code[6:]
                 try:
-                    result = eval(code, f_globals, f_locals)
                     output = True
+                    # for expression code
+                    _matched = find_one(r'(^\D[a-zA-Z0-9])\s*=\s*(.*)', code)
+                    var_name = _matched[1]
+                    if var_name:
+                        code = _matched[2]
+                        output = False
+                    result = eval(code, f_globals, f_locals)
                 except SyntaxError:
                     output = False
                     result = exec(code, f_globals, f_locals)
@@ -2084,9 +2091,10 @@ JSON.stringify(result)""" % (
                 if output:
                     print(repr(result))
                 f_globals['_'] = result
+                if var_name:
+                    f_globals[var_name] = result
             except KeyboardInterrupt:
-                print()
-                continue
+                break
             except EOFError:
                 break
             except Exception:
