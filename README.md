@@ -29,154 +29,6 @@
 - **ChromeEngine** progress pool utils
   - support HTTP api router with [FastAPI](https://github.com/tiangolo/fastapi)
 
-
-# What's More?
-
-As we known, `Chrome` browsers (including various webdriver versions) will have the following problems **in a long-running scene**:
-   1. memory leak
-   2. missing websocket connections
-   3. infinitely growing cache
-   4. other unpredictable problems...
-
-So you may need a more stable process pool with **ChromeEngine(HTTP usage & normal usage)**:
-
-<details>
-    <summary><b>Show more</b></summary>
-
-## ChromeEngine HTTP usage
-
-### Server
-
-> pip install -U ichrome[web]
-
-```python
-import os
-
-import uvicorn
-from fastapi import FastAPI
-
-from ichrome import AsyncTab
-from ichrome.routers.fastapi_routes import ChromeAPIRouter
-
-app = FastAPI()
-# reset max_msg_size and window size for a large size screenshot
-AsyncTab._DEFAULT_WS_KWARGS['max_msg_size'] = 10 * 1024**2
-app.include_router(ChromeAPIRouter(workers_amount=os.cpu_count(),
-                                   headless=True,
-                                   extra_config=['--window-size=1920,1080']),
-                   prefix='/chrome')
-
-uvicorn.run(app)
-
-# view url with your browser
-# http://127.0.0.1:8000/chrome/screenshot?url=http://bing.com
-# http://127.0.0.1:8000/chrome/download?url=http://bing.com
-```
-
-### Client
-
-```python
-from torequests import tPool
-from inspect import getsource
-req = tPool()
-
-
-async def tab_callback(self, tab, data, timeout):
-    await tab.set_url(data['url'], timeout=timeout)
-    return (await tab.querySelector('h1')).text
-
-
-r = req.post('http://127.0.0.1:8000/chrome/do',
-             json={
-                 'data': {
-                     'url': 'http://httpbin.org/html'
-                 },
-                 'tab_callback': getsource(tab_callback),
-                 'timeout': 10
-             })
-print(r.text)
-# "Herman Melville - Moby-Dick"
-```
-
-
-## ChromeEngine normal usage
-
-### Connect tab and do something
-```python
-import asyncio
-
-from ichrome.pool import ChromeEngine
-
-
-def test_chrome_engine_connect_tab():
-
-    async def _test_chrome_engine_connect_tab():
-
-        async with ChromeEngine(port=9234, headless=True,
-                                disable_image=True) as ce:
-            async with ce.connect_tab(port=9234) as tab:
-                await tab.goto('http://pypi.org')
-                print(await tab.title)
-
-    asyncio.get_event_loop().run_until_complete(
-        _test_chrome_engine_connect_tab())
-
-
-if __name__ == "__main__":
-    test_chrome_engine_connect_tab()
-# INFO  2020-10-13 22:18:53 [ichrome] pool.py(464): [enqueue](0) ChromeTask(<9234>, PENDING, id=1, tab=None), timeout=None, data=<ichrome.pool._TabWorker object at 0x000002232841D9A0>
-# INFO  2020-10-13 22:18:55 [ichrome] pool.py(172): [online] ChromeWorker(<9234>, 0/5, 0 todos) is online.
-# INFO  2020-10-13 22:18:55 [ichrome] pool.py(200): ChromeWorker(<9234>, 0/5, 0 todos) get a new task ChromeTask(<9234>, PENDING, id=1, tab=None).
-# PyPI · The Python Package Index
-# INFO  2020-10-13 22:18:57 [ichrome] pool.py(182): [offline] ChromeWorker(<9234>, 0/5, 0 todos) is offline.
-# INFO  2020-10-13 22:18:57 [ichrome] pool.py(241): [finished](0) ChromeTask(<9234>, PENDING, id=1, tab=None)
-```
-
-### Batch Tasks
-```python
-import asyncio
-from inspect import getsource
-
-from ichrome.pool import ChromeEngine
-
-
-async def tab_callback(self, tab, url, timeout):
-    await tab.set_url(url, timeout=5)
-    return await tab.title
-
-
-def test_pool():
-
-    async def _test_pool():
-        async with ChromeEngine(max_concurrent_tabs=5,
-                                headless=True,
-                                disable_image=True) as ce:
-            tasks = [
-                asyncio.ensure_future(
-                    ce.do('http://bing.com', tab_callback, timeout=10))
-                for _ in range(3)
-            ] + [
-                asyncio.ensure_future(
-                    ce.do(
-                        'http://bing.com', getsource(tab_callback), timeout=10))
-                for _ in range(3)
-            ]
-            for task in tasks:
-                result = await task
-                print(result)
-                assert result
-
-    # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
-    asyncio.get_event_loop().run_until_complete(_test_pool())
-
-
-if __name__ == "__main__":
-    test_pool()
-```
-
-</details>
-
-
 # Install
 
 > Install from [PyPI](https://pypi.org/project/ichrome/)
@@ -188,16 +40,6 @@ if __name__ == "__main__":
         $ python3 -m ichrome --clean
         $ pip uninstall ichrome
 
-## Have a Try?
-
-Simple REPL mode to try some functions of Tab
-
-    python3 -m ichrome -t
-
-And you can debug your tab with one-line code `from ichrome import repl; await repl()` after `(ichrome>=2.7.2)`.
-
-Or view the [demo.py](https://github.com/ClericPy/ichrome/blob/master/demo.py)
-
 ## Download & unzip the latest version of Chromium browser
 
 > python3 -m ichrome --install="/home/root/chrome_bin"
@@ -207,6 +49,107 @@ WARNING:
 1. install the missing packages yourself
    1. use `ldd chrome | grep not` on linux to check and install them, or view the link: [Checking out and building Chromium on Linux](https://chromium.googlesource.com/chromium/src/+/master/docs/linux/build_instructions.md#Install-additional-build-dependencies)
 2. add `--no-sandbox` to extra_configs to avoid `No usable sandbox` errors, unless you really need `sandbox`: [Chromium: "Running without the SUID sandbox!" error - Ask Ubuntu](https://askubuntu.com/questions/329320/chromium-running-without-the-suid-sandbox-error)
+
+## Have a Try?
+
+> Interactive Debugging (REPL Mode)
+
+There are two ways to enter the repl mode
+
+1. `python3 -m ichrome -t`
+2. or run `await tab.repl()` in your code
+
+```python
+λ python3 -m ichrome -t
+>>> from ichrome.debugger import *
+>>> tab = get_a_tab()
+>>> tab.goto('https://github.com/ClericPy')
+True
+>>> title = tab.title
+>>> title
+'ClericPy (ClericPy) · GitHub'
+>>> tab.click('.pinned-item-list-item-content [href="/ClericPy/ichrome"]')
+Tag(a)
+>>> tab.wait_loading(2)
+True
+>>> tab.wait_loading(2)
+False
+>>> tab.js('document.body.innerHTML="Updated"')
+{'type': 'string', 'value': 'Updated'}
+>>> tab.history_back()
+True
+>>> tab.set_html('hello world')
+{'id': 21, 'result': {}}
+>>> tab.set_ua('no UA')
+{'id': 22, 'result': {}}
+>>> tab.goto('http://httpbin.org/user-agent')
+True
+>>> tab.html
+'<html><head></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">{\n  "user-agent": "no UA"\n}\n</pre></body></html>'
+```
+
+## Quick Start
+
+1. Start a new chrome daemon process with headless=False
+   1. `python -m ichrome`
+   2. Then connect to an exist chrome instance
+      1. `async with AsyncChrome() as cd:`
+
+   or launching the chrome daemon in code may be a better choice
+
+        async with AsyncChromeDaemon() as cd:
+            async with cd.connect_tab() as tab:
+2. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
+3. Close the browser GRACEFULLY instead of killing process
+
+```python
+from ichrome import AsyncChromeDaemon
+import asyncio
+
+
+async def main():
+    async with AsyncChromeDaemon(headless=0, disable_image=False) as cd:
+        # index: 0=current activate tab, 1=tab 1, None=new tab, $URL=new tab for url
+        async with cd.connect_tab(index=0, auto_close=True) as tab:
+            # tab: AsyncTab
+            await tab.alert(
+                'Now using the default tab and goto the url, click to continue.'
+            )
+            print(await tab.goto('https://github.com/ClericPy/ichrome',
+                                 timeout=5))
+            # wait tag appeared
+            await tab.wait_tag('[data-content="Issues"]', max_wait_time=5)
+            await tab.alert(
+                'Here the Issues tag appeared, I will click that button.')
+            # click the issues tag
+            await tab.click('[data-content="Issues"]')
+            await tab.wait_tag('#js-issues-search')
+            await tab.alert('Now will input some text and search the issues.')
+            await tab.mouse_click_element_rect('#js-issues-search')
+            await tab.keyboard_send(string='chromium')
+            await tab.js(
+                r'''document.querySelector('[role="search"]').submit()''')
+            await tab.wait_loading(5)
+            await asyncio.sleep(2)
+            await tab.alert('demo finished.')
+
+            # start repl mode?
+            # await tab.repl()
+
+            # no need to close tab for auto_close=True
+            # await tab.close()
+
+        # # close browser gracefully
+        # await cd.close_browser()
+        print('clearing the user data cache.')
+        await cd.clear_user_data_dir()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Example Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/master/examples_async.py) & [Classic Use Cases](https://github.com/ClericPy/ichrome/blob/master/use_cases.py)
 
 <details>
     <summary><b>AsyncChrome feature list</b></summary>
@@ -374,68 +317,6 @@ WARNING:
 
 </details>
 
-# Examples
-
-### See the [Classic Use Cases](https://github.com/ClericPy/ichrome/blob/master/use_cases.py)
-
-## Quick Start
-
-1. Start a new chrome daemon process with headless=False
-   1. `python -m ichrome`
-   2. Then connect to an exist chrome instance
-      1. `async with AsyncChrome() as cd:`
-
-   or launching the chrome daemon in code may be a better choice
-
-        async with AsyncChromeDaemon() as cd:
-            async with cd.connect_tab() as tab:
-2. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
-3. Close the browser GRACEFULLY instead of killing process
-
-```python
-from ichrome import AsyncChromeDaemon
-import asyncio
-
-
-async def main():
-    async with AsyncChromeDaemon(headless=0, disable_image=False) as cd:
-        # index: 0=current activate tab, 1=tab 1, None=new tab, $URL=new tab for url
-        async with cd.connect_tab(index=0, auto_close=True) as tab:
-            # tab: AsyncTab
-            await tab.alert(
-                'Now using the default tab and goto the url, click to continue.'
-            )
-            print(await tab.goto('https://github.com/ClericPy/ichrome',
-                                 timeout=5))
-            # wait tag appeared
-            await tab.wait_tag('[data-content="Issues"]', max_wait_time=5)
-            await tab.alert(
-                'Here the Issues tag appeared, I will click that button.')
-            # click the issues tag
-            await tab.click('[data-content="Issues"]')
-            await tab.wait_tag('#js-issues-search')
-            await tab.alert('Now will input some text and search the issues.')
-            await tab.mouse_click_element_rect('#js-issues-search')
-            await tab.keyboard_send(string='chromium')
-            await tab.js(
-                r'''document.querySelector('[role="search"]').submit()''')
-            await tab.wait_loading(5)
-            await asyncio.sleep(2)
-            await tab.alert('demo finished.')
-            # no need to close tab for auto_close=True
-            # await tab.close()
-        # # close browser gracefully
-        # await cd.close_browser()
-        print('clearing the user data cache.')
-        await cd.clear_user_data_dir()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-[More Examples](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
-
 ## Command Line Usage (Daemon Mode)
 
 > Be used for launching a chrome daemon process. The unhandled args will be treated as chrome raw args and appended to extra_config list.
@@ -540,54 +421,157 @@ optional arguments:
                         Have a try for ichrome with repl mode.
 ```
 
-## Interactive Debugging (REPL Mode)
+# What's More?
+
+As we known, `Chrome` browsers (including various webdriver versions) will have the following problems **in a long-running scene**:
+   1. memory leak
+   2. missing websocket connections
+   3. infinitely growing cache
+   4. other unpredictable problems...
+
+So you may need a more stable process pool with **ChromeEngine(HTTP usage & normal usage)**:
+
+<details>
+    <summary><b>Show more</b></summary>
+
+## ChromeEngine HTTP usage
+
+### Server
+
+> pip install -U ichrome[web]
 
 ```python
-λ python
-Python 3.7.1 (v3.7.1:260ec2c36a, Oct 20 2018, 14:57:15) [MSC v.1915 64 bit (AMD64)] on win32
-Type "help", "copyright", "credits" or "license" for more information.
->>> from ichrome.debugger import *
->>> tab = get_a_tab()
->>> tab.set_url('https://github.com/ClericPy')
-True
->>> tab.click('.pinned-item-list-item-content [href="/ClericPy/ichrome"]')
-Tag(a)
->>> tab.wait_loading(2)
-True
->>> tab.wait_loading(2)
-False
->>> tab.js('document.body.innerHTML="Updated"')
-{'type': 'string', 'value': 'Updated'}
->>> tab.history_back()
-True
->>> tab.set_html('hello world')
-{'id': 21, 'result': {}}
->>> tab.set_ua('no UA')
-{'id': 22, 'result': {}}
->>> tab.set_url('http://httpbin.org/user-agent')
-True
->>> tab.html
-'<html><head></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">{\n  "user-agent": "no UA"\n}\n</pre></body></html>'
+import os
+
+import uvicorn
+from fastapi import FastAPI
+
+from ichrome import AsyncTab
+from ichrome.routers.fastapi_routes import ChromeAPIRouter
+
+app = FastAPI()
+# reset max_msg_size and window size for a large size screenshot
+AsyncTab._DEFAULT_WS_KWARGS['max_msg_size'] = 10 * 1024**2
+app.include_router(ChromeAPIRouter(workers_amount=os.cpu_count(),
+                                   headless=True,
+                                   extra_config=['--window-size=1920,1080']),
+                   prefix='/chrome')
+
+uvicorn.run(app)
+
+# view url with your browser
+# http://127.0.0.1:8000/chrome/screenshot?url=http://bing.com
+# http://127.0.0.1:8000/chrome/download?url=http://bing.com
+```
+
+### Client
+
+```python
+from torequests import tPool
+from inspect import getsource
+req = tPool()
+
+
+async def tab_callback(self, tab, data, timeout):
+    await tab.set_url(data['url'], timeout=timeout)
+    return (await tab.querySelector('h1')).text
+
+
+r = req.post('http://127.0.0.1:8000/chrome/do',
+             json={
+                 'data': {
+                     'url': 'http://httpbin.org/html'
+                 },
+                 'tab_callback': getsource(tab_callback),
+                 'timeout': 10
+             })
+print(r.text)
+# "Herman Melville - Moby-Dick"
 ```
 
 
-## [Debugger] debug the features of async Chrome / Tab / Daemon.
+## ChromeEngine normal usage
 
-> Similar to sync usage, but methods come from the AsyncChrome / AsyncTab / AsyncDaemon
+### Connect tab and do something
+```python
+import asyncio
 
-Test Code: [examples_debug.py](https://github.com/ClericPy/ichrome/blob/master/examples_debug.py)
+from ichrome.pool import ChromeEngine
 
-## Operating tabs with coroutines in the async environment
 
-> Run in a completely asynchronous environment, it's a stable choice.
+def test_chrome_engine_connect_tab():
 
-Test Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/master/examples_async.py)
+    async def _test_chrome_engine_connect_tab():
 
-## [Archived] Simple Sync Usage
+        async with ChromeEngine(port=9234, headless=True,
+                                disable_image=True) as ce:
+            async with ce.connect_tab(port=9234) as tab:
+                await tab.goto('http://pypi.org')
+                print(await tab.title)
+
+    asyncio.get_event_loop().run_until_complete(
+        _test_chrome_engine_connect_tab())
+
+
+if __name__ == "__main__":
+    test_chrome_engine_connect_tab()
+# INFO  2020-10-13 22:18:53 [ichrome] pool.py(464): [enqueue](0) ChromeTask(<9234>, PENDING, id=1, tab=None), timeout=None, data=<ichrome.pool._TabWorker object at 0x000002232841D9A0>
+# INFO  2020-10-13 22:18:55 [ichrome] pool.py(172): [online] ChromeWorker(<9234>, 0/5, 0 todos) is online.
+# INFO  2020-10-13 22:18:55 [ichrome] pool.py(200): ChromeWorker(<9234>, 0/5, 0 todos) get a new task ChromeTask(<9234>, PENDING, id=1, tab=None).
+# PyPI · The Python Package Index
+# INFO  2020-10-13 22:18:57 [ichrome] pool.py(182): [offline] ChromeWorker(<9234>, 0/5, 0 todos) is offline.
+# INFO  2020-10-13 22:18:57 [ichrome] pool.py(241): [finished](0) ChromeTask(<9234>, PENDING, id=1, tab=None)
+```
+
+### Batch Tasks
+```python
+import asyncio
+from inspect import getsource
+
+from ichrome.pool import ChromeEngine
+
+
+async def tab_callback(self, tab, url, timeout):
+    await tab.set_url(url, timeout=5)
+    return await tab.title
+
+
+def test_pool():
+
+    async def _test_pool():
+        async with ChromeEngine(max_concurrent_tabs=5,
+                                headless=True,
+                                disable_image=True) as ce:
+            tasks = [
+                asyncio.ensure_future(
+                    ce.do('http://bing.com', tab_callback, timeout=10))
+                for _ in range(3)
+            ] + [
+                asyncio.ensure_future(
+                    ce.do(
+                        'http://bing.com', getsource(tab_callback), timeout=10))
+                for _ in range(3)
+            ]
+            for task in tasks:
+                result = await task
+                print(result)
+                assert result
+
+    # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
+    asyncio.get_event_loop().run_until_complete(_test_pool())
+
+
+if __name__ == "__main__":
+    test_pool()
+```
+
+</details>
+
+<!-- ## [Archived] Simple Sync Usage
 
 > Sync utils will be hardly maintained, no more new features.
 
-Test Code: [examples_sync.py](https://github.com/ClericPy/ichrome/blob/master/examples_sync.py)
+Test Code: [examples_sync.py](https://github.com/ClericPy/ichrome/blob/master/examples_sync.py) -->
 
 
 ## TODO
