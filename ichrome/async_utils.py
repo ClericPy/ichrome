@@ -2009,8 +2009,8 @@ JSON.stringify(result)""" % (
     async def alert(self, text):
         return await self.js('alert(`%s`)' % text)
 
-    @staticmethod
-    async def repl(f_globals=None, f_locals=None, auto_await=True):
+    @classmethod
+    async def repl(cls, f_globals=None, f_locals=None, auto_await=True):
         """Give a simple way to debug your code with ichrome."""
         import sys
         import traceback

@@ -34,7 +34,7 @@ async def main():
             print(json.loads(result))
             # ================= now tab will be closed, and cache will be clear =================
             # try debugging with repl mode like: tab.url
-            # from ichrome import repl; await repl()
+            await tab.repl()
 
 
 if __name__ == "__main__":
