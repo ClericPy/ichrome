@@ -61,8 +61,6 @@ There are two ways to enter the repl mode
 
 ```python
 λ python3 -m ichrome -t
->>> from ichrome.debugger import *
->>> tab = get_a_tab()
 >>> tab.goto('https://github.com/ClericPy')
 True
 >>> title = tab.title
