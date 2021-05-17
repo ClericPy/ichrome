@@ -2482,6 +2482,28 @@ class Chrome(GetValueMixin):
         _exhaust_simple_coro(self.close())
 
 
+class JavaScriptSnippets(object):
+
+    @staticmethod
+    async def add_tip(tab: Tab, text, style=None, timeout=NotSet):
+        if style is None:
+            style = 'position: absolute;max-width: 50%;top: 0.8em; font-size:1.2em; line-height:1.5em; word-break: break-word; right: 0;color: #FF6666; background-color: #ffff99;padding: 1em;'
+        code = f'''window.ichrome_show_tip_index = (window.ichrome_show_tip_index||0) + 1
+var span = document.querySelector('span#ichrome-show-tip') || document.createElement('span')
+span.id = 'ichrome-show-tip'
+span.setAttribute('style', '{style}')
+span.innerHTML = (span.innerHTML || '') + window.ichrome_show_tip_index + '. ' + `{text}`+'<br>'
+document.documentElement.appendChild(span)'''
+        return await tab.js(code, timeout=timeout)
+
+    @staticmethod
+    async def clear_tip(tab: Tab, timeout=NotSet):
+        code = '''window.ichrome_show_tip_index = 0
+var span = document.querySelector('span#ichrome-show-tip') || document.createElement('span')
+span.remove()'''
+        return await tab.js(code, timeout=timeout)
+
+
 # alias
 AsyncTab = Tab
 AsyncChrome = Chrome
