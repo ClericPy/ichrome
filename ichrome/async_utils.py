@@ -1192,7 +1192,8 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         """
         result = await self.send("Runtime.evaluate",
                                  timeout=timeout,
-                                 expression=javascript)
+                                 expression=javascript,
+                                 kwargs=kwargs)
         logger.debug(
             f'[js] {self!r} insert js `{javascript}`, received: {result}.')
         return self.get_data_value(result, value_path)
@@ -2006,8 +2007,39 @@ JSON.stringify(result)""" % (
         # HeapProfiler.collectGarbage
         return await self.send('HeapProfiler.collectGarbage')
 
-    async def alert(self, text):
-        return await self.js('alert(`%s`)' % text)
+    async def alert(self, text, timeout=NotSet):
+        """run alert(`{text}`) in console, the `text` should be escaped before passing.
+        Block until user click [OK] or timeout.
+        Returned as:
+            "undefined": [OK] clicked.
+            None: timeout.
+        """
+        result = await self.js('alert(`%s`)' % text, timeout=timeout)
+        return self.get_data_value(result, 'type', None)
+
+    async def confirm(self, text, timeout=NotSet):
+        """run confirm(`{text}`) in console, the `text` should be escaped before passing.
+        Block until user click [OK] or click [Cancel] or timeout.
+        Returned as:
+            True: [OK] clicked.
+            False: [Cancel] clicked.
+            None: timeout.
+        """
+        result = await self.js('confirm(`%s`)' % text, timeout=timeout)
+        return self.get_data_value(result, 'value')
+
+    async def prompt(self, text, value=None, timeout=NotSet):
+        """run prompt(`{text}`, `value`) in console, the `text` and `value` should be escaped before passing.
+        Block until user click [OK] or click [Cancel] or timeout.
+        Returned as:
+            new value: [OK] clicked.
+            None: [Cancel] clicked.
+            value: timeout.
+        """
+        _value = str(value or '')
+        result = await self.js('prompt(`%s`, `%s`)' % (text, _value),
+                               timeout=timeout)
+        return self.get_data_value(result, 'value', value)
 
     @classmethod
     async def repl(cls, f_globals=None, f_locals=None, auto_await=True):
