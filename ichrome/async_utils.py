@@ -892,6 +892,32 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await _ensure_awaitable_callback_result(callback_function,
                                                        result)
 
+    def wait_response_context(self,
+                              filter_function: Optional[Callable] = None,
+                              callback_function: Optional[Callable] = None,
+                              response_body: bool = True,
+                              timeout=NotSet):
+        """
+        Handler context for tab.wait_response.
+
+            async with tab.wait_response_context(
+                        filter_function=lambda r: tab.get_data_value(
+                            r, 'params.response.url') == 'http://httpbin.org/get',
+                        timeout=5,
+                ) as r:
+                    await tab.goto('http://httpbin.org/get')
+                    result = await r
+                    if result:
+                        print(result['data'])
+        """
+        return WaitResponseContext(
+            self,
+            filter_function=filter_function,
+            callback_function=callback_function,
+            response_body=response_body,
+            timeout=timeout,
+        )
+
     async def wait_response(self,
                             filter_function: Optional[Callable] = None,
                             callback_function: Optional[Callable] = None,
@@ -2515,6 +2541,35 @@ window.ichrome_show_tip_array = []
 var span = document.querySelector('span#ichrome-show-tip') || document.createElement('span')
 span.remove()'''
         return await tab.js(code, timeout=timeout)
+
+
+class WaitResponseContext(object):
+
+    def __init__(self,
+                 tab: Tab,
+                 filter_function: Optional[Callable] = None,
+                 callback_function: Optional[Callable] = None,
+                 response_body: bool = True,
+                 timeout=NotSet):
+        self.tab = tab
+        self._coro = self.tab.wait_response(
+            filter_function=filter_function,
+            callback_function=callback_function,
+            response_body=response_body,
+            timeout=timeout,
+        )
+        self._task: asyncio.Task = None
+
+    def __await__(self):
+        if self._task:
+            return self._task.__await__()
+
+    async def __aenter__(self):
+        self._task = asyncio.ensure_future(self._coro)
+        return self
+
+    async def __aexit__(self, *_errors):
+        pass
 
 
 # alias
