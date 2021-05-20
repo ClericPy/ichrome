@@ -147,6 +147,41 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+### Listen the network
+
+```python
+import asyncio
+
+from ichrome import AsyncChromeDaemon
+
+
+async def main():
+    async with AsyncChromeDaemon() as cd:
+        async with cd.connect_tab(index=0) as tab:
+
+            def filter_function(r):
+                try:
+                    url = r['params']['response']['url']
+                    return url == 'http://httpbin.org/get'
+                except KeyError:
+                    pass
+
+            async with tab.wait_response_context(
+                    filter_function=filter_function,
+                    timeout=5,
+            ) as r:
+                await tab.goto('http://httpbin.org/get')
+                result = await r
+                if result:
+                    print(result['data'])
+                assert 'User-Agent' in result['data']
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+```
+
 Example Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/master/examples_async.py) & [Classic Use Cases](https://github.com/ClericPy/ichrome/blob/master/use_cases.py)
 
 <details>
