@@ -2490,20 +2490,28 @@ class Chrome(GetValueMixin):
 class JavaScriptSnippets(object):
 
     @staticmethod
-    async def add_tip(tab: Tab, text, style=None, timeout=NotSet):
+    async def add_tip(tab: Tab, text, style=None, max_lines=10, timeout=NotSet):
         if style is None:
-            style = 'position: absolute;max-width: 50%;top: 0.8em; font-size:1.2em; line-height:1.5em; word-break: break-word; right: 0;color: #FF6666; background-color: #ffff99;padding: 1em;'
-        code = f'''window.ichrome_show_tip_index = (window.ichrome_show_tip_index||0) + 1
+            style = 'position: absolute;max-width: 50%;top: 0.8em; font-size:1.2em; line-height:1.5em; word-break: break-word; right: 0;color: #FF6666; background-color: #ffff99;padding: 1em;z-index:999;display:block;'
+        code = f'''
+window.ichrome_show_tip_index = (window.ichrome_show_tip_index||0) + 1
+window.ichrome_show_tip_array = window.ichrome_show_tip_array || []
+window.ichrome_show_tip_array.push(window.ichrome_show_tip_index + '. ' + `{text}`)
+window.ichrome_show_tip_array = window.ichrome_show_tip_array.length > {max_lines}?window.ichrome_show_tip_array.slice(window.ichrome_show_tip_array.length - {max_lines}):window.ichrome_show_tip_array
 var span = document.querySelector('span#ichrome-show-tip') || document.createElement('span')
 span.id = 'ichrome-show-tip'
 span.setAttribute('style', '{style}')
-span.innerHTML = (span.innerHTML || '') + window.ichrome_show_tip_index + '. ' + `{text}`+'<br>'
+span.setAttribute('title', 'double click to hide')
+span.setAttribute('ondblclick', "this.style.display = 'none';")
+span.innerHTML = window.ichrome_show_tip_array.join('<br>')
 document.documentElement.appendChild(span)'''
         return await tab.js(code, timeout=timeout)
 
     @staticmethod
     async def clear_tip(tab: Tab, timeout=NotSet):
-        code = '''window.ichrome_show_tip_index = 0
+        code = '''
+window.ichrome_show_tip_index = 0
+window.ichrome_show_tip_array = []
 var span = document.querySelector('span#ichrome-show-tip') || document.createElement('span')
 span.remove()'''
         return await tab.js(code, timeout=timeout)
