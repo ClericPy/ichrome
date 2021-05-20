@@ -583,7 +583,11 @@ class Tab(GetValueMixin):
             domain = method.split('.', 1)[0]
             await self.enable(domain, timeout=timeout)
 
-    async def enable(self, domain: str, force: bool = False, timeout=None):
+    async def enable(self,
+                     domain: str,
+                     force: bool = False,
+                     timeout=None,
+                     **_kwargs):
         '''domain: Network / Page and so on, will send `domain.enable`. Will check for duplicated sendings if not force.'''
         if not force:
             # no need for duplicated enable.
@@ -591,7 +595,8 @@ class Tab(GetValueMixin):
                 return True
         result = await self.send(f'{domain}.enable',
                                  timeout=timeout,
-                                 auto_enable=False)
+                                 auto_enable=False,
+                                 **_kwargs)
         if result is not None:
             self._enabled_domains.add(domain)
         return result
