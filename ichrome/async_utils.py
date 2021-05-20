@@ -903,7 +903,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                              filter_function=filter_function,
                                              timeout=timeout)
         if timeout is not None:
-            timeout = timeout - start_time
+            timeout = timeout - (time.time() - start_time)
         if response_body:
             # set the data value
             if request_dict:
@@ -911,7 +911,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                     request_dict['params']['requestId'],
                     timeout=timeout,
                     wait_loading=True)
-                request_dict['data'] = self.get_data_value(data, 'result.body')
+                request_dict['data'] = data
             elif isinstance(request_dict, dict):
                 request_dict['data'] = None
         return await _ensure_awaitable_callback_result(callback_function,
