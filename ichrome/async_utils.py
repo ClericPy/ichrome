@@ -8,6 +8,7 @@ import time
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
 from base64 import b64decode
+from pathlib import Path
 from typing import (Any, Awaitable, Callable, Coroutine, Dict, List, Optional,
                     Set, Union)
 from weakref import WeakValueDictionary
@@ -2166,6 +2167,50 @@ JSON.stringify(result)""" % (
             except Exception:
                 traceback.print_exc()
         print()
+
+    async def set_file_input(self,
+                             filepaths: List[Union[str, Path]],
+                             cssselector: str = 'input[type="file"]',
+                             root_id: str = None,
+                             timeout=NotSet):
+        """set file type input nodes with given filepaths.
+        1. path of filepaths will be reset as absolute posix path.
+        2. all the nodes which matched given cssselector will be set together for using DOM.querySelectorAll.
+        3. nodes in iframe tags need a new root_id but not default gotten from DOM.getDocument.
+        """
+        if isinstance(filepaths, str):
+            logger.debug(
+                'filepaths is type of str will be reset to [filepaths]')
+            filepaths = [filepaths]
+        assert isinstance(filepaths, list)
+        data = await self.send('DOM.getDocument', timeout=timeout)
+        if not root_id:
+            root_id = self.get_data_value(data, 'result.root.nodeId')
+        if not root_id:
+            logger.debug(
+                f'set_file_input failed for receive data without root nodeId: {data}'
+            )
+            return
+        data = await self.send('DOM.querySelectorAll',
+                               nodeId=root_id,
+                               selector=cssselector,
+                               timeout=timeout)
+        nodeIds = self.get_data_value(data, 'result.nodeIds')
+        if not nodeIds:
+            logger.debug(
+                f'set_file_input failed for receive data without target nodeId: {data}'
+            )
+            return
+        filepaths = [
+            Path(filepath).absolute().as_posix() for filepath in filepaths
+        ]
+        results = []
+        for nodeId in nodeIds:
+            data = await self.send('DOM.setFileInputFiles',
+                                   files=filepaths,
+                                   nodeId=nodeId)
+            results.append(data)
+        return results
 
 
 class OffsetMoveWalker:
