@@ -847,6 +847,7 @@ class AsyncChromeDaemon(ChromeDaemon):
             index = 0 means the current tab.
             index = None means create a new tab.
             index = 'http://python.org' means create a new tab with url.
+            index = 'F130D0295DB5879791AA490322133AFC' means the tab with this id.
 
             If auto_close is True: close this tab while exiting context.
 '''
