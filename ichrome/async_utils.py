@@ -231,7 +231,8 @@ class Tab(GetValueMixin):
     # aiohttp ws timeout default to 10.0, here is 5
     _DEFAULT_CONNECT_TIMEOUT = 5.0
     _RECV_DAEMON_BREAK_CALLBACK = None
-    _DEFAULT_WS_KWARGS: Dict = {}
+    # default max_msg_size has been set to 20MB, for 4MB is too small.
+    _DEFAULT_WS_KWARGS: Dict = {"max_msg_size": 20 * 1024**2}
 
     def __init__(self,
                  tab_id: str = None,
@@ -1251,6 +1252,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                             accept=True,
                             promptText=None,
                             timeout=NotSet) -> bool:
+        """WARNING: you should enable `Page` domain explicitly before running tab.js('alert()'), because alert() will always halt the event loop."""
         kwargs = {'timeout': timeout, 'accept': accept}
         if promptText is not None:
             kwargs['promptText'] = promptText
@@ -2283,6 +2285,7 @@ class Chrome(GetValueMixin):
                  timeout: int = None,
                  retry: int = None):
         self.host = host
+        # port can be null for chrome address without port.
         self.port = port
         self.timeout = timeout or self._DEFAULT_CONNECT_TIMEOUT
         self.retry = self._DEFAULT_RETRY if retry is None else retry
@@ -2318,7 +2321,15 @@ class Chrome(GetValueMixin):
     @property
     def server(self) -> str:
         """return like 'http://127.0.0.1:9222'"""
-        return f"http://{self.host}:{self.port}"
+        if re.match(r'^https?://', self.host):
+            prefix = self.host
+        else:
+            # filled the scheme
+            prefix = f"http://{self.host}"
+        if self.port:
+            return f"{prefix}:{self.port}"
+        else:
+            return prefix
 
     async def get_version(self) -> dict:
         """`await self.get_version()`
