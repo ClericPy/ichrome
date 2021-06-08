@@ -74,6 +74,9 @@ class _SingleTabConnectionManager:
     async def __aenter__(self) -> 'Tab':
         if isinstance(self.index, int):
             self.tab = await self.chrome.get_tab(self.index)
+        elif isinstance(self.index, str) and '://' not in self.index:
+            # tab_id
+            self.tab = await self.chrome.get_tab(self.index)
         else:
             self.tab = await self.chrome.new_tab(self.index or "")
         if not self.tab:
@@ -2453,15 +2456,21 @@ class Chrome(GetValueMixin):
             raise error
         return []
 
-    async def get_tab(self, index: int = 0) -> Union[Tab, None]:
+    async def get_tab(self, index: Union[int, str] = 0) -> Union[Tab, None]:
         """`await self.get_tab(1)` <=> await `(await self.get_tabs())[1]`
         If not exist, return None
         cdp url: /json"""
         tabs = await self.get_tabs()
         try:
-            return tabs[index]
+            if isinstance(index, int):
+                return tabs[index]
+            else:
+                for tab in tabs:
+                    if tab.tab_id == index:
+                        return tab
         except IndexError:
-            return None
+            pass
+        return None
 
     @property
     def tabs(self) -> Awaitable[List[Tab]]:
@@ -2528,6 +2537,7 @@ class Chrome(GetValueMixin):
             index = 0 means the current tab.
             index = None means create a new tab.
             index = 'http://python.org' means create a new tab with url.
+            index = 'F130D0295DB5879791AA490322133AFC' means the tab with this id.
 
             If auto_close is True: close this tab while exiting context.
 '''
