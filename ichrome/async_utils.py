@@ -2583,7 +2583,12 @@ class Chrome(GetValueMixin):
 class JavaScriptSnippets(object):
 
     @staticmethod
-    async def add_tip(tab: Tab, text, style=None, max_lines=10, timeout=NotSet):
+    async def add_tip(tab: Tab,
+                      text,
+                      style=None,
+                      max_lines: int = 10,
+                      expires: float = None,
+                      timeout=NotSet):
         if style is None:
             style = 'position: absolute;max-width: 50%;top: 0.8em; font-size:1.2em; line-height:1.5em; word-break: break-word; right: 0;color: #FF6666; background-color: #ffff99;padding: 1em;z-index:999;display:block;'
         code = f'''
@@ -2598,6 +2603,12 @@ span.setAttribute('title', 'double click to hide')
 span.setAttribute('ondblclick', "this.style.display = 'none';")
 span.innerHTML = window.ichrome_show_tip_array.join('<br>')
 document.documentElement.appendChild(span)'''
+        if expires:
+            code += r'''
+setTimeout(() => {
+    document.querySelector('span#ichrome-show-tip').style.display='none';
+}, %s);
+''' % (expires * 1000)
         return await tab.js(code, timeout=timeout)
 
     @staticmethod
