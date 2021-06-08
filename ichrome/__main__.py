@@ -178,10 +178,6 @@ Other operations:
     if args.version:
         print(__version__)
         return
-    if args.demo:
-        from .debugger import repl_tab
-        repl_tab()
-        return
     if args.install:
         return install_chromium(args.install, version=args.install_version)
     if args.config:
@@ -269,8 +265,14 @@ Other operations:
         )
     else:
         start_port = getattr(args, 'port', 9222)
-        asyncio.run(
-            ChromeWorkers.run_chrome_workers(start_port, args.workers, kwargs))
+        if args.demo:
+            from .debugger import repl_tab
+            repl_tab(**kwargs)
+            return
+        else:
+            asyncio.run(
+                ChromeWorkers.run_chrome_workers(start_port, args.workers,
+                                                 kwargs))
 
 
 if __name__ == "__main__":
