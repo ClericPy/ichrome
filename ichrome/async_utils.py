@@ -8,7 +8,8 @@ import time
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
 from base64 import b64decode
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Union
+from typing import (Any, Awaitable, Callable, Coroutine, Dict, List, Optional,
+                    Set, Union)
 from weakref import WeakValueDictionary
 
 from aiohttp.client_exceptions import ClientError
@@ -910,13 +911,13 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                     if result:
                         print(result['data'])
         """
-        return WaitResponseContext(
-            self,
-            filter_function=filter_function,
-            callback_function=callback_function,
-            response_body=response_body,
-            timeout=timeout,
-        )
+        return WaitContext(
+            self.wait_response(
+                filter_function=filter_function,
+                callback_function=callback_function,
+                response_body=response_body,
+                timeout=timeout,
+            ))
 
     async def wait_response(self,
                             filter_function: Optional[Callable] = None,
@@ -2543,22 +2544,12 @@ span.remove()'''
         return await tab.js(code, timeout=timeout)
 
 
-class WaitResponseContext(object):
+class WaitContext(object):
 
-    def __init__(self,
-                 tab: Tab,
-                 filter_function: Optional[Callable] = None,
-                 callback_function: Optional[Callable] = None,
-                 response_body: bool = True,
-                 timeout=NotSet):
-        self.tab = tab
-        self._coro = self.tab.wait_response(
-            filter_function=filter_function,
-            callback_function=callback_function,
-            response_body=response_body,
-            timeout=timeout,
-        )
+    def __init__(self, coro: Coroutine, _auto_cancel=True):
+        self._coro = coro
         self._task: asyncio.Task = None
+        self._auto_cancel = _auto_cancel
 
     def __await__(self):
         if self._task:
@@ -2569,7 +2560,8 @@ class WaitResponseContext(object):
         return self
 
     async def __aexit__(self, *_errors):
-        pass
+        if self._auto_cancel and self._task and not self._task.done():
+            self._task.cancel()
 
 
 # alias
