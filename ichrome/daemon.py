@@ -8,6 +8,7 @@ import threading
 import time
 from getpass import getuser
 from inspect import isawaitable
+from json import loads as _json_loads
 from pathlib import Path
 from typing import Union
 
@@ -598,6 +599,19 @@ class ChromeDaemon(object):
                                     max_deaths=max_deaths,
                                     interval=interval)
 
+    def get_local_state(self):
+        """Get the dict from {self.user-data-dir}/Local State which including online user profiles info.
+        WARNING: return None while self.user_data_dir is not set, and new folder may not have this file until chrome process run more than 10 secs.
+        """
+        if self.user_data_dir:
+            file_path = self.user_data_dir / 'Local State'
+            if file_path.is_file():
+                try:
+                    return _json_loads(file_path.read_text())
+                except ValueError:
+                    pass
+        return None
+
     def __del__(self):
         self.shutdown()
 
@@ -863,6 +877,9 @@ class AsyncChromeDaemon(ChromeDaemon):
                 return True
         except ChromeException:
             return False
+
+    async def get_local_state(self):
+        return await async_run(super().get_local_state)
 
     def __del__(self):
         pass
