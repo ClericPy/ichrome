@@ -2,6 +2,7 @@
 import asyncio
 import os
 import platform
+import re
 import socket
 import subprocess
 import threading
@@ -236,17 +237,21 @@ class ChromeDaemon(object):
             return None
         else:
             # valid path string
-            return Path(user_data_dir)
+            return Path(re.sub(r'''^['"]|['"]$''', '', str(user_data_dir)))
 
     def _wrap_user_data_dir(self):
         if '--user-data-dir=' in str(self.extra_config):
             # ignore custom user_data_dir by ichrome
             self.user_data_dir = None
             return
-        # user_data_dir = self.user_data_dir
         main_user_dir = self._ensure_user_dir(self.user_data_dir)
         if main_user_dir is None:
+            # use the default path and ignore --user-data-dir
             self.user_data_dir = None
+            return
+        if (main_user_dir / 'Last Browser').is_file():
+            # exist user dir, use this one without port folder
+            self.user_data_dir = main_user_dir
             return
         port_user_dir = main_user_dir / f"chrome_{self.port}"
         self.user_data_dir = port_user_dir
