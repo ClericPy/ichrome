@@ -229,6 +229,8 @@ class ChromeDaemon(object):
                 return Path(env_path)
             else:
                 return cls.DEFAULT_USER_DIR_PATH
+        elif isinstance(user_data_dir, Path):
+            return user_data_dir
         elif user_data_dir in cls.IGNORE_USER_DIR_FLAGS:
             # ignore custom path settings
             logger.debug(
@@ -249,17 +251,18 @@ class ChromeDaemon(object):
             # use the default path and ignore --user-data-dir
             self.user_data_dir = None
             return
-        if (main_user_dir / 'Last Browser').is_file():
+        elif (main_user_dir / 'Last Browser').is_file():
             # exist user dir, use this one without port folder
             self.user_data_dir = main_user_dir
             return
-        port_user_dir = main_user_dir / f"chrome_{self.port}"
-        self.user_data_dir = port_user_dir
-        if not self.user_data_dir.is_dir():
-            logger.debug(
-                f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
-            )
-            self.user_data_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            port_user_dir = main_user_dir / f"chrome_{self.port}"
+            self.user_data_dir = port_user_dir
+            if not self.user_data_dir.is_dir():
+                logger.debug(
+                    f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
+                )
+                self.user_data_dir.mkdir(parents=True, exist_ok=True)
 
     @classmethod
     def clear_user_dir(cls, user_data_dir=None, port=None):
