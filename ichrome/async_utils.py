@@ -2081,7 +2081,7 @@ JSON.stringify(result)""" % (
         return self.get_data_value(result, 'value', value)
 
     @classmethod
-    async def repl(cls, f_globals=None, f_locals=None, auto_await=True):
+    async def repl(cls, f_globals=None, f_locals=None):
         """Give a simple way to debug your code with ichrome."""
         import traceback
         try:

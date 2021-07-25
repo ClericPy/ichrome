@@ -320,7 +320,7 @@ Now enjoy it!
                 tab: AsyncTab
                 print(doc)
                 print('=' * 50)
-                await tab.repl(auto_await=True)
+                await tab.repl()
 
     kwargs.setdefault('clear_after_shutdown', True)
     asyncio.get_event_loop().run_until_complete(_main(kwargs=kwargs))
