@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import json
 import re
+import sys
 import time
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
@@ -2082,90 +2083,120 @@ JSON.stringify(result)""" % (
     @classmethod
     async def repl(cls, f_globals=None, f_locals=None, auto_await=True):
         """Give a simple way to debug your code with ichrome."""
-        import sys
         import traceback
-        from inspect import isawaitable
-
+        try:
+            import readline as _
+        except ImportError:
+            pass
+        import ast
+        import warnings
+        import types
+        from code import CommandCompiler
         f_globals = f_globals or sys._getframe(1).f_globals
         f_locals = f_locals or sys._getframe(1).f_locals
+        for key in {
+                '__name__', '__package__', '__loader__', '__spec__',
+                '__builtins__', '__file__'
+        }:
+            f_locals[key] = f_globals[key]
         doc = r'''
-    Here is ichrome repl demo version, the features is not as good as python pbd, but this is very easy to use.
+Here is ichrome repl demo version, the features is not as good as python pbd, but this is very easy to use.
 
-    Shortcuts:
-        -h: show more help.
-        -q: quit the repl mode.
-        CTRL-C: clear current line.
+Shortcuts:
+    -h: show more help.
+    -q: quit the repl mode.
+    CTRL-C: clear current line.
 
-    Some simple `await` expression can ignore the `await` syntax like: `await tab.title => tab.title`
-    but not support complex ones.
+Demo source code:
 
-    More usages: `from ichrome import repl` and use it wherever you want it to be, like some lines of your async functions.
-    Demo source code:
-
-    ```python
-    from ichrome import AsyncChromeDaemon, repl
-    import asyncio
+```python
+from ichrome import AsyncChromeDaemon, repl
+import asyncio
 
 
-    async def main():
-        async with AsyncChromeDaemon() as cd:
-            async with cd.connect_tab() as tab:
-                await repl()
+async def main():
+    async with AsyncChromeDaemon() as cd:
+        async with cd.connect_tab() as tab:
+            await tab.repl()
 
 
-    if __name__ == "__main__":
-        asyncio.run(main())
-    ```
-    So debug your code with ichrome is only `await repl()`.
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+So debug your code with ichrome is only `await tab.repl()`.
 
-    For example:
+For example:
 
-    >>> tab.goto('https://cn.bing.com/')
-    True
-    >>> tab.title
-    '微软 Bing 搜索 - 国内版'
-    >>> tab.js(r'document.getElementById("sb_form_q").value="ichrome clericpy"')
-    {'type': 'string', 'value': 'ichrome clericpy'}
-    >>> tab.click('#sb_form_go')
-    Tag(input)
-    >>> tab.includes("ClericPy")
-    True
-    '''
+>>> await tab.goto('https://github.com/ClericPy')
+True
+>>> title = await tab.title
+>>> title
+'ClericPy (ClericPy) · GitHub'
+>>> await tab.click('.pinned-item-list-item-content [href="/ClericPy/ichrome"]')
+Tag(a)
+>>> await tab.wait_loading(2)
+True
+>>> await tab.wait_loading(2)
+False
+>>> await tab.js('document.body.innerHTML="Updated"')
+{'type': 'string', 'value': 'Updated'}
+>>> await tab.history_back()
+True
+>>> await tab.set_html('hello world')
+{'id': 21, 'result': {}}
+>>> await tab.set_ua('no UA')
+{'id': 22, 'result': {}}
+>>> await tab.goto('http://httpbin.org/user-agent')
+True
+>>> await tab.html
+'<html><head></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">{\n  "user-agent": "no UA"\n}\n</pre></body></html>'
+'''
+
+        _compile = CommandCompiler()
+        _compile.compiler.flags |= ast.PyCF_ALLOW_TOP_LEVEL_AWAIT
+        warnings.filterwarnings('ignore',
+                                message=r'^coroutine .* was never awaited$',
+                                category=RuntimeWarning)
+
+        async def run_code():
+            buffer = []
+            more = None
+            while more != 0:
+                if more == 1:
+                    line = input('... ')
+                else:
+                    line = input('>>> ')
+                if not buffer:
+                    if line == '-q':
+                        raise SystemExit()
+                    elif line == '-h':
+                        print(doc)
+                        break
+                buffer.append(line)
+                try:
+                    code = _compile('\n'.join(buffer), '<console>', 'single')
+                    if code is None:
+                        more = 1
+                        continue
+                    else:
+                        func = types.FunctionType(code, f_locals)
+                        maybe_coro = func()
+                        if inspect.isawaitable(maybe_coro):
+                            await maybe_coro
+                            return
+                        else:
+                            return code
+                except (OverflowError, SyntaxError, ValueError):
+                    traceback.print_exc()
+                    raise
+
         while 1:
             try:
-                is_await = False
-                var_name = None
-                code = input('>>> ')
-                if code == '-q':
-                    break
-                elif code == '-h':
-                    print(doc)
-                    continue
-                if code.startswith('await '):
-                    is_await = True
-                    code = code[6:]
-                try:
-                    output = True
-                    # for expression code
-                    _matched = find_one(r'(^\D[a-zA-Z0-9])\s*=\s*(.*)', code)
-                    var_name = _matched[1]
-                    if var_name:
-                        code = _matched[2]
-                        output = False
-                    result = eval(code, f_globals, f_locals)
-                except SyntaxError:
-                    output = False
-                    result = exec(code, f_globals, f_locals)
-                if is_await or (auto_await and isawaitable(result)):
-                    result = await result
-                if output:
-                    print(repr(result))
-                f_globals['_'] = result
-                if var_name:
-                    f_globals[var_name] = result
+                await run_code()
             except KeyboardInterrupt:
-                break
-            except EOFError:
+                print()
+                continue
+            except (EOFError, SystemExit):
                 break
             except Exception:
                 traceback.print_exc()

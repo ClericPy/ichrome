@@ -61,28 +61,28 @@ There are two ways to enter the repl mode
 
 ```python
 λ python3 -m ichrome -t
->>> tab.goto('https://github.com/ClericPy')
+>>> await tab.goto('https://github.com/ClericPy')
 True
->>> title = tab.title
+>>> title = await tab.title
 >>> title
 'ClericPy (ClericPy) · GitHub'
->>> tab.click('.pinned-item-list-item-content [href="/ClericPy/ichrome"]')
+>>> await tab.click('.pinned-item-list-item-content [href="/ClericPy/ichrome"]')
 Tag(a)
->>> tab.wait_loading(2)
+>>> await tab.wait_loading(2)
 True
->>> tab.wait_loading(2)
+>>> await tab.wait_loading(2)
 False
->>> tab.js('document.body.innerHTML="Updated"')
+>>> await tab.js('document.body.innerHTML="Updated"')
 {'type': 'string', 'value': 'Updated'}
->>> tab.history_back()
+>>> await tab.history_back()
 True
->>> tab.set_html('hello world')
+>>> await tab.set_html('hello world')
 {'id': 21, 'result': {}}
->>> tab.set_ua('no UA')
+>>> await tab.set_ua('no UA')
 {'id': 22, 'result': {}}
->>> tab.goto('http://httpbin.org/user-agent')
+>>> await tab.goto('http://httpbin.org/user-agent')
 True
->>> tab.html
+>>> await tab.html
 '<html><head></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">{\n  "user-agent": "no UA"\n}\n</pre></body></html>'
 ```
 
