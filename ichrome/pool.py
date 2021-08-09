@@ -115,6 +115,8 @@ class ChromeWorker:
     MAX_CONCURRENT_TABS = 5
     # auto restart chrome daemon every 8 mins, to avoid zombie processes and memory leakage.
     RESTART_EVERY = 8 * 60
+    # --disk-cache-size default cache size 100MB
+    DEFAULT_CACHE_SIZE = 100 * 1024**2
 
     def __init__(self,
                  port=None,
@@ -130,6 +132,10 @@ class ChromeWorker:
         self.max_concurrent_tabs = max_concurrent_tabs or self.MAX_CONCURRENT_TABS
         self._tab_sem = None
         self._shutdown = False
+        if self.DEFAULT_CACHE_SIZE:
+            _extra = f'--disk-cache-size={self.DEFAULT_CACHE_SIZE}'
+            if _extra not in AsyncChromeDaemon.DEFAULT_EXTRA_CONFIG:
+                AsyncChromeDaemon.DEFAULT_EXTRA_CONFIG.append(_extra)
         self.daemon_kwargs = daemon_kwargs or deepcopy(
             self.DEFAULT_DAEMON_KWARGS)
         assert 'port' not in self.daemon_kwargs, 'invalid key `port` for self.daemon_kwargs'

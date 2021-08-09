@@ -103,6 +103,7 @@ class ChromeDaemon(object):
     IGNORE_USER_DIR_FLAGS = {'null', 'None', '/dev/null', "''", '""'}
     MAX_WAIT_CHECKING_SECONDS = 15
     DEFAULT_USER_DIR_PATH = Path.home() / 'ichrome_user_data'
+    DEFAULT_EXTRA_CONFIG = ["--disable-gpu", "--no-first-run"]
 
     def __init__(self,
                  chrome_path=None,
@@ -178,9 +179,7 @@ class ChromeDaemon(object):
     def _init_extra_config(self):
         if self.extra_config and isinstance(self.extra_config, str):
             self.extra_config = [self.extra_config]
-        self.extra_config = self.extra_config or [
-            "--disable-gpu", "--no-first-run"
-        ]
+        self.extra_config = self.extra_config or self.DEFAULT_EXTRA_CONFIG
         if '--no-sandbox' not in str(self.extra_config) and getuser() == 'root':
             self.extra_config.append('--no-sandbox')
         if not isinstance(self.extra_config, list):
