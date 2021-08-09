@@ -90,6 +90,7 @@ def get_proc_by_regex(regex, proc_names=None):
             return procs
         except (psutil.Error, OSError, TypeError, AttributeError):
             procs.clear()
+    return procs
 
 
 def get_proc(port=9222) -> List[psutil.Process]:
