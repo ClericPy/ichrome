@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
 import time
-from asyncio import get_running_loop
 from base64 import b64encode
 from inspect import isawaitable
 from pathlib import Path
@@ -342,12 +341,22 @@ def install_chromium(path=None,
         print('Mission failed.')
 
 
-def async_run(func, *args, **kwargs):
+try:
+    from asyncio import to_thread
+except ImportError:
+    from asyncio import get_running_loop
+    from contextvars import copy_context
+    from functools import partial
 
-    def function():
-        return func(*args, **kwargs)
+    async def to_thread(func, *args, **kwargs):
+        """copy python3.9"""
+        loop = get_running_loop()
+        ctx = copy_context()
+        func_call = partial(ctx.run, func, *args, **kwargs)
+        return await loop.run_in_executor(None, func_call)
 
-    return get_running_loop().run_in_executor(None, function)
+
+async_run = to_thread
 
 
 async def ensure_awaitable(result):
