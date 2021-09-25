@@ -18,7 +18,7 @@ from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
-from torequests.utils import UA, find_one, quote_plus, urljoin
+from torequests.utils import UA, quote_plus, urljoin
 
 from .base import (INF, NotSet, Tag, TagNotFound, async_run,
                    clear_chrome_process, ensure_awaitable, get_memory_by_port)
@@ -2089,8 +2089,8 @@ JSON.stringify(result)""" % (
         except ImportError:
             pass
         import ast
-        import warnings
         import types
+        import warnings
         from code import CommandCompiler
         f_globals = f_globals or sys._getframe(1).f_globals
         f_locals = f_locals or sys._getframe(1).f_locals
@@ -2514,8 +2514,7 @@ class Chrome(GetValueMixin):
                    max_deaths: int = 1) -> None:
         if self.req:
             await self.req.close()
-        await asyncio.get_running_loop().run_in_executor(
-            None, clear_chrome_process, self.port, timeout, max_deaths)
+        await async_run(clear_chrome_process, self.port, timeout, max_deaths)
 
     async def new_tab(self, url: str = "") -> Union[Tab, None]:
         api = f'/json/new?{quote_plus(url)}'
