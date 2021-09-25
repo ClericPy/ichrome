@@ -5,6 +5,8 @@
 
 ![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
 
+If you encounter any problems, please let me know through [issues](https://github.com/ClericPy/ichrome/issues), some of them will be a good opinion for the enhancement of `ichrome`.
+
 # Why?
 
 - Pyppeteer is awesome, but I don't need so much
@@ -147,7 +149,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### Listen the network
+### Listen to the network traffic
 
 ```python
 import asyncio
@@ -188,7 +190,7 @@ Example Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/maste
     <summary><b>AsyncChrome feature list</b></summary>
 
 1. server
-    
+   
     > return `f"http://{self.host}:{self.port}"`, such as `http://127.0.0.1:9222`
 2. version
     > version info from `/json/version` format like:
@@ -196,13 +198,13 @@ Example Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/maste
     {'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}
     ```
 3. `connect` / `check` / `ok`
-    
+   
     > check alive
 4. `get_tabs` / `tabs` / `get_tab` / `get_tabs`
-    
+   
     > get the `AsyncTab` instance from `/json`.
 5. `new_tab` / `activate_tab` / `close_tab` / `close_tabs`
-    
+   
     > operating tabs.
 6. `close_browser`
     > find the activated tab and send `Browser.close` message, close the connected chrome browser gracefully.
@@ -247,31 +249,31 @@ Example Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/maste
     <summary><b>AsyncTab feature list</b></summary>
 
 1. `set_url` / `reload`
-    
+   
     > navigate to a new url(return bool for whether load finished), or send `Page.reload` message.
 2. `wait_event`
-    
+   
     > listening the events with given name, and separate from other same-name events with filter_function, finally run the callback_function with result.
 3. `wait_page_loading` / `wait_loading`
-    
+   
     > wait for `Page.loadEventFired` event, or stop loading while timeout. Different from `wait_loading_finished`.
 4. `wait_response` / `wait_request`
-    
+   
     > filt the `Network.responseReceived` / `Network.requestWillBeSent` event by `filter_function`, return the `request_dict` which can be used by `get_response` / `get_response_body` / `get_request_post_data`. WARNING: requestWillBeSent event fired do not mean the response is ready, should await tab.wait_request_loading(request_dict) or await tab.get_response(request_dict, wait_loading=True)
 5. `wait_request_loading` / `wait_loading_finished`
-    
+   
     > sometimes event got `request_dict` with `wait_response`, but the ajax request is still fetching, which need to wait the `Network.loadingFinished` event.
 6. `activate` / `activate_tab`
-    
+   
     > activate tab with websocket / http message.
 7. `close` / `close_tab`
-    
+   
     > close tab with websocket / http message.
 8. `add_js_onload`
-    
+   
     > `Page.addScriptToEvaluateOnNewDocument`, which means this javascript code will be run before page loaded.
 9. `clear_browser_cache` / `clear_browser_cookies`
-    
+   
     > `Network.clearBrowserCache` and `Network.clearBrowserCookies`
 10. `querySelectorAll`
     
