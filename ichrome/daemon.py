@@ -126,7 +126,8 @@ class ChromeDaemon(object):
                  on_shutdown=None,
                  before_startup=None,
                  after_shutdown=None,
-                 clear_after_shutdown=False):
+                 clear_after_shutdown=False,
+                 popen_kwargs: dict = None):
         if debug:
             logger.setLevel('DEBUG')
         self.debug = debug
@@ -155,6 +156,7 @@ class ChromeDaemon(object):
         self.after_shutdown = after_shutdown
         self._block = block
         self.clear_after_shutdown = clear_after_shutdown
+        self.popen_kwargs = popen_kwargs or {}
         self.init()
 
     def init(self):
@@ -379,6 +381,7 @@ class ChromeDaemon(object):
         if not self.debug:
             kwargs["stdout"] = subprocess.DEVNULL
             kwargs["stderr"] = subprocess.DEVNULL
+        kwargs.update(self.popen_kwargs)
         self.cmd_args = kwargs
         return kwargs
 
@@ -652,7 +655,8 @@ class AsyncChromeDaemon(ChromeDaemon):
                  on_shutdown=None,
                  before_startup=None,
                  after_shutdown=None,
-                 clear_after_shutdown=False):
+                 clear_after_shutdown=False,
+                 popen_kwargs: dict = None):
         super().__init__(chrome_path=chrome_path,
                          host=host,
                          port=port,
@@ -673,7 +677,8 @@ class AsyncChromeDaemon(ChromeDaemon):
                          on_shutdown=on_shutdown,
                          before_startup=before_startup,
                          after_shutdown=after_shutdown,
-                         clear_after_shutdown=clear_after_shutdown)
+                         clear_after_shutdown=clear_after_shutdown,
+                         popen_kwargs=popen_kwargs)
 
     def init(self):
         # Please init AsyncChromeDaemon in a running loop with `async with`
