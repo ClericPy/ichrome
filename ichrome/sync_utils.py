@@ -316,7 +316,8 @@ class Tab(object):
 
     @property
     def title(self):
-        return json.loads(self.js("document.title"))["result"]["result"]["value"]
+        return json.loads(
+            self.js("document.title"))["result"]["result"]["value"]
 
     @property
     def html(self):
@@ -369,7 +370,7 @@ class Tab(object):
             ) - start_time > wait_seconds
             if timeout_break:
                 break
-            if result:
+            if result or timeout == 0:
                 if callable(filter_function):
                     if filter_function(result):
                         break
