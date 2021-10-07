@@ -18,18 +18,23 @@ If you encounter any problems, please let me know through [issues](https://githu
   - fast http & websocket connections (based on aiohttp) for **asyncio** environment
   - **ichrome.debugger** is a sync tool and depends on the `ichrome.async_utils`
     - a choice for debugging interactively.
+- Playwright Python comes too late
+  - https://github.com/microsoft/playwright-python
+  - This library may be a good choice for both `sync` and `async` usage
 
 # Features
 
-- Chrome process daemon
-  - auto-restart
+> As we known, **`Javascript` is the first-class citizen of the Chrome world**, so learn to use it with `ichrome` frequently.
+
+- A process daemon of Chrome instances
+  - **auto-restart**
   - command-line usage support
-  - async environment compatible
-- Connect to an existing Chrome
-- Operations on Tabs under stable websocket
+  - `async` environment compatible
+- Connect to an **existing** Chrome
+- Operations on Tabs under stable `websocket`
   - Package very commonly used functions
-- **ChromeEngine** progress pool utils
-  - support HTTP api router with [FastAPI](https://github.com/tiangolo/fastapi)
+- `ChromeEngine` as the progress pool
+  - support HTTP `api` router with [FastAPI](https://github.com/tiangolo/fastapi)
 
 # Install
 
@@ -37,7 +42,7 @@ If you encounter any problems, please let me know through [issues](https://githu
 
     pip install ichrome -U
 
-> Uninstall & Clear the user data dir
+> Uninstall & Clear the user data folder
 
         $ python3 -m ichrome --clean
         $ pip uninstall ichrome
@@ -56,7 +61,7 @@ WARNING:
 
 > Interactive Debugging (REPL Mode)
 
-There are two ways to enter the repl mode
+There are two ways to enter the `REPL` mode
 
 1. `python3 -m ichrome -t`
 2. or run `await tab.repl()` in your code
@@ -109,7 +114,7 @@ import asyncio
 
 async def main():
     async with AsyncChromeDaemon(headless=0, disable_image=False) as cd:
-        # index: 0=current activate tab, 1=tab 1, None=new tab, $URL=new tab for url
+        # [index] 0: current activate tab, 1: tab 1, None: new tab, $URL: new tab for url
         async with cd.connect_tab(index=0, auto_close=True) as tab:
             # tab: AsyncTab
             await tab.alert(
@@ -133,7 +138,7 @@ async def main():
             await asyncio.sleep(2)
             await tab.alert('demo finished.')
 
-            # start repl mode?
+            # start REPL mode
             # await tab.repl()
 
             # no need to close tab for auto_close=True
@@ -248,7 +253,7 @@ Example Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/maste
 <details>
     <summary><b>AsyncTab feature list</b></summary>
 
-1. `set_url` / `reload`
+1. `set_url` / `goto` / `reload`
    
     > navigate to a new url(return bool for whether load finished), or send `Page.reload` message.
 2. `wait_event`
