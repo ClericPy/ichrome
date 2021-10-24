@@ -98,12 +98,16 @@ True
 1. Start a new chrome daemon process with headless=False
    1. `python -m ichrome`
    2. Then connect to an exist chrome instance
-      1. `async with AsyncChrome() as cd:`
+```python
+        async with AsyncChrome() as chrome:
+            async with chrome.connect_tab() as tab:
+```
 
    or launching the chrome daemon in code may be a better choice
-
+```python
         async with AsyncChromeDaemon() as cd:
             async with cd.connect_tab() as tab:
+```
 2. Operations on the tabs: new tab, wait loading, run javascript, get html, close tab
 3. Close the browser GRACEFULLY instead of killing process
 
