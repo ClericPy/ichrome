@@ -326,4 +326,24 @@ Now enjoy it!
     asyncio.get_event_loop().run_until_complete(_main(kwargs=kwargs))
 
 
+def repl_tab_chrome(**kwargs):
+
+    async def _main(kwargs):
+        doc = r'''
+Input `-q` to quit the repl mode, and the cache fold "~/ichrome_user_data" will be clean up after shutdown.
+Input `-h` to show more help.
+
+Now enjoy it!
+         '''
+        async with AsyncChrome(host=kwargs.get('host') or '127.0.0.1',
+                               port=int(kwargs.get('port', 9222))) as chrome:
+            async with chrome.connect_tab(auto_close=True) as tab:
+                tab: AsyncTab
+                print(doc)
+                print('=' * 50)
+                await tab.repl()
+
+    asyncio.get_event_loop().run_until_complete(_main(kwargs=kwargs))
+
+
 repl = AsyncTab.repl
