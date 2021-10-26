@@ -463,6 +463,8 @@ optional arguments:
                         port
   -t, --try, --demo, --repl
                         Have a try for ichrome with repl mode.
+  -tc, --try-connection, --repl-connection
+                        Have a try for ichrome with repl mode (connect to a launched chrome).
 ```
 
 # What's More?

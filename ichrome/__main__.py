@@ -173,6 +173,14 @@ Other operations:
                         default=False,
                         dest='demo',
                         action="store_true")
+    parser.add_argument(
+        "-tc",
+        "--try-connection",
+        "--repl-connection",
+        help="Have a try for ichrome with repl mode with a launched Chrome.",
+        default=False,
+        dest='demo_connection',
+        action="store_true")
     args, extra_config = parser.parse_known_args()
 
     if args.version:
@@ -268,6 +276,10 @@ Other operations:
         if args.demo:
             from .debugger import repl_tab
             repl_tab(**kwargs)
+            return
+        elif args.demo_connection:
+            from .debugger import repl_tab_chrome
+            repl_tab_chrome(**kwargs)
             return
         else:
             asyncio.run(
