@@ -104,6 +104,7 @@ class ChromeDaemon(object):
     MAX_WAIT_CHECKING_SECONDS = 15
     DEFAULT_USER_DIR_PATH = Path.home() / 'ichrome_user_data'
     DEFAULT_EXTRA_CONFIG = ["--disable-gpu", "--no-first-run"]
+    DEFAULT_POPEN_ARGS = {'start_new_session': True}
 
     def __init__(self,
                  chrome_path=None,
@@ -156,7 +157,7 @@ class ChromeDaemon(object):
         self.after_shutdown = after_shutdown
         self._block = block
         self.clear_after_shutdown = clear_after_shutdown
-        self.popen_kwargs = popen_kwargs or {}
+        self.popen_kwargs = self.DEFAULT_POPEN_ARGS if popen_kwargs is None else popen_kwargs
         self.init()
 
     def init(self):
