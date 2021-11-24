@@ -47,6 +47,7 @@ class ChromeDaemon(object):
         on_startup & on_shutdown: function which handled a ChromeDaemon object while startup or shutdown
 
     default extra_config: ["--disable-gpu", "--no-first-run"], root user may need append "--no-sandbox"
+    https://github.com/GoogleChrome/chrome-launcher/blob/master/docs/chrome-flags-for-tools.md
 
     common args:
 
@@ -82,13 +83,26 @@ class ChromeDaemon(object):
         --disable-shared-workers
         --disable-gl-drawing-for-tests
         --use-gl=swiftshader
-        -disable-canvas-aa
+        --disable-canvas-aa
         --disable-2d-canvas-clip-aa
         --disable-breakpad
         --no-zygote
         --disable-reading-from-canvas
         --disable-remote-fonts
         --renderer-process-limit=1
+        --disable-hang-monitor
+        --disable-client-side-phishing-detection
+        --disable-translate
+        --password-store=basic
+        --disable-popup-blocking
+        --no-service-autorun
+        --no-default-browser-check
+        --autoplay-policy=user-gesture-required
+        --disable-device-discovery-notifications
+        --disable-component-update
+        --disable-domain-reliability
+        --enable-automation
+
 
     see more args: https://peter.sh/experiments/chromium-command-line-switches/
     """
