@@ -272,6 +272,50 @@ async def test_tab_keyboard_mouse(tab: Tab):
     await walker.move(50 * 1.414, 50 * 1.414, 0.2)
 
 
+async def test_iter_events(tab: Tab):
+    async with tab.iter_events(['Page.loadEventFired'],
+                               timeout=8) as events_iter:
+        await tab.goto('http://httpbin.org/get', timeout=0)
+        data = await events_iter
+        assert data, data
+    async with tab.iter_events(['Page.loadEventFired'],
+                               timeout=8) as events_iter:
+        await tab.goto('http://httpbin.org/get', timeout=0)
+        data = await events_iter.get()
+        # print(data)
+        assert data, data
+    async with tab.iter_events(['Page.loadEventFired'],
+                               timeout=8) as events_iter:
+        await tab.goto('http://httpbin.org/get', timeout=0)
+        async for data in events_iter:
+            # print(data)
+            assert data
+            break
+
+    # test iter_fetch
+    async with tab.iter_fetch(patterns=[{
+            'urlPattern': '*httpbin.org/get?a=*'
+    }]) as f:
+        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        data = await f
+        assert data
+        # test continueRequest
+        await f.continueRequest(data)
+        assert await tab.wait_includes('origin')
+
+        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        data = await f
+        assert data
+        # test modify response
+        await f.fulfillRequest(data, 200, body=b'hello world.')
+        assert await tab.wait_includes('hello world.')
+        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        data = await f
+        assert data
+        await f.failRequest(data, 'AccessDenied')
+        assert (await tab.url).startswith('chrome-error://')
+
+
 async def test_init_tab(chromed):
     # test init tab from chromed, create new tab and auto_close=True
     async with chromed.connect_tab(index=None, auto_close=True) as tab:
@@ -340,6 +384,9 @@ async def test_examples():
                 logger.info('test_wait_response OK.')
                 # test add_js_onload remove_js_onload
                 await test_tab_js_onload(tab)
+                logger.info('test_tab_js_onload OK.')
+                # test iter_events iter_fetch
+                await test_iter_events(tab)
                 logger.info('test_tab_js_onload OK.')
                 # test set ua and set headers
                 await test_tab_set_ua_headers(tab)
