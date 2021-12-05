@@ -600,19 +600,22 @@ class Tab(GetValueMixin):
                      domain: str,
                      force: bool = False,
                      timeout=None,
+                     kwargs: dict = None,
                      **_kwargs):
         '''domain: Network / Page and so on, will send `domain.enable`. Will check for duplicated sendings if not force.'''
         if not force:
             # no need for duplicated enable.
             if domain not in self._domains_can_be_enabled or domain in self._enabled_domains:
                 return True
+        if kwargs:
+            _kwargs.update(kwargs)
         # enable timeout should not be 0
         if timeout == 0:
             timeout = self.timeout
         result = await self.send(f'{domain}.enable',
                                  timeout=timeout,
                                  auto_enable=False,
-                                 **_kwargs)
+                                 kwargs=_kwargs)
         if result is not None:
             self._enabled_domains.add(domain)
         return result
