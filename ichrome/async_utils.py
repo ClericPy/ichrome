@@ -8,7 +8,8 @@ import sys
 import time
 from asyncio.base_futures import _PENDING
 from asyncio.futures import Future
-from base64 import b64decode
+from base64 import b64decode, b64encode
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import (Any, Awaitable, Callable, Coroutine, Dict, List, Optional,
                     Set, Union)
@@ -220,13 +221,14 @@ class Tab(GetValueMixin):
 """
     _log_all_recv = False
     _min_move_interval = 0.05
+    # only enable without Params
     _domains_can_be_enabled = {
         'Accessibility', 'Animation', 'ApplicationCache', 'Audits', 'CSS',
         'Cast', 'DOM', 'DOMSnapshot', 'DOMStorage', 'Database',
         'HeadlessExperimental', 'IndexedDB', 'Inspector', 'LayerTree', 'Log',
         'Network', 'Overlay', 'Page', 'Performance', 'Security',
-        'ServiceWorker', 'Fetch', 'WebAudio', 'WebAuthn', 'Media', 'Console',
-        'Debugger', 'HeapProfiler', 'Profiler', 'Runtime'
+        'ServiceWorker', 'WebAudio', 'WebAuthn', 'Media', 'Console', 'Debugger',
+        'HeapProfiler', 'Profiler', 'Runtime'
     }
     # timeout for recv, for wait_XXX methods
     # You can reset this with float instead of forever, like 30 * 60
@@ -318,6 +320,7 @@ class Tab(GetValueMixin):
         else:
             self.req = Requests()
         self._listener = Listener()
+        self._buffers: WeakValueDictionary = WeakValueDictionary()
         self._enabled_domains: Set[str] = set()
         self._default_recv_callback: List[Callable] = []
         # using default_recv_callback.setter, default_recv_callback can be list or function
@@ -495,6 +498,9 @@ class Tab(GetValueMixin):
             for callback in self.default_recv_callback:
                 asyncio.ensure_future(
                     ensure_awaitable(callback(self, data_dict)))
+            buffer: asyncio.Queue = self._buffers.get(data_dict.get('method'))
+            if buffer:
+                asyncio.ensure_future(buffer.put(data_dict))
             f = self._listener.find_future(data_dict)
             if f:
                 if f._state == _PENDING:
@@ -600,6 +606,9 @@ class Tab(GetValueMixin):
             # no need for duplicated enable.
             if domain not in self._domains_can_be_enabled or domain in self._enabled_domains:
                 return True
+        # enable timeout should not be 0
+        if timeout == 0:
+            timeout = self.timeout
         result = await self.send(f'{domain}.enable',
                                  timeout=timeout,
                                  auto_enable=False,
@@ -822,11 +831,11 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             timeout_stop_loading=timeout_stop_loading)
 
     async def wait_event(
-        self,
-        event_name: str,
-        timeout=None,
-        callback_function: Optional[Callable] = None,
-        filter_function: Optional[Callable] = None
+            self,
+            event_name: str,
+            timeout=None,
+            callback_function: Optional[Callable] = None,
+            filter_function: Optional[Callable] = None
     ) -> Union[dict, None, Any]:
         """Similar to self.recv, but has the filter_function to distinct duplicated method of event.
         WARNING: methods with prefix `wait_` the `timeout` default to None.
@@ -992,6 +1001,71 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         return await self.wait_request_loading(request_dict=request_dict,
                                                timeout=timeout)
 
+    def iter_events(self,
+                    events: List[str],
+                    timeout: Union[float, int] = None,
+                    maxsize=0) -> 'EventBuffer':
+        """Iter events with a async context.
+        ::
+
+            async with AsyncChromeDaemon() as cd:
+                async with cd.connect_tab() as tab:
+                    async with tab.iter_events(['Page.loadEventFired'],
+                                            timeout=60) as e:
+                        await tab.goto('http://httpbin.org/get')
+                        print(await e)
+                        # {'method': 'Page.loadEventFired', 'params': {'timestamp': 1380679.967344}}
+                        # await tab.goto('http://httpbin.org/get')
+                        # print(await e.get())
+                        # # {'method': 'Page.loadEventFired', 'params': {'timestamp': 1380679.967344}}
+                        await tab.goto('http://httpbin.org/get')
+                        async for data in e:
+                            print(data)
+                            break
+        """
+        return EventBuffer(events, tab=self, maxsize=maxsize, timeout=timeout)
+
+    def iter_fetch(self,
+                   patterns: List[dict] = None,
+                   handleAuthRequests=False,
+                   events: List[str] = None,
+                   timeout: Union[float, int] = None,
+                   maxsize=0) -> 'FetchBuffer':
+        """
+        ::
+
+            async with tab.iter_fetch(patterns=[{
+                    'urlPattern': '*httpbin.org/get?a=*'
+            }]) as f:
+                await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+                data = await f
+                assert data
+                # test continueRequest
+                await f.continueRequest(data)
+                assert await tab.wait_includes('origin')
+
+                await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+                data = await f
+                assert data
+                # test modify response
+                await f.fulfillRequest(data,
+                                       200,
+                                       body=b'hello world.')
+                assert await tab.wait_includes('hello world.')
+                await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+                data = await f
+                assert data
+                await f.failRequest(data, 'AccessDenied')
+                assert (await tab.url).startswith('chrome-error://')
+
+        """
+        return FetchBuffer(events=events,
+                           tab=self,
+                           patterns=patterns,
+                           handleAuthRequests=handleAuthRequests,
+                           timeout=timeout,
+                           maxsize=maxsize)
+
     @staticmethod
     def _ensure_request_id(request_id: Union[None, dict, str]):
         if request_id is None:
@@ -1006,10 +1080,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             )
 
     async def get_response(
-            self,
-            request_dict: Union[None, dict, str],
-            timeout=NotSet,
-            wait_loading: bool = None,
+        self,
+        request_dict: Union[None, dict, str],
+        timeout=NotSet,
+        wait_loading: bool = None,
     ) -> Union[dict, None]:
         '''return Network.getResponseBody raw response.
         return demo:
@@ -2669,6 +2743,247 @@ class WaitContext(object):
     async def __aexit__(self, *_errors):
         if self._auto_cancel and self._task and not self._task.done():
             self._task.cancel()
+
+
+class EventBuffer(asyncio.Queue):
+
+    def __init__(
+        self,
+        events: List[str],
+        tab: Tab,
+        timeout: Union[float, int] = None,
+        maxsize: int = 0,
+    ):
+        if isinstance(events, (list, set, tuple)):
+            self.events = list(events)
+        else:
+            raise TypeError
+        self.tab = tab
+        self.timeout = timeout
+        super().__init__(maxsize=maxsize)
+
+    def get_timeout(self) -> float:
+        if self.timeout:
+            return self.start_time + self.timeout - time.time()
+        else:
+            return None
+
+    async def __aenter__(self):
+        self.start_time = time.time()
+        for event_name in self.events:
+            await self.tab.auto_enable(event_name)
+            self.tab._buffers[event_name] = self
+        return self
+
+    async def __aexit__(self, *_):
+        for event_name in self.events:
+            self.tab._buffers.pop(event_name, None)
+
+    def __await__(self):
+        return self.wait_event().__await__()
+
+    def __aiter__(self):
+        return self
+
+    async def wait_event(self):
+        timeout = self.get_timeout()
+        if timeout is None or timeout > 0:
+            try:
+                return await asyncio.wait_for(self.get(), timeout=timeout)
+            except asyncio.TimeoutError:
+                pass
+
+    async def __anext__(self):
+        result = await self.wait_event()
+        if result:
+            return result
+        else:
+            raise StopAsyncIteration
+
+
+class FetchBuffer(EventBuffer):
+    """Enter and activate Fetch.enable, exit with Fetch.disable. Ensure only one FetchContext instance at the same moment.
+    https://chromedevtools.github.io/devtools-protocol/tot/Fetch/
+    """
+
+    def __init__(
+        self,
+        events: List[str],
+        tab: Tab,
+        patterns: List[dict] = None,
+        handleAuthRequests=False,
+        timeout: Union[float, int] = None,
+        maxsize: int = 0,
+    ):
+        self.patterns = patterns or [{'urlPattern': '*'}]
+        self.handleAuthRequests = handleAuthRequests
+        if not events:
+            if handleAuthRequests:
+                events = ['Fetch.requestPaused', 'Fetch.authRequired']
+            else:
+                events = ['Fetch.requestPaused']
+        self.timeout = timeout
+        super().__init__(events=events,
+                         tab=tab,
+                         timeout=timeout,
+                         maxsize=maxsize)
+
+    async def __aenter__(self):
+        await super().__aenter__()
+        await self.enable()
+        return self
+
+    async def __aexit__(self, *_):
+        await self.disable()
+        await super().__aexit__(*_)
+
+    async def enable(self):
+        return await self.tab.send('Fetch.enable',
+                                   pattern=self.patterns,
+                                   handleAuthRequests=self.handleAuthRequests)
+
+    async def disable(self):
+        return await self.tab.send('Fetch.disable')
+
+    async def wait_event(self):
+        while 1:
+            data = await super().wait_event()
+            if data:
+                try:
+                    url = data['params']['request']['url']
+                    requestId = self.ensure_request_id(data)
+                    for pattern in self.patterns:
+                        if fnmatchcase(url, pattern['urlPattern']):
+                            break
+                    else:
+                        await self.continueRequest(requestId)
+                        continue
+                except KeyError:
+                    pass
+                return data
+            else:
+                break
+
+    def ensure_request_id(self, data: Union[dict, str]):
+        if isinstance(data, str):
+            return data
+        elif isinstance(data, dict):
+            return data['params']['requestId']
+        raise TypeError
+
+    async def fulfillRequest(self,
+                             requestId: Union[str, dict],
+                             responseCode: int,
+                             responseHeaders: List[Dict[str, str]] = None,
+                             binaryResponseHeaders: str = None,
+                             body: Union[str, bytes] = None,
+                             responsePhrase: str = None,
+                             kwargs: dict = None,
+                             **_kwargs):
+        """Fetch.fulfillRequest. Provides response to the request.
+
+        :param requestId: An id the client received in requestPaused event.
+        :type requestId: str
+        :param responseCode: An HTTP response code.
+        :type responseCode: int
+        :param responseHeaders: Response headers, defaults to None
+        :type responseHeaders: List[Dict[str, str]], optional
+        :param binaryResponseHeaders: Alternative way of specifying response headers as a \0-separated series of name: value pairs. Prefer the above method unless you need to represent some non-UTF8 values that can't be transmitted over the protocol as text. (Encoded as a base64 string when passed over JSON), defaults to None
+        :type binaryResponseHeaders: str, optional
+        :param body: A response body. If absent, original response body will be used if the request is intercepted at the response stage and empty body will be used if the request is intercepted at the request stage. (Encoded as a base64 string when passed over JSON), defaults to None. If given as bytes type, will be translate to base64 string automatically.
+        :type body: Union[str, bytes], optional
+        :param responsePhrase: A textual representation of responseCode. If absent, a standard phrase matching responseCode is used., defaults to None
+        :type responsePhrase: str, optional
+        """
+        requestId = self.ensure_request_id(requestId)
+        if kwargs:
+            _kwargs.update(kwargs)
+        _kwargs['requestId'] = requestId
+        _kwargs['responseCode'] = responseCode
+        if isinstance(body, bytes):
+            body = b64encode(body).decode('utf-8')
+        for key, value in dict(responseHeaders=responseHeaders,
+                               binaryResponseHeaders=binaryResponseHeaders,
+                               body=body,
+                               responsePhrase=responsePhrase).items():
+            if value is not None:
+                _kwargs[key] = value
+        return await self.tab.send('Fetch.fulfillRequest', kwargs=_kwargs)
+
+    async def continueRequest(self,
+                              requestId: Union[str, dict],
+                              url: str = None,
+                              method: str = None,
+                              postData: str = None,
+                              headers: List[Dict[str, str]] = None,
+                              kwargs: dict = None,
+                              **_kwargs):
+        """Fetch.continueRequest. Continues the request, optionally modifying some of its parameters.
+
+        :param requestId: An id the client received in requestPaused event.
+        :type requestId: str
+        :param url: If set, the request url will be modified in a way that's not observable by page., defaults to None
+        :type url: str, optional
+        :param method: If set, the request method is overridden., defaults to None
+        :type method: str, optional
+        :param postData: If set, overrides the post data in the request. (Encoded as a base64 string when passed over JSON), defaults to None
+        :type postData: str, optional
+        :param headers: If set, overrides the request headers., defaults to None
+        :type headers: List[Dict[str, str]], optional
+        :param kwargs: other params, defaults to None
+        :type kwargs: dict, optional
+        """
+        requestId = self.ensure_request_id(requestId)
+        if kwargs:
+            _kwargs.update(kwargs)
+        _kwargs['requestId'] = requestId
+        for key, value in dict(url=url,
+                               method=method,
+                               postData=postData,
+                               headers=headers).items():
+            if value is not None:
+                _kwargs[key] = value
+        return await self.tab.send('Fetch.continueRequest', kwargs=_kwargs)
+
+    async def continueWithAuth(self,
+                               requestId: Union[str, dict],
+                               response: str,
+                               username: str = None,
+                               password: str = None,
+                               kwargs: dict = None,
+                               **_kwargs):
+        """response: Allowed Values: Default, CancelAuth, ProvideCredentials"""
+        requestId = self.ensure_request_id(requestId)
+        if kwargs:
+            _kwargs.update(kwargs)
+        _kwargs['requestId'] = requestId
+        authChallengeResponse = {}
+        for key, value in dict(response=response,
+                               username=username,
+                               password=password).items():
+            if value is not None:
+                authChallengeResponse[key] = value
+        return await self.tab.send('Fetch.continueWithAuth',
+                                   authChallengeResponse=authChallengeResponse,
+                                   kwargs=_kwargs)
+
+    async def failRequest(self,
+                          requestId: Union[str, dict],
+                          errorReason: str,
+                          kwargs: dict = None,
+                          **_kwargs):
+        """Fetch.failRequest. Stop the request.
+
+        Allowed ErrorReason:
+
+        Failed, Aborted, TimedOut, AccessDenied, ConnectionClosed, ConnectionReset, ConnectionRefused, ConnectionAborted, ConnectionFailed, NameNotResolved, InternetDisconnected, AddressUnreachable, BlockedByClient, BlockedByResponse
+        """
+        requestId = self.ensure_request_id(requestId)
+        if kwargs:
+            _kwargs.update(kwargs)
+        _kwargs['requestId'] = requestId
+        _kwargs['errorReason'] = errorReason
+        return await self.tab.send('Fetch.failRequest', kwargs=_kwargs)
 
 
 # alias
