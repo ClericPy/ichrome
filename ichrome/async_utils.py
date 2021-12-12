@@ -66,15 +66,22 @@ class _SingleTabConnectionManager:
     def __init__(self,
                  chrome: 'Chrome',
                  index: Union[None, int, str] = 0,
-                 auto_close: bool = False):
+                 auto_close: bool = False,
+                 target_kwargs: dict = None):
         self.chrome = chrome
         self.index = index
         self.tab: 'Tab' = None
+        self.target_kwargs = target_kwargs
         self._ws_connection: '_WSConnection' = None
         self._auto_close = auto_close
 
     async def __aenter__(self) -> 'Tab':
-        if isinstance(self.index, int):
+        if self.target_kwargs:
+            data = await self.chrome.browser.send('Target.createTarget',
+                                                  kwargs=self.target_kwargs)
+            tab_id = data['result']['targetId']
+            self.tab = await self.chrome.get_tab(tab_id)
+        elif isinstance(self.index, int):
             self.tab = await self.chrome.get_tab(self.index)
         elif isinstance(self.index, str) and '://' not in self.index:
             # tab_id
@@ -304,6 +311,9 @@ class Tab(GetValueMixin):
         self.type = type
         self.description = description
         self.devtoolsFrontendUrl = devtoolsFrontendUrl
+        if tab_id and not webSocketDebuggerUrl:
+            _chrome_port_str = f':{chrome.port}' if chrome.port else ''
+            webSocketDebuggerUrl = f'ws://{chrome.host}{_chrome_port_str}/devtools/page/{tab_id}'
         self.webSocketDebuggerUrl = webSocketDebuggerUrl
         self.json = json
         self.chrome = chrome
@@ -340,10 +350,14 @@ class Tab(GetValueMixin):
     def __repr__(self):
         return f"<Tab({self.status}): {self.tab_id}>"
 
-    def __del__(self):
+    async def shutdown(self):
         if self.ws and not self.ws.closed:
             logger.debug('[unclosed] WSConnection is not closed.')
-            asyncio.ensure_future(self.ws.close())
+            await self.ws.close()
+
+    def __del__(self):
+        if self.ws and not self.ws.closed:
+            asyncio.ensure_future(self.shutdown())
 
     def ensure_timeout(self, timeout):
         if timeout is NotSet:
@@ -2447,23 +2461,50 @@ class Chrome(GetValueMixin):
         self.retry = self._DEFAULT_RETRY if retry is None else retry
         self.status = 'init'
         self._req = None
+        self._browser: Tab = None
+        self._browser_ws: _WSConnection = None
 
-    def __getitem__(self, index: int) -> Awaitable[Tab]:
-        assert isinstance(index, int), 'only support int index'
+    @property
+    def browser(self) -> Tab:
+        if self._browser:
+            return self._browser
+        raise ChromeRuntimeError('`async with` context needed.')
+
+    async def init_browser_tab(self):
+        if self._browser:
+            raise ChromeRuntimeError('`async with` context is already in use.')
+        version = await self.version
+        # print(version)
+        self._browser = Tab(
+            tab_id='browser',
+            webSocketDebuggerUrl=version['webSocketDebuggerUrl'],
+            chrome=self)
+        self._browser_ws = self._browser.connect()
+        await self._browser_ws.__aenter__()
+        return self._browser
+
+    def __getitem__(self,
+                    index: Union[int, str] = 0) -> Awaitable[Union[Tab, None]]:
         return self.get_tab(index=index)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.__del__()
-
     async def __aenter__(self):
-        await self.connect()
+        if await self.connect():
+            await self.init_browser_tab()
         return self
 
     async def __aexit__(self, *args):
         await self.close()
+
+    async def close(self):
+        if self.req:
+            await self.req.close()
+        if self.status == 'closed':
+            return
+        if self._browser:
+            await self._browser.shutdown()
+            self._browser = None
+        self._browser_ws = None
+        self.status = 'closed'
 
     async def close_browser(self):
         tab0 = await self.get_tab(0)
@@ -2676,15 +2717,23 @@ class Chrome(GetValueMixin):
     def __str__(self):
         return f"<Chrome({self.status}): {self.server}>"
 
-    async def close(self):
-        if self.req:
-            await self.req.close()
-        if self.status == 'closed':
-            return
-        self.status = 'closed'
-
     def __del__(self):
         _exhaust_simple_coro(self.close())
+
+    def create_context(
+        self,
+        disposeOnDetach: bool = True,
+        proxyServer: str = None,
+        proxyBypassList: str = None,
+        originsWithUniversalNetworkAccess: List[str] = None,
+    ) -> 'BrowserContext':
+        return BrowserContext(
+            chrome=self,
+            disposeOnDetach=disposeOnDetach,
+            proxyServer=proxyServer,
+            proxyBypassList=proxyBypassList,
+            originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
+        )
 
 
 class JavaScriptSnippets(object):
@@ -2987,6 +3036,73 @@ class FetchBuffer(EventBuffer):
         _kwargs['requestId'] = requestId
         _kwargs['errorReason'] = errorReason
         return await self.tab.send('Fetch.failRequest', kwargs=_kwargs)
+
+
+class BrowserContext:
+
+    def __init__(
+        self,
+        chrome: Chrome,
+        disposeOnDetach: bool = True,
+        proxyServer: str = None,
+        proxyBypassList: str = None,
+        originsWithUniversalNetworkAccess: List[str] = None,
+    ):
+        self.chrome = chrome
+        self.browser = self.chrome.browser
+        self.disposeOnDetach = disposeOnDetach
+        self.proxyServer = proxyServer
+        self.proxyBypassList = proxyBypassList
+        self.originsWithUniversalNetworkAccess = originsWithUniversalNetworkAccess
+        self.browserContextId = None
+
+    def new_tab(
+        self,
+        url: str = 'about:blank',
+        width: int = None,
+        height: int = None,
+        browserContextId: str = None,
+        enableBeginFrameControl: bool = None,
+        newWindow: bool = None,
+        background: bool = None,
+        auto_close: bool = False,
+    ) -> _SingleTabConnectionManager:
+        browserContextId = browserContextId or self.browserContextId
+        if not browserContextId:
+            raise ChromeRuntimeError('`async with` context needed.')
+        kwargs = dict(
+            url=url,
+            width=width,
+            height=height,
+            browserContextId=browserContextId,
+            enableBeginFrameControl=enableBeginFrameControl,
+            newWindow=newWindow,
+            background=background,
+        )
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        return _SingleTabConnectionManager(chrome=self.chrome,
+                                           index=None,
+                                           auto_close=auto_close,
+                                           target_kwargs=kwargs)
+
+    async def __aenter__(self):
+        kwargs = dict(
+            disposeOnDetach=self.disposeOnDetach,
+            proxyServer=self.proxyServer,
+            proxyBypassList=self.proxyBypassList,
+            originsWithUniversalNetworkAccess=self.
+            originsWithUniversalNetworkAccess,
+        )
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        data = await self.browser.send('Target.createBrowserContext',
+                                       kwargs=kwargs)
+        self.browserContextId = data['result']['browserContextId']
+        return self
+
+    async def __aexit__(self, *_):
+        if self.browserContextId:
+            await self.browser.send('Target.disposeBrowserContext')
+            self.browserContextId = None
 
 
 # alias
