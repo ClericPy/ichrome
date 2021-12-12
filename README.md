@@ -162,30 +162,19 @@ if __name__ == "__main__":
 
 ```python
 import asyncio
+import json
 
 from ichrome import AsyncChromeDaemon
 
 
 async def main():
     async with AsyncChromeDaemon() as cd:
-        async with cd.connect_tab(index=0) as tab:
-
-            def filter_function(r):
-                try:
-                    url = r['params']['response']['url']
-                    return url == 'http://httpbin.org/get'
-                except KeyError:
-                    pass
-
-            async with tab.wait_response_context(
-                    filter_function=filter_function,
-                    timeout=5,
-            ) as r:
-                await tab.goto('http://httpbin.org/get')
-                result = await r
-                if result:
-                    print(result['data'])
-                assert 'User-Agent' in result['data']
+        async with cd.connect_tab() as tab:
+            async with tab.iter_fetch(timeout=5) as f:
+                await tab.goto('http://httpbin.org/get', timeout=0)
+                async for request in f:
+                    print(json.dumps(request))
+                    await f.continueRequest(request)
 
 
 if __name__ == "__main__":
@@ -194,8 +183,6 @@ if __name__ == "__main__":
 ```
 
 ### Incognito Mode
-
-> New in version 2.9.0.
 
 1.  Set a new proxy which is different from the global one.
 2.  Share cookies in context.
