@@ -91,6 +91,15 @@ async def test_tab_cookies(tab: Tab):
     assert len(await tab.get_all_cookies()) > 0
 
 
+async def test_browser_context(tab: Tab, chrome: Chrome):
+    assert len(await tab.get_all_cookies()) > 0
+    async with chrome.create_context(proxyServer=None) as context:
+        async with context.new_tab(auto_close=0) as tab:
+            assert len(await tab.get_all_cookies()) == 0
+            await tab.set_cookie('a', '1', 'http://httpbin.org')
+            assert len(await tab.get_all_cookies()) > 0
+
+
 async def test_tab_set_url(tab: Tab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
     assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=2))
@@ -373,6 +382,9 @@ async def test_examples():
                 # test cookies operations
                 await test_tab_cookies(tab)
                 logger.info('test_tab_cookies OK.')
+                # test_browser_context
+                await test_browser_context(tab, chrome)
+                logger.info('test_browser_context OK.')
                 # set url
                 await test_tab_set_url(tab)
                 logger.info('test_tab_set_url OK.')

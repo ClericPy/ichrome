@@ -105,4 +105,4 @@ venv.bak/
 
 .vscode/
 ichrome_user_data/
-temp*.py
+temp*
