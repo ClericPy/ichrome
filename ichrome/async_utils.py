@@ -551,26 +551,28 @@ class Tab(GetValueMixin):
             if auto_enable or force is False:
                 await self.auto_enable(method, timeout=timeout)
             logger.debug(f"[send] {self!r} {request}")
-            result = await self.ws.send_json(request)
             if timeout != 0:
                 # wait for msg filted by id
                 event = {"id": request["id"]}
-                msg = await self.recv(event,
-                                      timeout=timeout,
-                                      callback_function=callback_function)
-                return msg
+                f = self.recv(event,
+                              timeout=timeout,
+                              callback_function=callback_function)
+                await self.ws.send_json(request)
+                return await f
             else:
                 # timeout == 0, no need wait for response.
-                return result
+                return await self.ws.send_json(request)
         except (ClientError, WebSocketError, TypeError) as err:
             err_msg = f'{self} [send] msg {request} failed for {err}'
             logger.error(err_msg)
             raise ChromeRuntimeError(err_msg)
 
-    async def recv(self,
-                   event_dict: dict,
-                   timeout=NotSet,
-                   callback_function=None) -> Union[dict, None]:
+    def recv(
+        self,
+        event_dict: dict,
+        timeout=NotSet,
+        callback_function=None,
+    ) -> Awaitable[Union[dict, None]]:
         """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
 
         :param event_dict: dict like {'id': 1} or {'method': 'Page.loadEventFired'} or other JSON serializable dict.
@@ -583,16 +585,23 @@ class Tab(GetValueMixin):
         :rtype: dict
         """
         timeout = self.ensure_timeout(timeout)
-        await self.auto_enable(event_dict, timeout=timeout)
-        result = None
         if isinstance(timeout, (float, int)) and timeout <= 0:
             # no wait
-            return result
+            return None
         f = self._listener.register(event_dict)
+        return self._recv(f=f,
+                          event_dict=event_dict,
+                          timeout=timeout,
+                          callback_function=callback_function)
+
+    async def _recv(self, f, event_dict, timeout,
+                    callback_function) -> Union[dict, None]:
+        await self.auto_enable(event_dict, timeout=timeout)
         try:
             result = await asyncio.wait_for(f, timeout=timeout)
         except asyncio.TimeoutError:
             logger.debug(f'[timeout] {event_dict} [recv] timeout.')
+            result = None
         finally:
             return await _ensure_awaitable_callback_result(
                 callback_function, result)
