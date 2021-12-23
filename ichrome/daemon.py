@@ -880,7 +880,8 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     def connect_tab(self,
                     index: Union[None, int, str] = 0,
-                    auto_close: bool = False):
+                    auto_close: bool = False,
+                    flatten: bool = False):
         '''More easier way to init a connected Tab with `async with`.
 
         Got a connected Tab object by using `async with chromed.connect_tab(0) as tab:`
@@ -891,11 +892,14 @@ class AsyncChromeDaemon(ChromeDaemon):
             index = 'F130D0295DB5879791AA490322133AFC' means the tab with this id.
 
             If auto_close is True: close this tab while exiting context.
+
+            View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-attachToTarget
 '''
         return _SingleTabConnectionManagerDaemon(host=self.host,
                                                  port=self.port,
                                                  index=index,
-                                                 auto_close=auto_close)
+                                                 auto_close=auto_close,
+                                                 flatten=flatten)
 
     async def close_browser(self):
         try:
