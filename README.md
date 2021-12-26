@@ -35,6 +35,12 @@ If you encounter any problems, please let me know through [issues](https://githu
   - Package very commonly used functions
 - `ChromeEngine` as the progress pool
   - support HTTP `api` router with [FastAPI](https://github.com/tiangolo/fastapi)
+- `Flatten` mode with `sessionId`
+  - New in version 2.9.0
+    - [EXPERIMENTAL](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-attachToTarget)
+    - Share the same `Websocket` connection and use `sessionId` to distinguish requests
+  - How to enable flatten mode
+    - `AsyncTab._DEFAULT_FLATTEN = True`
 
 # Install
 
