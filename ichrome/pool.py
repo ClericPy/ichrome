@@ -155,7 +155,7 @@ class ChromeWorker:
     def start_daemon(self):
         self._chrome_daemon_ready = asyncio.Event()
         self._need_restart = asyncio.Event()
-        self.daemon_task = asyncio.create_task(self._start_chrome_daemon())
+        self.daemon_task = self.start_tab_worker()
         self.consumers = [
             asyncio.create_task(self.future_consumer(_))
             for _ in range(self.max_concurrent_tabs)
@@ -269,7 +269,7 @@ class ChromeWorker:
                 await self.q.put(future)
 
     def start_tab_worker(self):
-        asyncio.create_task(self._start_chrome_daemon())
+        return asyncio.create_task(self._start_chrome_daemon())
 
     async def shutdown(self):
         if self._shutdown:
