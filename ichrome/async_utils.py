@@ -52,13 +52,13 @@ class _TabConnectionManager:
     async def __aenter__(self) -> None:
         for tab in self.tabs:
             ws_connection = tab()
-            await ws_connection.connect()
+            await ws_connection.__aenter__()
             self.ws_connections.add(ws_connection)
 
     async def __aexit__(self, *args):
         for ws_connection in self.ws_connections:
             if not ws_connection._closed:
-                await ws_connection.shutdown()
+                await ws_connection.__aexit__(None, None, None)
 
 
 class _SingleTabConnectionManager:
@@ -68,14 +68,14 @@ class _SingleTabConnectionManager:
                  index: Union[None, int, str] = 0,
                  auto_close: bool = False,
                  target_kwargs: dict = None,
-                 flatten: bool = False):
+                 flatten: bool = None):
         self.chrome = chrome
         self.index = index
         self.tab: 'Tab' = None
         self.target_kwargs = target_kwargs
         self._ws_connection: '_WSConnection' = None
         self._auto_close = auto_close
-        self.flatten = flatten
+        self.flatten = Tab._DEFAULT_FLATTEN if flatten is None else flatten
 
     async def __aenter__(self) -> 'Tab':
         if self.target_kwargs:
@@ -169,8 +169,8 @@ class _WSConnection:
                         f'[missing] {self.tab} missing ws connection. {err}')
             else:
                 raise TabConnectionError(f'Connect to tab failed, {self.tab}')
-        # start the daemon background.
-        await self._start_tasks()
+            # start the daemon background.
+            await self._start_tasks()
         return self.tab
 
     async def _heartbeat_daemon(self):
@@ -193,17 +193,20 @@ class _WSConnection:
         # stop daemon if shutdown
         if self.tab.flatten:
             if self.tab._session_id:
+                self.tab._session_id = None
                 self.browser._sessions.pop(self.tab._session_id, None)
                 await self.browser.send('Target.detachFromTarget',
                                         sessionId=self.tab._session_id)
+            self._closed = True
         else:
             await self._stop_tasks()
-        if self.tab.ws and not self.tab.ws.closed:
-            await self.tab.ws.close()
-            self._closed = self.tab.ws.closed
-            self.tab.ws = None
-        else:
-            self._closed = True
+            if self.tab.ws:
+                if not self.tab.ws.closed:
+                    await self.tab.ws.close()
+                self._closed = self.tab.ws.closed
+                self.tab.ws = None
+            else:
+                self._closed = True
 
     async def __aexit__(self, *args):
         await self.shutdown()
@@ -275,6 +278,8 @@ class Tab(GetValueMixin):
     _RECV_DAEMON_BREAK_CALLBACK = None
     # default max_msg_size has been set to 20MB, for 4MB is too small.
     _DEFAULT_WS_KWARGS: Dict = {"max_msg_size": 20 * 1024**2}
+    # default flatten arg
+    _DEFAULT_FLATTEN = False
 
     def __init__(self,
                  tab_id: str = None,
@@ -290,7 +295,7 @@ class Tab(GetValueMixin):
                  ws_kwargs: dict = None,
                  default_recv_callback: Callable = None,
                  _recv_daemon_break_callback: Callable = None,
-                 flatten: bool = False,
+                 flatten: bool = None,
                  **kwargs):
         """
         original Tab JSON::
@@ -372,14 +377,16 @@ class Tab(GetValueMixin):
         self._sessions: WeakValueDictionary = WeakValueDictionary()
         self._session_id: str = None
         # sessions for flatten mode
-        self.flatten = flatten
-        if flatten:
+        self.flatten = self._DEFAULT_FLATTEN if flatten is None else flatten
+        if self.flatten:
             self.set_flatten()
 
     def set_flatten(self):
         # /devtools/browser/
-        if self.ws:
-            raise ChromeRuntimeError('can not set flatten for connected Tab')
+        if '/devtools/browser/' in self.webSocketDebuggerUrl:
+            raise ChromeRuntimeError('browser can not be set flatten mode')
+        if self.status == 'connected':
+            return
         else:
             self.flatten = True
             self._listener = self.browser._listener
@@ -450,9 +457,11 @@ class Tab(GetValueMixin):
 
     @property
     def status(self) -> str:
-        if self.ws and not self.ws.closed:
-            return 'connected'
-        return 'disconnected'
+        if self.flatten:
+            connected = bool(self._session_id)
+        else:
+            connected = bool(self.ws and not self.ws.closed)
+        return {True: 'connected', False: 'disconnected'}[connected]
 
     def connect(self) -> _WSConnection:
         '''`async with tab.connect() as tab:`'''
@@ -655,11 +664,11 @@ class Tab(GetValueMixin):
     async def _recv(self, f, event_dict, timeout,
                     callback_function) -> Union[dict, None]:
         await self.auto_enable(event_dict, timeout=timeout)
+        result = None
         try:
             result = await asyncio.wait_for(f, timeout=timeout)
         except asyncio.TimeoutError:
             logger.debug(f'[timeout] {event_dict} [recv] timeout.')
-            result = None
         finally:
             return await _ensure_awaitable_callback_result(
                 callback_function, result)
@@ -2529,7 +2538,7 @@ class Chrome(GetValueMixin):
         self.status = 'init'
         self._req = None
         self._browser: Tab = None
-        self._browser_ws: _WSConnection = None
+        self._browser_ws_connection: _WSConnection = None
 
     @property
     def browser(self) -> Tab:
@@ -2545,9 +2554,10 @@ class Chrome(GetValueMixin):
         self._browser = Tab(
             tab_id='browser',
             webSocketDebuggerUrl=version['webSocketDebuggerUrl'],
-            chrome=self)
-        self._browser_ws = self._browser.connect()
-        await self._browser_ws.__aenter__()
+            chrome=self,
+            flatten=False)
+        self._browser_ws_connection = self._browser.connect()
+        await self._browser_ws_connection.__aenter__()
         return self._browser
 
     def __getitem__(self,
@@ -2567,10 +2577,10 @@ class Chrome(GetValueMixin):
             await self.req.close()
         if self.status == 'closed':
             return
-        if self._browser_ws:
-            await self._browser_ws.__aexit__(None, None, None)
+        if self._browser_ws_connection:
+            await self._browser_ws_connection.__aexit__(None, None, None)
         self._browser = None
-        self._browser_ws = None
+        self._browser_ws_connection = None
         self.status = 'closed'
 
     async def close_browser(self):
@@ -2745,7 +2755,7 @@ class Chrome(GetValueMixin):
     def connect_tab(self,
                     index: Union[None, int, str] = 0,
                     auto_close: bool = False,
-                    flatten: bool = False):
+                    flatten: bool = None):
         '''More easier way to init a connected Tab with `async with`.
 
         Got a connected Tab object by using `async with chrome.connect_tab(0) as tab::`

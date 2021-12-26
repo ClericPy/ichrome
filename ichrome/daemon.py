@@ -881,7 +881,7 @@ class AsyncChromeDaemon(ChromeDaemon):
     def connect_tab(self,
                     index: Union[None, int, str] = 0,
                     auto_close: bool = False,
-                    flatten: bool = False):
+                    flatten: bool = None):
         '''More easier way to init a connected Tab with `async with`.
 
         Got a connected Tab object by using `async with chromed.connect_tab(0) as tab:`
