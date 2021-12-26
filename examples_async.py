@@ -499,12 +499,15 @@ def test_chrome_engine():
 
 
 def test_all():
+    import time
     AsyncChromeDaemon.DEFAULT_USER_DIR_PATH = Path('./ichrome_user_data')
-    for flatten in [True, False]:
+    for flatten in [True, False, True]:
         logger.critical('Start testing flatten=%s.' % flatten)
         Tab._DEFAULT_FLATTEN = flatten
         test_chrome_engine()
+        time.sleep(1)
         asyncio.get_event_loop().run_until_complete(test_examples())
+        time.sleep(1)
 
 
 if __name__ == "__main__":
