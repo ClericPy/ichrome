@@ -52,14 +52,14 @@ async def test_chrome(chrome: Chrome):
 async def test_tab_ws(tab: Tab):
     # test msg_id auto increase
     assert tab.msg_id == tab.msg_id - 1
-    assert tab.status != 'connected'
-    assert tab.ws is None
+    assert tab.status == 'disconnected', tab.status
+    assert tab.ws is None or (tab.flatten and not tab._session_id)
     async with tab():
         assert tab.ws
         assert tab.status == 'connected'
     # assert no connection out of async context.
-    assert tab.ws is None
-    assert tab.status != 'connected'
+    assert tab.status == 'disconnected'
+    assert tab.ws is None or (tab.flatten and not tab._session_id)
 
 
 async def test_send_msg(tab: Tab):
@@ -291,13 +291,11 @@ async def test_iter_events(tab: Tab):
                                timeout=8) as events_iter:
         await tab.goto('http://httpbin.org/get', timeout=0)
         data = await events_iter.get()
-        # print(data)
         assert data, data
     async with tab.iter_events(['Page.loadEventFired'],
                                timeout=8) as events_iter:
         await tab.goto('http://httpbin.org/get', timeout=0)
         async for data in events_iter:
-            # print(data)
             assert data
             break
 
@@ -325,7 +323,7 @@ async def test_iter_events(tab: Tab):
         assert (await tab.url).startswith('chrome-error://')
 
 
-async def test_init_tab(chromed):
+async def test_init_tab(chromed: AsyncChromeDaemon):
     # test init tab from chromed, create new tab and auto_close=True
     async with chromed.connect_tab(index=None, auto_close=True) as tab:
         TEST_DRC_OK = False
@@ -399,7 +397,7 @@ async def test_examples():
                 logger.info('test_tab_js_onload OK.')
                 # test iter_events iter_fetch
                 await test_iter_events(tab)
-                logger.info('test_tab_js_onload OK.')
+                logger.info('test_iter_events OK.')
                 # test set ua and set headers
                 await test_tab_set_ua_headers(tab)
                 logger.info('test_tab_set_ua_headers OK.')
@@ -429,12 +427,12 @@ async def test_examples():
             # await chrome.kill()
             sep = f'\n{"=" * 80}\n'
             logger.critical(
-                f'{sep}Congratulations, all test cases passed.{sep}')
+                f'{sep}Congratulations, all test cases passed(flatten={Tab._DEFAULT_FLATTEN}).{sep}'
+            )
     assert AsyncChromeDaemon.bye
     # test clear_after_shutdown
     _user_dir_path = AsyncChromeDaemon.DEFAULT_USER_DIR_PATH / 'chrome_9222'
     dir_cleared = not _user_dir_path.is_dir()
-    # print(dir_cleared)
     assert dir_cleared
 
 
@@ -494,14 +492,20 @@ def test_chrome_engine():
         logger.critical('test_chrome_engine OK')
         _user_dir_path = AsyncChromeDaemon.DEFAULT_USER_DIR_PATH / f'chrome_{ChromeEngine.START_PORT}'
         dir_cleared = not _user_dir_path.is_dir()
-        # print(dir_cleared)
         assert dir_cleared
 
     # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
     asyncio.get_event_loop().run_until_complete(_test_chrome_engine())
 
 
-if __name__ == "__main__":
+def test_all():
     AsyncChromeDaemon.DEFAULT_USER_DIR_PATH = Path('./ichrome_user_data')
-    test_chrome_engine()
-    asyncio.get_event_loop().run_until_complete(test_examples())
+    for flatten in [True, False]:
+        logger.critical('Start testing flatten=%s.' % flatten)
+        Tab._DEFAULT_FLATTEN = flatten
+        test_chrome_engine()
+        asyncio.get_event_loop().run_until_complete(test_examples())
+
+
+if __name__ == "__main__":
+    test_all()
