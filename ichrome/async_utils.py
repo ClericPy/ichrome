@@ -1136,6 +1136,14 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                    timeout: Union[float, int] = None,
                    maxsize=0) -> 'FetchBuffer':
         """
+Fetch.RequestPattern:
+    urlPattern
+        string(Wildcards)
+    resourceType
+        Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Preflight, Other
+    requestStage
+        Stage at which to begin intercepting requests. Default is Request.
+        Allowed Values: Request, Response
         ::
 
             async with tab.iter_fetch(patterns=[{
@@ -2973,7 +2981,7 @@ class FetchBuffer(EventBuffer):
 
     async def enable(self):
         return await self.tab.send('Fetch.enable',
-                                   pattern=self.patterns,
+                                   patterns=self.patterns,
                                    handleAuthRequests=self.handleAuthRequests)
 
     async def disable(self):
