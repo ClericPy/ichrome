@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List
 
 from ichrome import AsyncChromeDaemon, ChromeEngine
-from ichrome.async_utils import Chrome, Tab, Tag, logger
+from ichrome.async_utils import AsyncTab, Chrome, Tab, Tag, logger
 
 # logger.setLevel('DEBUG')
 # Tab._log_all_recv = True
@@ -340,6 +340,17 @@ async def test_init_tab(chromed: AsyncChromeDaemon):
         tab.default_recv_callback.clear()
 
 
+async def test_fetch_context(tab: AsyncTab):
+    async with tab.iter_fetch(patterns=[{
+            'urlPattern': '*httpbin.org/ip*'
+    }]) as f:
+        await tab.goto('http://httpbin.org/ip', timeout=0)
+        async for r in f:
+            assert 'httpbin.org/ip' in r['params']['request']['url']
+            await f.continueRequest(r)
+            break
+
+
 async def test_examples():
 
     def on_startup(chromed):
@@ -392,6 +403,9 @@ async def test_examples():
                 # test wait_response
                 await test_wait_response(tab)
                 logger.info('test_wait_response OK.')
+                # test fetch_context
+                await test_fetch_context(tab)
+                logger.info('test_fetch_context OK.')
                 # test add_js_onload remove_js_onload
                 await test_tab_js_onload(tab)
                 logger.info('test_tab_js_onload OK.')
