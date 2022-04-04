@@ -3139,12 +3139,17 @@ class BrowserContext:
         originsWithUniversalNetworkAccess: List[str] = None,
     ):
         self.chrome = chrome
-        self.browser = self.chrome.browser
         self.disposeOnDetach = disposeOnDetach
         self.proxyServer = proxyServer
         self.proxyBypassList = proxyBypassList
         self.originsWithUniversalNetworkAccess = originsWithUniversalNetworkAccess
         self.browserContextId = None
+
+        self._need_init_chrome = self.chrome.status == 'init'
+
+    @property
+    def browser(self):
+        return self.chrome.browser
 
     def new_tab(
         self,
@@ -3176,6 +3181,8 @@ class BrowserContext:
                                            target_kwargs=kwargs)
 
     async def __aenter__(self):
+        if self._need_init_chrome:
+            await self.chrome.__aenter__()
         kwargs = dict(
             disposeOnDetach=self.disposeOnDetach,
             proxyServer=self.proxyServer,
@@ -3193,6 +3200,8 @@ class BrowserContext:
         if self.browserContextId:
             await self.browser.send('Target.disposeBrowserContext')
             self.browserContextId = None
+        if self._need_init_chrome:
+            await self.chrome.__aexit__()
 
 
 # alias
