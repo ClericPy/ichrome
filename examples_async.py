@@ -91,9 +91,17 @@ async def test_tab_cookies(tab: Tab):
     assert len(await tab.get_all_cookies()) > 0
 
 
-async def test_browser_context(tab: Tab, chrome: Chrome):
-    assert len(await tab.get_all_cookies()) > 0
+async def test_browser_context(tab1: Tab, chrome: Chrome,
+                               chromed: AsyncChromeDaemon):
+    assert len(await tab1.get_all_cookies()) > 0
     async with chrome.create_context(proxyServer=None) as context:
+        async with context.new_tab(auto_close=0) as tab:
+            assert len(await tab.get_all_cookies()) == 0
+            await tab.set_cookie('a', '1', 'http://httpbin.org')
+            assert len(await tab.get_all_cookies()) > 0
+
+    assert len(await tab1.get_all_cookies()) > 0
+    async with chromed.create_context(proxyServer=None) as context:
         async with context.new_tab(auto_close=0) as tab:
             assert len(await tab.get_all_cookies()) == 0
             await tab.set_cookie('a', '1', 'http://httpbin.org')
@@ -392,7 +400,7 @@ async def test_examples():
                 await test_tab_cookies(tab)
                 logger.info('test_tab_cookies OK.')
                 # test_browser_context
-                await test_browser_context(tab, chrome)
+                await test_browser_context(tab, chrome, chromed)
                 logger.info('test_browser_context OK.')
                 # set url
                 await test_tab_set_url(tab)

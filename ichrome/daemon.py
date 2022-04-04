@@ -11,13 +11,14 @@ from getpass import getuser
 from inspect import isawaitable
 from json import loads as _json_loads
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
-from .async_utils import _SingleTabConnectionManagerDaemon
+from .async_utils import (AsyncChrome, BrowserContext,
+                          _SingleTabConnectionManagerDaemon)
 from .base import (async_run, clear_chrome_process, ensure_awaitable,
                    get_dir_size, get_memory_by_port, get_proc,
                    get_readable_dir_size)
@@ -911,6 +912,23 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def get_local_state(self):
         return await async_run(super().get_local_state)
+
+    def create_context(
+        self,
+        disposeOnDetach: bool = True,
+        proxyServer: str = None,
+        proxyBypassList: str = None,
+        originsWithUniversalNetworkAccess: List[str] = None,
+    ) -> BrowserContext:
+        return BrowserContext(
+            chrome=AsyncChrome(host=self.host,
+                               port=self.port,
+                               timeout=self._timeout),
+            disposeOnDetach=disposeOnDetach,
+            proxyServer=proxyServer,
+            proxyBypassList=proxyBypassList,
+            originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
+        )
 
     def __del__(self):
         pass
