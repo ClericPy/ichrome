@@ -930,6 +930,37 @@ class AsyncChromeDaemon(ChromeDaemon):
             originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
         )
 
+    def incognito_tab(
+        self,
+        url: str = 'about:blank',
+        width: int = None,
+        height: int = None,
+        enableBeginFrameControl: bool = None,
+        newWindow: bool = None,
+        background: bool = None,
+        disposeOnDetach: bool = True,
+        proxyServer: str = None,
+        proxyBypassList: str = None,
+        originsWithUniversalNetworkAccess: List[str] = None,
+        flatten: bool = None,
+    ):
+        chrome = AsyncChrome(host=self.host,
+                             port=self.port,
+                             timeout=self._timeout)
+        return chrome.incognito_tab(
+            url=url,
+            width=width,
+            height=height,
+            enableBeginFrameControl=enableBeginFrameControl,
+            newWindow=newWindow,
+            background=background,
+            flatten=flatten,
+            disposeOnDetach=disposeOnDetach,
+            proxyServer=proxyServer,
+            proxyBypassList=proxyBypassList,
+            originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
+        )
+
     def __del__(self):
         pass
 
