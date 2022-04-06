@@ -11,7 +11,7 @@ If you encounter any problems, please let me know through [issues](https://githu
 
 - Pyppeteer is awesome, but I don't need so much
   - spelling of pyppeteer is confused
-  - event-driven programming is not always advisable.
+  - Event-driven architecture(EDA) is not always smart.
 - Selenium is slow
   - webdrivers often come with memory leak.
 - In desperate need of a stable toolkit to communicate with Chrome browser (or other Blink-based browsers like Chromium)
@@ -20,7 +20,7 @@ If you encounter any problems, please let me know through [issues](https://githu
     - a choice for debugging interactively.
 - Playwright Python comes too late
   - https://github.com/microsoft/playwright-python
-  - This library may be a good choice for both `sync` and `async` usage
+  - This library may be a good choice for both `sync` and `async` usage, but its source code is NodeJS.
 
 # Features
 
