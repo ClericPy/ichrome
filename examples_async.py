@@ -93,19 +93,35 @@ async def test_tab_cookies(tab: Tab):
 
 async def test_browser_context(tab1: Tab, chrome: Chrome,
                                chromed: AsyncChromeDaemon):
+    # test chrome.create_context
     assert len(await tab1.get_all_cookies()) > 0
     async with chrome.create_context(proxyServer=None) as context:
-        async with context.new_tab(auto_close=0) as tab:
+        async with context.new_tab() as tab:
             assert len(await tab.get_all_cookies()) == 0
             await tab.set_cookie('a', '1', 'http://httpbin.org')
             assert len(await tab.get_all_cookies()) > 0
 
+    # test chrome_daemon.create_context
     assert len(await tab1.get_all_cookies()) > 0
     async with chromed.create_context(proxyServer=None) as context:
-        async with context.new_tab(auto_close=0) as tab:
+        async with context.new_tab() as tab:
             assert len(await tab.get_all_cookies()) == 0
             await tab.set_cookie('a', '1', 'http://httpbin.org')
             assert len(await tab.get_all_cookies()) > 0
+
+    # test chrome.incognito_tab
+    assert len(await tab1.get_all_cookies()) > 0
+    async with chrome.incognito_tab(proxyServer=None) as tab:
+        assert len(await tab.get_all_cookies()) == 0
+        await tab.set_cookie('a', '1', 'http://httpbin.org')
+        assert len(await tab.get_all_cookies()) > 0
+
+    # test chrome_daemon.incognito_tab
+    assert len(await tab1.get_all_cookies()) > 0
+    async with chromed.incognito_tab(proxyServer=None) as tab:
+        assert len(await tab.get_all_cookies()) == 0
+        await tab.set_cookie('a', '1', 'http://httpbin.org')
+        assert len(await tab.get_all_cookies()) > 0
 
 
 async def test_tab_set_url(tab: Tab):

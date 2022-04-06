@@ -2825,6 +2825,35 @@ class Chrome(GetValueMixin):
             originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
         )
 
+    def incognito_tab(
+        self,
+        url: str = 'about:blank',
+        width: int = None,
+        height: int = None,
+        enableBeginFrameControl: bool = None,
+        newWindow: bool = None,
+        background: bool = None,
+        flatten: bool = None,
+        disposeOnDetach: bool = True,
+        proxyServer: str = None,
+        proxyBypassList: str = None,
+        originsWithUniversalNetworkAccess: List[str] = None,
+    ) -> 'IncognitoTabContext':
+        return IncognitoTabContext(
+            chrome=self,
+            url=url,
+            width=width,
+            height=height,
+            enableBeginFrameControl=enableBeginFrameControl,
+            newWindow=newWindow,
+            background=background,
+            flatten=flatten,
+            disposeOnDetach=disposeOnDetach,
+            proxyServer=proxyServer,
+            proxyBypassList=proxyBypassList,
+            originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
+        )
+
 
 class JavaScriptSnippets(object):
 
@@ -3161,6 +3190,7 @@ class BrowserContext:
         newWindow: bool = None,
         background: bool = None,
         auto_close: bool = False,
+        flatten: bool = None,
     ) -> _SingleTabConnectionManager:
         browserContextId = browserContextId or self.browserContextId
         if not browserContextId:
@@ -3178,7 +3208,8 @@ class BrowserContext:
         return _SingleTabConnectionManager(chrome=self.chrome,
                                            index=None,
                                            auto_close=auto_close,
-                                           target_kwargs=kwargs)
+                                           target_kwargs=kwargs,
+                                           flatten=flatten)
 
     async def __aenter__(self):
         if self._need_init_chrome:
@@ -3202,6 +3233,52 @@ class BrowserContext:
             self.browserContextId = None
         if self._need_init_chrome:
             await self.chrome.__aexit__()
+
+
+class IncognitoTabContext:
+
+    def __init__(
+        self,
+        chrome: Chrome,
+        url: str = 'about:blank',
+        width: int = None,
+        height: int = None,
+        enableBeginFrameControl: bool = None,
+        newWindow: bool = None,
+        background: bool = None,
+        flatten: bool = None,
+        disposeOnDetach: bool = True,
+        proxyServer: str = None,
+        proxyBypassList: str = None,
+        originsWithUniversalNetworkAccess: List[str] = None,
+    ):
+        self.target_kwargs = {
+            'url': url,
+            'width': width,
+            'height': height,
+            'enableBeginFrameControl': enableBeginFrameControl,
+            'newWindow': newWindow,
+            'background': background,
+            'flatten': flatten,
+        }
+        self.browser_context = BrowserContext(
+            chrome=chrome,
+            disposeOnDetach=disposeOnDetach,
+            proxyServer=proxyServer,
+            proxyBypassList=proxyBypassList,
+            originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
+        )
+        self.connection = None
+
+    async def __aenter__(self) -> Tab:
+        await self.browser_context.__aenter__()
+        self.connection = self.browser_context.new_tab(**self.target_kwargs)
+        return await self.connection.__aenter__()
+
+    async def __aexit__(self, *_):
+        if self.connection:
+            await self.connection.__aexit__(*_)
+        await self.browser_context.__aexit__(*_)
 
 
 # alias
