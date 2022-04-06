@@ -2,6 +2,8 @@ import asyncio
 from pathlib import Path
 from typing import List
 
+from torequests.dummy import Requests
+
 from ichrome import AsyncChromeDaemon, ChromeEngine
 from ichrome.async_utils import AsyncTab, Chrome, Tab, Tag, logger
 
@@ -375,6 +377,17 @@ async def test_fetch_context(tab: AsyncTab):
             break
 
 
+async def test_port_forwarding(host, port):
+    from ichrome.utils import PortForwarder
+
+    dst_port = port + 1000
+    async with PortForwarder((host, port), (host, dst_port)):
+        r = await Requests().get(f'http://{host}:{dst_port}/json', timeout=2)
+        assert 'webSocketDebuggerUrl' in r.text
+    r = await Requests().get(f'http://{host}:{dst_port}/json', timeout=2)
+    assert 'webSocketDebuggerUrl' not in r.text
+
+
 async def test_examples():
 
     def on_startup(chromed):
@@ -391,6 +404,7 @@ async def test_examples():
                                  on_startup=on_startup,
                                  on_shutdown=on_shutdown,
                                  clear_after_shutdown=True) as chromed:
+        await test_port_forwarding(host, port)
         await test_init_tab(chromed)
         logger.info('test init tab from chromed OK.')
         # test on_startup
