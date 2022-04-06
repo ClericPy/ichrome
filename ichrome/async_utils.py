@@ -2532,6 +2532,9 @@ class Listener:
         '''Listener will register a event_dict, such as {'id': 1} or {'method': 'Page.loadEventFired'}, maybe the dict doesn't has key [method].'''
         f: Future = Future()
         key = self._arg_to_key(event_dict)
+        if key in self._registered_futures:
+            raise ChromeValueError(
+                f'Event key duplicated: {key}.')
         self._registered_futures[key] = f
         return f
 
@@ -3268,7 +3271,7 @@ class IncognitoTabContext:
             proxyBypassList=proxyBypassList,
             originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
         )
-        self.connection = None
+        self.connection: _SingleTabConnectionManager = None
 
     async def __aenter__(self) -> Tab:
         await self.browser_context.__aenter__()

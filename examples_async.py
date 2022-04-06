@@ -388,6 +388,15 @@ async def test_port_forwarding(host, port):
     assert 'webSocketDebuggerUrl' not in r.text
 
 
+async def test_duplicated_key_error(tab: Tab):
+    _task = asyncio.create_task(tab.wait_loading(timeout=3))
+    try:
+        await asyncio.create_task(tab.wait_loading(timeout=3))
+    except ValueError:
+        return await _task
+    raise AssertionError
+
+
 async def test_examples():
 
     def on_startup(chromed):
@@ -404,6 +413,7 @@ async def test_examples():
                                  on_startup=on_startup,
                                  on_shutdown=on_shutdown,
                                  clear_after_shutdown=True) as chromed:
+        # test utils port forwarding
         await test_port_forwarding(host, port)
         await test_init_tab(chromed)
         logger.info('test init tab from chromed OK.')
@@ -423,6 +433,8 @@ async def test_examples():
             await test_tab_ws(tab)
             # same as: async with tab.connect():
             async with tab():
+                # test duplicated event key issue
+                await test_duplicated_key_error(tab)
                 # test send raw message
                 await test_send_msg(tab)
                 logger.info('test_send_msg OK.')
