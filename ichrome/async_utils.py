@@ -286,7 +286,7 @@ class Tab(GetValueMixin):
     # default max_msg_size has been set to 20MB, for 4MB is too small.
     _DEFAULT_WS_KWARGS: Dict = {"max_msg_size": 20 * 1024**2}
     # default flatten arg
-    _DEFAULT_FLATTEN = False
+    _DEFAULT_FLATTEN = True
 
     def __init__(self,
                  tab_id: str = None,
