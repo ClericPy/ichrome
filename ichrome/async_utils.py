@@ -2494,6 +2494,7 @@ class OffsetDragWalker(OffsetMoveWalker):
 
 
 class Listener:
+    _SINGLETON_EVENT_KEY = True
 
     def __init__(self):
         self._registered_futures = WeakValueDictionary()
@@ -2533,8 +2534,10 @@ class Listener:
         f: Future = Future()
         key = self._arg_to_key(event_dict)
         if key in self._registered_futures:
-            raise ChromeValueError(
-                f'Event key duplicated: {key}.')
+            msg = f'Event key duplicated: {key}. Try tab.iter_events.'
+            logger.warning(msg)
+            if self._SINGLETON_EVENT_KEY:
+                raise ChromeValueError(msg)
         self._registered_futures[key] = f
         return f
 
