@@ -190,32 +190,31 @@ if __name__ == "__main__":
 
 ### Incognito Mode
 
-1.  Set a new proxy which is different from the global one.
-2.  Share cookies in context.
-3.  The startup speed is faster than a new `Chrome Daemon`.
+1.  Set a new proxy.
+2.  The startup speed is much faster than a new `Chrome Daemon`.
+    1.  But slower than a new `Tab`
+        1.  https://github.com/ClericPy/ichrome/issues/87
 
 
 ```python
 import asyncio
 
-from ichrome import AsyncChrome, AsyncChromeDaemon
+from ichrome import AsyncChromeDaemon
 
 
 async def main():
-    async with AsyncChromeDaemon():
-        async with AsyncChrome() as chrome:
-            # Set a new proxy for this context
-            proxy = None
-            async with chrome.create_context(proxyServer=proxy) as context:
-                async with context.new_tab(auto_close=True) as tab:
-                    # This tab will be created in the given BrowserContext
-                    await tab.goto('http://httpbin.org/get', timeout=10)
-                    # print and watch your IP changed
-                    print(await tab.html)
-                    await asyncio.sleep(3)
+    async with AsyncChromeDaemon() as cd:
+        proxy = None
+        async with cd.incognito_tab(proxyServer=proxy) as tab:
+            # This tab will be created in the given BrowserContext
+            await tab.goto('http://httpbin.org/ip', timeout=10)
+            # print and watch your IP changed
+            print(await tab.html)
+            await asyncio.sleep(3)
 
 
 asyncio.run(main())
+
 ```
 
 Example Code: [examples_async.py](https://github.com/ClericPy/ichrome/blob/master/examples_async.py) & [Classic Use Cases](https://github.com/ClericPy/ichrome/blob/master/use_cases.py)
