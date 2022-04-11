@@ -2534,7 +2534,7 @@ class Listener:
         f: Future = Future()
         key = self._arg_to_key(event_dict)
         if key in self._registered_futures:
-            msg = f'Event key duplicated: {key}. Try tab.iter_events.'
+            msg = f'Event key duplicated: {key}'
             logger.warning(msg)
             if self._SINGLETON_EVENT_KEY:
                 raise ChromeValueError(msg)
@@ -2923,6 +2923,7 @@ class WaitContext(object):
 
 
 class EventBuffer(asyncio.Queue):
+    _SINGLETON_EVENT_KEY = True
 
     def __init__(
         self,
@@ -2948,6 +2949,11 @@ class EventBuffer(asyncio.Queue):
     async def __aenter__(self):
         self.start_time = time.time()
         for event_name in self.events:
+            if event_name in self.tab._buffers:
+                msg = f'Event key duplicated: {event_name}'
+                logger.warning(msg)
+                if self._SINGLETON_EVENT_KEY:
+                    raise ChromeValueError(msg)
             await self.tab.auto_enable(event_name)
             self.tab._buffers[event_name] = self
         return self
