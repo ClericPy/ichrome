@@ -5,15 +5,15 @@ from typing import List
 from torequests.dummy import Requests
 
 from ichrome import AsyncChromeDaemon, ChromeEngine
-from ichrome.async_utils import AsyncTab, Chrome, Tab, Tag, logger
+from ichrome.async_utils import AsyncTab, AsyncChrome, Tag, logger
 
 # logger.setLevel('DEBUG')
-# Tab._log_all_recv = True
+# AsyncTab._log_all_recv = True
 # headless = False
 headless = True
 
 
-async def test_chrome(chrome: Chrome):
+async def test_chrome(chrome: AsyncChrome):
     assert str(chrome) == '<Chrome(connected): http://127.0.0.1:9222>'
     assert chrome.server == 'http://127.0.0.1:9222'
     version = await chrome.version
@@ -24,15 +24,15 @@ async def test_chrome(chrome: Chrome):
     assert ok is True
     resp = await chrome.get_server('json')
     assert isinstance(resp.json(), list)
-    tabs1: List[Tab] = await chrome.get_tabs()
-    tabs2: List[Tab] = await chrome.tabs
+    tabs1: List[AsyncTab] = await chrome.get_tabs()
+    tabs2: List[AsyncTab] = await chrome.tabs
     assert tabs1 == tabs2 and tabs1 and tabs2, (tabs1, tabs2)
-    tab0: Tab = await chrome.get_tab(0)
+    tab0: AsyncTab = await chrome.get_tab(0)
     tab0_by_getitem = await chrome[0]
     assert tab0 == tab0_by_getitem
     assert tabs1 == [tab0], (tabs1, tab0)
-    tab1: Tab = await chrome.new_tab()
-    assert isinstance(tab1, Tab)
+    tab1: AsyncTab = await chrome.new_tab()
+    assert isinstance(tab1, AsyncTab)
     await asyncio.sleep(0.2)
     await chrome.activate_tab(tab0)
     # test batch connect multiple tabs
@@ -51,7 +51,7 @@ async def test_chrome(chrome: Chrome):
     await chrome.close_tab(tab1)
 
 
-async def test_tab_ws(tab: Tab):
+async def test_tab_ws(tab: AsyncTab):
     # test msg_id auto increase
     assert tab.msg_id == tab.msg_id - 1
     assert tab.status == 'disconnected', tab.status
@@ -64,7 +64,7 @@ async def test_tab_ws(tab: Tab):
     assert tab.ws is None or (tab.flatten and not tab._session_id)
 
 
-async def test_send_msg(tab: Tab):
+async def test_send_msg(tab: AsyncTab):
     # test send msg
     assert tab.get_data_value(await tab.send('Network.enable'),
                               value_path='value',
@@ -73,7 +73,7 @@ async def test_send_msg(tab: Tab):
     await tab.disable('Network')
 
 
-async def test_tab_cookies(tab: Tab):
+async def test_tab_cookies(tab: AsyncTab):
     await tab.clear_browser_cookies()
     assert len(await tab.get_cookies(urls='http://httpbin.org/get')) == 0
     assert await tab.set_cookie('test', 'test_value', url='https://github.com/')
@@ -93,7 +93,7 @@ async def test_tab_cookies(tab: Tab):
     assert len(await tab.get_all_cookies()) > 0
 
 
-async def test_browser_context(tab1: Tab, chrome: Chrome,
+async def test_browser_context(tab1: AsyncTab, chrome: AsyncChrome,
                                chromed: AsyncChromeDaemon):
     # test chrome.create_context
     assert len(await tab1.get_all_cookies()) > 0
@@ -126,10 +126,10 @@ async def test_browser_context(tab1: Tab, chrome: Chrome,
         assert len(await tab.get_all_cookies()) > 0
 
 
-async def test_tab_set_url(tab: Tab):
+async def test_tab_set_url(tab: AsyncTab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
-    assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=2))
-    assert await tab.set_url('http://httpbin.org/delay/0', timeout=3)
+    assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=1))
+    assert await tab.set_url('http://httpbin.org/delay/0', timeout=5)
     await tab.goto('https://httpbin.org/forms/post')
     assert await tab.wait_tag(
         '[name="custemail"]',
@@ -138,7 +138,7 @@ async def test_tab_set_url(tab: Tab):
     assert mhtml_len in range(2273, 2300), f'test snapshot failed {mhtml_len}'
 
 
-async def test_tab_js(tab: Tab):
+async def test_tab_js(tab: AsyncTab):
     # test js update title
     await tab.js("document.title = 'abc'")
     # test js_code
@@ -202,7 +202,7 @@ async def test_tab_js(tab: Tab):
     assert (await tab.wait_console_value()) == 123
 
 
-async def test_wait_response(tab: Tab):
+async def test_wait_response(tab: AsyncTab):
     # wait_response with filter_function
     # raw response: {'method': 'Network.responseReceived', 'params': {'requestId': '1000003000.69', 'loaderId': 'D7814CD633EDF3E699523AF0C4E9DB2C', 'timestamp': 207483.974238, 'type': 'Script', 'response': {'url': 'https://www.python.org/static/js/libs/masonry.pkgd.min.js', 'status': 200, 'statusText': '', 'headers': {'date': 'Sat, 05 Oct 2019 08:18:34 GMT', 'via': '1.1 vegur, 1.1 varnish, 1.1 varnish', 'last-modified': 'Tue, 24 Sep 2019 18:31:03 GMT', 'server': 'nginx', 'age': '290358', 'etag': '"5d8a60e7-6643"', 'x-served-by': 'cache-iad2137-IAD, cache-tyo19928-TYO', 'x-cache': 'HIT, HIT', 'content-type': 'application/x-javascript', 'status': '200', 'cache-control': 'max-age=604800, public', 'accept-ranges': 'bytes', 'x-timer': 'S1570263515.866582,VS0,VE0', 'content-length': '26179', 'x-cache-hits': '1, 170'}, 'mimeType': 'application/x-javascript', 'connectionReused': False, 'connectionId': 0, 'remoteIPAddress': '151.101.108.223', 'remotePort': 443, 'fromDiskCache': True, 'fromServiceWorker': False, 'fromPrefetchCache': False, 'encodedDataLength': 0, 'timing': {'requestTime': 207482.696803, 'proxyStart': -1, 'proxyEnd': -1, 'dnsStart': -1, 'dnsEnd': -1, 'connectStart': -1, 'connectEnd': -1, 'sslStart': -1, 'sslEnd': -1, 'workerStart': -1, 'workerReady': -1, 'sendStart': 0.079, 'sendEnd': 0.079, 'pushStart': 0, 'pushEnd': 0, 'receiveHeadersEnd': 0.836}, 'protocol': 'h2', 'securityState': 'unknown'}, 'frameId': 'A2971702DE69F008914F18EAE6514DD5'}}
 
@@ -239,7 +239,7 @@ async def test_wait_response(tab: Tab):
         assert 'User-Agent' in result.get('data', ''), result
 
 
-async def test_tab_js_onload(tab: Tab):
+async def test_tab_js_onload(tab: AsyncTab):
     # add js onload
     js_id = await tab.add_js_onload(source='window.title=123456789')
     assert js_id
@@ -256,14 +256,14 @@ async def test_tab_js_onload(tab: Tab):
     assert url == 'http://httpbin.org/get' == current_url, url
 
 
-async def test_tab_current_html(tab: Tab):
+async def test_tab_current_html(tab: AsyncTab):
     html = await tab.get_html()
     assert 'Customer name:' in html
     # alias current_html
     assert html == (await tab.current_html) == (await tab.html)
 
 
-async def test_tab_screenshot(tab: Tab):
+async def test_tab_screenshot(tab: AsyncTab):
     # screenshot
     screen = await tab.screenshot()
     part = await tab.screenshot_element('fieldset')
@@ -272,7 +272,7 @@ async def test_tab_screenshot(tab: Tab):
     assert len(screen) > len(part)
 
 
-async def test_tab_set_ua_headers(tab: Tab):
+async def test_tab_set_ua_headers(tab: AsyncTab):
     # test set_ua
     await tab.set_ua('Test UA')
     # test set_headers
@@ -282,7 +282,7 @@ async def test_tab_set_ua_headers(tab: Tab):
     assert '"A": "1"' in html and '"B": "2"' in html and '"User-Agent": "Test UA"' in html
 
 
-async def test_tab_keyboard_mouse(tab: Tab):
+async def test_tab_keyboard_mouse(tab: AsyncTab):
     if 'httpbin.org/forms/post' not in (await tab.current_url):
         await tab.set_url('http://httpbin.org/forms/post', timeout=5)
     rect = await tab.get_bounding_client_rect('[type="tel"]')
@@ -307,7 +307,7 @@ async def test_tab_keyboard_mouse(tab: Tab):
     await walker.move(50 * 1.414, 50 * 1.414, 0.2)
 
 
-async def test_iter_events(tab: Tab):
+async def test_iter_events(tab: AsyncTab):
     async with tab.iter_events(['Page.loadEventFired'],
                                timeout=8) as events_iter:
         await tab.goto('http://httpbin.org/get', timeout=0)
@@ -388,7 +388,7 @@ async def test_port_forwarding(host, port):
     assert 'webSocketDebuggerUrl' not in r.text
 
 
-async def test_duplicated_key_error(tab: Tab):
+async def test_duplicated_key_error(tab: AsyncTab):
     _task = asyncio.create_task(tab.wait_loading(timeout=3))
     try:
         await asyncio.create_task(tab.wait_loading(timeout=3))
@@ -421,7 +421,7 @@ async def test_examples():
         assert chromed.started
         logger.info('test on_startup OK.')
         # ===================== Chrome Test Cases =====================
-        async with Chrome(host=host, port=port) as chrome:
+        async with AsyncChrome(host=host, port=port) as chrome:
             memory = chrome.get_memory()
             assert memory > 0
             logger.info('get_memory OK. (%s MB)' % memory)
@@ -429,12 +429,13 @@ async def test_examples():
             logger.info('test_chrome OK.')
             # ===================== Tab Test Cases =====================
             # Duplicate, use async with chrome.connect_tab(None) instead
-            tab: Tab = await chrome.new_tab()
+            tab: AsyncTab = await chrome.new_tab()
             await test_tab_ws(tab)
             # same as: async with tab.connect():
             async with tab():
                 # test duplicated event key issue
                 await test_duplicated_key_error(tab)
+                logger.info('test_duplicated_key_error OK.')
                 # test send raw message
                 await test_send_msg(tab)
                 logger.info('test_send_msg OK.')
@@ -491,7 +492,7 @@ async def test_examples():
             # await chrome.kill()
             sep = f'\n{"=" * 80}\n'
             logger.critical(
-                f'{sep}Congratulations, all test cases passed(flatten={Tab._DEFAULT_FLATTEN}).{sep}'
+                f'{sep}Congratulations, all test cases passed(flatten={AsyncTab._DEFAULT_FLATTEN}).{sep}'
             )
     assert AsyncChromeDaemon.bye
     # test clear_after_shutdown
@@ -567,11 +568,12 @@ def test_all():
     AsyncChromeDaemon.DEFAULT_USER_DIR_PATH = Path('./ichrome_user_data')
     for flatten in [True, False, True]:
         logger.critical('Start testing flatten=%s.' % flatten)
-        Tab._DEFAULT_FLATTEN = flatten
+        AsyncTab._DEFAULT_FLATTEN = flatten
         test_chrome_engine()
         time.sleep(1)
         asyncio.get_event_loop().run_until_complete(test_examples())
         time.sleep(1)
+    AsyncChromeDaemon.clear_dir(AsyncChromeDaemon.DEFAULT_USER_DIR_PATH)
 
 
 if __name__ == "__main__":

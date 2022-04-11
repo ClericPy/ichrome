@@ -239,9 +239,10 @@ class ChromeWorker:
         except (asyncio.CancelledError, asyncio.TimeoutError):
             return
         except ChromeException as error:
-            logger.error(f'{self} restarting for error {error!r}')
-            if not self._need_restart.is_set():
-                self._need_restart.set()
+            if not self._shutdown:
+                logger.error(f'{self} restarting for error {error!r}')
+                if not self._need_restart.is_set():
+                    self._need_restart.set()
         finally:
             logger.info(f'[finished]({self.todos}) {future}')
             del future
@@ -255,9 +256,10 @@ class ChromeWorker:
         except asyncio.CancelledError:
             pass
         except ChromeException as error:
-            logger.error(f'{self} restarting for error {error!r}')
-            if not self._need_restart.is_set():
-                self._need_restart.set()
+            if not self._shutdown:
+                logger.error(f'{self} restarting for error {error!r}')
+                if not self._need_restart.is_set():
+                    self._need_restart.set()
         except Exception as error:
             # other errors may give a retry
             logger.error(f'{self} catch an error {error!r} for {future}')
