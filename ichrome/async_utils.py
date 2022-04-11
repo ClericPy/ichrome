@@ -64,19 +64,19 @@ class _TabConnectionManager:
 class _SingleTabConnectionManager:
 
     def __init__(self,
-                 chrome: 'Chrome',
+                 chrome: 'AsyncChrome',
                  index: Union[None, int, str] = 0,
                  auto_close: bool = False,
                  target_kwargs: dict = None,
                  flatten: bool = None):
         self.chrome = chrome
         self.index = index
-        self.tab: 'Tab' = None
-        self.target_kwargs = target_kwargs
+        self.tab: 'AsyncTab' = None
+        self.target_kwargs: dict = target_kwargs
         self._auto_close = auto_close
-        self.flatten = Tab._DEFAULT_FLATTEN if flatten is None else flatten
+        self.flatten = AsyncTab._DEFAULT_FLATTEN if flatten is None else flatten
 
-    async def __aenter__(self) -> 'Tab':
+    async def __aenter__(self) -> 'AsyncTab':
         if self.target_kwargs:
             data = await self.chrome.browser.send('Target.createTarget',
                                                   kwargs=self.target_kwargs)
@@ -113,13 +113,13 @@ class _SingleTabConnectionManagerDaemon(_SingleTabConnectionManager):
                  auto_close: bool = False,
                  timeout: int = None,
                  flatten: bool = False):
-        self.chrome = Chrome(host=host, port=port, timeout=timeout)
+        self.chrome = AsyncChrome(host=host, port=port, timeout=timeout)
         super().__init__(chrome=self.chrome,
                          index=index,
                          auto_close=auto_close,
                          flatten=flatten)
 
-    async def __aenter__(self) -> 'Tab':
+    async def __aenter__(self) -> 'AsyncTab':
         await self.chrome.__aenter__()
         return await super().__aenter__()
 
@@ -146,10 +146,10 @@ class _WSConnection:
     def browser(self):
         return self.tab.chrome.browser
 
-    async def __aenter__(self) -> 'Tab':
+    async def __aenter__(self) -> 'AsyncTab':
         return await self.connect()
 
-    async def connect(self) -> 'Tab':
+    async def connect(self) -> 'AsyncTab':
         """Connect to websocket, and set tab.ws as aiohttp.client_ws.ClientWebSocketResponse."""
         if self.tab.flatten:
             data = await self.browser.send('Target.attachToTarget',
@@ -250,7 +250,7 @@ class GetValueMixin:
         return not error
 
 
-class Tab(GetValueMixin):
+class AsyncTab(GetValueMixin):
     """Tab operations in async environment.
 
         The timeout variable -- wait for the events::
@@ -297,7 +297,7 @@ class Tab(GetValueMixin):
                  webSocketDebuggerUrl: str = None,
                  devtoolsFrontendUrl: str = None,
                  json: str = None,
-                 chrome: 'Chrome' = None,
+                 chrome: 'AsyncChrome' = None,
                  timeout=NotSet,
                  ws_kwargs: dict = None,
                  default_recv_callback: Callable = None,
@@ -481,7 +481,7 @@ class Tab(GetValueMixin):
         return self.connect()
 
     @property
-    def browser(self) -> 'Tab':
+    def browser(self) -> 'AsyncTab':
         return self.chrome.browser
 
     @property
@@ -589,12 +589,9 @@ class Tab(GetValueMixin):
             buffer: asyncio.Queue = self._buffers.get(data_dict.get('method'))
             if buffer:
                 asyncio.ensure_future(buffer.put(data_dict))
-            f = self._listener.find_future(data_dict)
-            if f:
-                if f._state == _PENDING:
-                    f.set_result(data_dict)
-                else:
-                    del f
+            f = self._listener.pop_future(data_dict)
+            if f and f._state == _PENDING:
+                f.set_result(data_dict)
         logger.debug(f'[break] {self!r} _recv_daemon loop break.')
         if self._recv_daemon_break_callback:
             return await _ensure_awaitable_callback_result(
@@ -666,23 +663,31 @@ class Tab(GetValueMixin):
             return None
         if self._session_id:
             event_dict['sessionId'] = self._session_id
-        f = self._listener.register(event_dict)
-        return self._recv(f=f,
-                          event_dict=event_dict,
+        return self._recv(event_dict=event_dict,
                           timeout=timeout,
                           callback_function=callback_function)
 
-    async def _recv(self, f, event_dict, timeout,
+    async def _recv(self, event_dict, timeout,
                     callback_function) -> Union[dict, None]:
-        await self.auto_enable(event_dict, timeout=timeout)
-        result = None
+        error = None
         try:
+            result = None
+            await self.auto_enable(event_dict, timeout=timeout)
+            f = self._listener.register(event_dict)
             result = await asyncio.wait_for(f, timeout=timeout)
+            self._listener.unregister(event_dict)
         except asyncio.TimeoutError:
-            logger.debug(f'[timeout] {event_dict} [recv] timeout.')
+            logger.debug(f'[timeout] {event_dict} [recv] timeout({timeout}).')
+            self._listener.unregister(event_dict)
+        except Exception as e:
+            logger.debug(f'[error] {event_dict} [recv] {e!r}.')
+            error = e
         finally:
-            return await _ensure_awaitable_callback_result(
-                callback_function, result)
+            if error:
+                raise error
+            else:
+                return await _ensure_awaitable_callback_result(
+                    callback_function, result)
 
     @property
     def now(self) -> int:
@@ -942,16 +947,19 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             filter_function: Optional[Callable] = None
     ) -> Union[dict, None, Any]:
         """Similar to self.recv, but has the filter_function to distinct duplicated method of event.
-        WARNING: methods with prefix `wait_` the `timeout` default to None.
+        WARNING: the `timeout` default to None when methods with prefix `wait_`
         """
         timeout = self.ensure_timeout(timeout)
         start_time = time.time()
         result = None
+        event = {"method": event_name}
         while 1:
-            if timeout is not None and time.time() - start_time > timeout:
-                break
+            if timeout is not None:
+                # update the real timeout
+                timeout = timeout - (time.time() - start_time)
+                if timeout < 0:
+                    break
             # avoid same method but different event occured, use filter_function
-            event = {"method": event_name}
             _result = await self.recv(event, timeout=timeout)
             if _result is None:
                 continue
@@ -1185,7 +1193,7 @@ Fetch.RequestPattern:
         if isinstance(request_id, str):
             return request_id
         elif isinstance(request_id, dict):
-            return Tab.get_data_value(request_id, 'params.requestId')
+            return AsyncTab.get_data_value(request_id, 'params.requestId')
         else:
             raise ChromeTypeError(
                 f"request type should be None or dict or str, but `{type(request_id)}` was given."
@@ -1399,7 +1407,11 @@ Fetch.RequestPattern:
         else:
             data = await self.reload(timeout=timeout)
         # loadEventFired return True, else return False
-        return bool(data and loaded_task and (await loaded_task))
+        if loaded_task:
+            loaded_ok = await loaded_task
+        else:
+            loaded_ok = False
+        return bool(data and loaded_ok)
 
     async def js(self,
                  javascript: str,
@@ -2436,7 +2448,7 @@ True
 class OffsetMoveWalker:
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
 
-    def __init__(self, start_x, start_y, tab: Tab, timeout=NotSet):
+    def __init__(self, start_x, start_y, tab: AsyncTab, timeout=NotSet):
         self.tab = tab
         self.timeout = timeout
         self.start_x = start_x
@@ -2467,7 +2479,12 @@ class OffsetMoveWalker:
 class OffsetDragWalker(OffsetMoveWalker):
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout', 'button')
 
-    def __init__(self, start_x, start_y, tab: Tab, button='left', timeout=None):
+    def __init__(self,
+                 start_x,
+                 start_y,
+                 tab: AsyncTab,
+                 button='left',
+                 timeout=None):
         super().__init__(start_x, start_y, tab=tab, timeout=timeout)
         self.button = button
 
@@ -2531,22 +2548,34 @@ class Listener:
 
     def register(self, event_dict: dict):
         '''Listener will register a event_dict, such as {'id': 1} or {'method': 'Page.loadEventFired'}, maybe the dict doesn't has key [method].'''
-        f: Future = Future()
         key = self._arg_to_key(event_dict)
         if key in self._registered_futures:
             msg = f'Event key duplicated: {key}'
             logger.warning(msg)
             if self._SINGLETON_EVENT_KEY:
                 raise ChromeValueError(msg)
+        f: Future = Future()
         self._registered_futures[key] = f
         return f
 
-    def find_future(self, event_dict):
+    def find_future(self, event_dict, default=None):
         key = self._arg_to_key(event_dict)
-        return self._registered_futures.get(key)
+        return self._registered_futures.get(key, default)
+
+    def pop_future(self, event_dict, default=None):
+        key = self._arg_to_key(event_dict)
+        return self._registered_futures.pop(key, default)
+
+    def unregister(self, event_dict: dict):
+        f = self.pop_future(event_dict)
+        if f:
+            del f
+            return True
+        else:
+            return False
 
 
-class Chrome(GetValueMixin):
+class AsyncChrome(GetValueMixin):
     _DEFAULT_CONNECT_TIMEOUT = 3
     _DEFAULT_RETRY = 1
 
@@ -2562,10 +2591,10 @@ class Chrome(GetValueMixin):
         self.retry = self._DEFAULT_RETRY if retry is None else retry
         self.status = 'init'
         self._req = None
-        self._browser: Tab = None
+        self._browser: AsyncTab = None
 
     @property
-    def browser(self) -> Tab:
+    def browser(self) -> AsyncTab:
         if self._browser:
             return self._browser
         raise ChromeRuntimeError('`async with` context needed.')
@@ -2575,7 +2604,7 @@ class Chrome(GetValueMixin):
             raise ChromeRuntimeError('`async with` context is already in use.')
         version = await self.version
         # print(version)
-        self._browser = Tab(
+        self._browser = AsyncTab(
             tab_id='browser',
             webSocketDebuggerUrl=version['webSocketDebuggerUrl'],
             chrome=self,
@@ -2584,8 +2613,9 @@ class Chrome(GetValueMixin):
         self.status = 'connected'
         return self._browser
 
-    def __getitem__(self,
-                    index: Union[int, str] = 0) -> Awaitable[Union[Tab, None]]:
+    def __getitem__(
+            self,
+            index: Union[int, str] = 0) -> Awaitable[Union[AsyncTab, None]]:
         return self.get_tab(index=index)
 
     async def __aenter__(self):
@@ -2683,14 +2713,14 @@ class Chrome(GetValueMixin):
             self.status = resp.text
         return resp
 
-    async def get_tabs(self, filt_page_type: bool = True) -> List[Tab]:
+    async def get_tabs(self, filt_page_type: bool = True) -> List[AsyncTab]:
         """`await self.get_tabs()`.
         cdp url: /json"""
         try:
             r = await self.get_server('/json')
             if r:
                 return [
-                    Tab(chrome=self, json=rjson, **rjson)
+                    AsyncTab(chrome=self, json=rjson, **rjson)
                     for rjson in r.json()
                     if (rjson["type"] == "page" or filt_page_type is not True)
                 ]
@@ -2699,7 +2729,8 @@ class Chrome(GetValueMixin):
             raise error
         return []
 
-    async def get_tab(self, index: Union[int, str] = 0) -> Union[Tab, None]:
+    async def get_tab(self,
+                      index: Union[int, str] = 0) -> Union[AsyncTab, None]:
         """`await self.get_tab(1)` <=> await `(await self.get_tabs())[1]`
         If not exist, return None
         cdp url: /json"""
@@ -2716,7 +2747,7 @@ class Chrome(GetValueMixin):
         return None
 
     @property
-    def tabs(self) -> Awaitable[List[Tab]]:
+    def tabs(self) -> Awaitable[List[AsyncTab]]:
         """`await self.tabs`. tabs[0] is the current activated tab"""
         # [{'description': '', 'devtoolsFrontendUrl': '/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4', 'id': '30C16F9165C525A4002E827EDABD48A4', 'title': 'about:blank', 'type': 'page', 'url': 'about:blank', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4'}]
         return self.get_tabs()
@@ -2728,22 +2759,22 @@ class Chrome(GetValueMixin):
             await self.req.close()
         await async_run(clear_chrome_process, self.port, timeout, max_deaths)
 
-    async def new_tab(self, url: str = "") -> Union[Tab, None]:
+    async def new_tab(self, url: str = "") -> Union[AsyncTab, None]:
         api = f'/json/new?{quote_plus(url)}'
         r = await self.get_server(api)
         if r:
             rjson = r.json()
-            tab = Tab(chrome=self, **rjson)
+            tab = AsyncTab(chrome=self, **rjson)
             tab._created_time = tab.now
             logger.debug(f"[new_tab] {tab} {rjson}")
             return tab
         else:
             return None
 
-    async def do_tab(self, tab_id: Union[Tab, str],
+    async def do_tab(self, tab_id: Union[AsyncTab, str],
                      action: str) -> Union[str, bool]:
         ok = False
-        if isinstance(tab_id, Tab):
+        if isinstance(tab_id, AsyncTab):
             tab_id = tab_id.tab_id
         r = await self.get_server(f"/json/{action}/{tab_id}")
         if r:
@@ -2756,14 +2787,15 @@ class Chrome(GetValueMixin):
         logger.debug(f"[{action}_tab] <Tab: {tab_id}>: {ok}")
         return ok
 
-    async def activate_tab(self, tab_id: Union[Tab, str]) -> Union[str, bool]:
+    async def activate_tab(self, tab_id: Union[AsyncTab,
+                                               str]) -> Union[str, bool]:
         return await self.do_tab(tab_id, action='activate')
 
-    async def close_tab(self, tab_id: Union[Tab, str]) -> Union[str, bool]:
+    async def close_tab(self, tab_id: Union[AsyncTab, str]) -> Union[str, bool]:
         return await self.do_tab(tab_id, action='close')
 
     async def close_tabs(self,
-                         tab_ids: Union[None, List[Tab], List[str]] = None,
+                         tab_ids: Union[None, List[AsyncTab], List[str]] = None,
                          *args) -> List[Union[str, bool]]:
         if tab_ids is None:
             tab_ids = await self.tabs
@@ -2864,7 +2896,7 @@ class Chrome(GetValueMixin):
 class JavaScriptSnippets(object):
 
     @staticmethod
-    async def add_tip(tab: Tab,
+    async def add_tip(tab: AsyncTab,
                       text,
                       style=None,
                       max_lines: int = 10,
@@ -2893,7 +2925,7 @@ setTimeout(() => {
         return await tab.js(code, timeout=timeout)
 
     @staticmethod
-    async def clear_tip(tab: Tab, timeout=NotSet):
+    async def clear_tip(tab: AsyncTab, timeout=NotSet):
         code = '''
 window.ichrome_show_tip_index = 0
 window.ichrome_show_tip_array = []
@@ -2928,7 +2960,7 @@ class EventBuffer(asyncio.Queue):
     def __init__(
         self,
         events: List[str],
-        tab: Tab,
+        tab: AsyncTab,
         timeout: Union[float, int] = None,
         maxsize: int = 0,
     ):
@@ -2992,7 +3024,7 @@ class FetchBuffer(EventBuffer):
     def __init__(
         self,
         events: List[str],
-        tab: Tab,
+        tab: AsyncTab,
         patterns: List[dict] = None,
         handleAuthRequests=False,
         timeout: Union[float, int] = None,
@@ -3173,7 +3205,7 @@ class BrowserContext:
 
     def __init__(
         self,
-        chrome: Chrome,
+        chrome: AsyncChrome,
         disposeOnDetach: bool = True,
         proxyServer: str = None,
         proxyBypassList: str = None,
@@ -3207,7 +3239,7 @@ class BrowserContext:
         browserContextId = browserContextId or self.browserContextId
         if not browserContextId:
             raise ChromeRuntimeError('`async with` context needed.')
-        kwargs = dict(
+        _kwargs = dict(
             url=url,
             width=width,
             height=height,
@@ -3216,7 +3248,7 @@ class BrowserContext:
             newWindow=newWindow,
             background=background,
         )
-        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        kwargs: dict = {k: v for k, v in _kwargs.items() if v is not None}
         return _SingleTabConnectionManager(chrome=self.chrome,
                                            index=None,
                                            auto_close=auto_close,
@@ -3251,7 +3283,7 @@ class IncognitoTabContext:
 
     def __init__(
         self,
-        chrome: Chrome,
+        chrome: AsyncChrome,
         url: str = 'about:blank',
         width: int = None,
         height: int = None,
@@ -3282,7 +3314,7 @@ class IncognitoTabContext:
         )
         self.connection: _SingleTabConnectionManager = None
 
-    async def __aenter__(self) -> Tab:
+    async def __aenter__(self) -> AsyncTab:
         await self.browser_context.__aenter__()
         self.connection = self.browser_context.new_tab(**self.target_kwargs)
         return await self.connection.__aenter__()
@@ -3293,6 +3325,6 @@ class IncognitoTabContext:
         await self.browser_context.__aexit__(*_)
 
 
-# alias
-AsyncTab = Tab
-AsyncChrome = Chrome
+# alias names
+Tab = AsyncTab
+Chrome = AsyncChrome
