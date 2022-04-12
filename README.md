@@ -9,18 +9,18 @@ If you encounter any problems, please let me know through [issues](https://githu
 
 # Why?
 
-- Pyppeteer is awesome, but I don't need so much
-  - spelling of pyppeteer is confused
+- In desperate need of a stable toolkit to communicate with Chrome browser (or other Blink-based browsers such as Chromium)
+  - `ichrome` includes fast http & websocket connections (based on aiohttp) within an **asyncio** environment
+- Pyppeteer is awesome
+  - But I don't need so much
+  - Spelling of pyppeteer is confused
   - Event-driven architecture(EDA) is not always smart.
 - Selenium is slow
-  - webdrivers often come with memory leak.
-- In desperate need of a stable toolkit to communicate with Chrome browser (or other Blink-based browsers like Chromium)
-  - fast http & websocket connections (based on aiohttp) for **asyncio** environment
-  - **ichrome.debugger** is a sync tool and depends on the `ichrome.async_utils`
-    - a choice for debugging interactively.
-- Playwright Python comes too late
-  - https://github.com/microsoft/playwright-python
-  - This library may be a good choice for both `sync` and `async` usage, but its source code is NodeJS.
+  - Webdriver often comes with memory leak
+    - PhantomJS development is suspended
+  - No native `asyncio` support
+- Playwright(Python) comes too late
+  - This may be a good choice for both `sync` and `async` usage, but its source code is NodeJS.
 
 # Features
 
@@ -28,18 +28,20 @@ If you encounter any problems, please let me know through [issues](https://githu
 
 - A process daemon of Chrome instances
   - **auto-restart**
-  - command-line usage support
+  - command-line usage
   - `async` environment compatible
 - Connect to an **existing** Chrome
 - Operations on Tabs under stable `websocket`
-  - Package very commonly used functions
+  - Commonly used functions
+  - `Incognito Mode`
 - `ChromeEngine` as the progress pool
   - support HTTP `api` router with [FastAPI](https://github.com/tiangolo/fastapi)
 - `Flatten` mode with `sessionId`
+  - Create only **1** WebSocket connection
   - New in version 2.9.0
     - [EXPERIMENTAL](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-attachToTarget)
     - Share the same `Websocket` connection and use `sessionId` to distinguish requests
-  - How to enable flatten mode
+  - After v3.0.1
     - `AsyncTab._DEFAULT_FLATTEN = True`
 
 # Install
@@ -194,7 +196,9 @@ if __name__ == "__main__":
 2.  The startup speed is much faster than a new `Chrome Daemon`.
     1.  But slower than a new `Tab`
         1.  https://github.com/ClericPy/ichrome/issues/87
+        2.  40% performance lost
 
+Proxy Authentication: https://github.com/ClericPy/ichrome/issues/86
 
 ```python
 import asyncio
@@ -210,7 +214,6 @@ async def main():
             await tab.goto('http://httpbin.org/ip', timeout=10)
             # print and watch your IP changed
             print(await tab.html)
-            await asyncio.sleep(3)
 
 
 asyncio.run(main())

@@ -1,5 +1,4 @@
-from .async_utils import AsyncChrome
-from .async_utils import AsyncTab
+from .async_utils import AsyncChrome, AsyncTab
 from .base import Tag
 from .daemon import AsyncChromeDaemon, ChromeDaemon, ChromeWorkers
 from .debugger import get_a_tab, repl
