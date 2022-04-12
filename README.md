@@ -12,15 +12,15 @@ If you encounter any problems, please let me know through [issues](https://githu
 - In desperate need of a stable toolkit to communicate with Chrome browser (or other Blink-based browsers such as Chromium)
   - `ichrome` includes fast http & websocket connections (based on aiohttp) within an **asyncio** environment
 - Pyppeteer is awesome
-  - But I don't need so much
-  - Spelling of pyppeteer is confused
+  - But I don't need so much, and the spelling of pyppeteer is confused
   - Event-driven architecture(EDA) is not always smart.
 - Selenium is slow
   - Webdriver often comes with memory leak
     - PhantomJS development is suspended
-  - No native `asyncio` support
-- Playwright(Python) comes too late
-  - This may be a good choice for both `sync` and `async` usage, but its source code is NodeJS.
+  - No native coroutine(`asyncio`) support
+- Playwright comes too late
+  - This may be a good choice for both `sync` and `async` usage
+  - But its core code is based on Node.js, which is hard for monkey patching
 
 # Features
 
@@ -43,6 +43,7 @@ If you encounter any problems, please let me know through [issues](https://githu
     - Share the same `Websocket` connection and use `sessionId` to distinguish requests
   - After v3.0.1
     - `AsyncTab._DEFAULT_FLATTEN = True`
+- The install script for chromium
 
 # Install
 
