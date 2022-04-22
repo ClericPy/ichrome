@@ -376,6 +376,19 @@ async def test_fetch_context(tab: AsyncTab):
             await f.continueRequest(r)
             break
 
+    async def cb(event, tab, buffer):
+        await buffer.continueRequest(event)
+
+    async with tab.iter_fetch(
+            patterns=[{
+                'urlPattern': '*httpbin.org/ip*'
+            }],
+            callback=cb,
+    ) as f:
+        await tab.goto('http://httpbin.org/ip', timeout=0)
+        async for r in f:
+            break
+
 
 async def test_port_forwarding(host, port):
     from ichrome.utils import PortForwarder
