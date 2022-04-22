@@ -1116,7 +1116,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     def iter_events(self,
                     events: List[str],
                     timeout: Union[float, int] = None,
-                    maxsize=0) -> 'EventBuffer':
+                    maxsize=0,
+                    kwargs: Any = None,
+                    callback: Callable = None) -> 'EventBuffer':
         """Iter events with a async context.
         ::
 
@@ -1135,14 +1137,21 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                             print(data)
                             break
         """
-        return EventBuffer(events, tab=self, maxsize=maxsize, timeout=timeout)
+        return EventBuffer(events,
+                           tab=self,
+                           maxsize=maxsize,
+                           timeout=timeout,
+                           kwargs=kwargs,
+                           callback=callback)
 
     def iter_fetch(self,
                    patterns: List[dict] = None,
                    handleAuthRequests=False,
                    events: List[str] = None,
                    timeout: Union[float, int] = None,
-                   maxsize=0) -> 'FetchBuffer':
+                   maxsize=0,
+                   kwargs: Any = None,
+                   callback: Callable = None) -> 'FetchBuffer':
         """
 Fetch.RequestPattern:
     urlPattern
@@ -1178,13 +1187,29 @@ Fetch.RequestPattern:
                 await f.failRequest(data, 'AccessDenied')
                 assert (await tab.url).startswith('chrome-error://')
 
+            # use callback
+            async def cb(event, tab, buffer):
+                await buffer.continueRequest(event)
+
+            async with tab.iter_fetch(
+                    patterns=[{
+                        'urlPattern': '*httpbin.org/ip*'
+                    }],
+                    callback=cb,
+            ) as f:
+                await tab.goto('http://httpbin.org/ip', timeout=0)
+                async for r in f:
+                    break
+
         """
         return FetchBuffer(events=events,
                            tab=self,
                            patterns=patterns,
                            handleAuthRequests=handleAuthRequests,
                            timeout=timeout,
-                           maxsize=maxsize)
+                           maxsize=maxsize,
+                           kwargs=kwargs,
+                           callback=callback)
 
     @staticmethod
     def _ensure_request_id(request_id: Union[None, dict, str]):
@@ -2963,6 +2988,8 @@ class EventBuffer(asyncio.Queue):
         tab: AsyncTab,
         timeout: Union[float, int] = None,
         maxsize: int = 0,
+        kwargs: Any = None,
+        callback: Callable = None,
     ):
         if isinstance(events, (list, set, tuple)):
             self.events = list(events)
@@ -2970,6 +2997,9 @@ class EventBuffer(asyncio.Queue):
             raise TypeError
         self.tab = tab
         self.timeout = timeout
+        self.kwargs = kwargs
+        self.callback = callback
+        self._shutdown = False
         super().__init__(maxsize=maxsize)
 
     def get_timeout(self) -> float:
@@ -3000,13 +3030,40 @@ class EventBuffer(asyncio.Queue):
     def __aiter__(self):
         return self
 
+    def shutdown(self):
+        if not self._shutdown:
+            self.put_nowait(None)
+            self._shutdown = True
+
+    async def run(self):
+        """Run until timeout."""
+        async for _ in self:
+            pass
+
     async def wait_event(self):
-        timeout = self.get_timeout()
-        if timeout is None or timeout > 0:
-            try:
-                return await asyncio.wait_for(self.get(), timeout=timeout)
-            except asyncio.TimeoutError:
-                pass
+        while not self._shutdown:
+            timeout = self.get_timeout()
+            if timeout is None or timeout > 0:
+                try:
+                    event = await asyncio.wait_for(self.get(), timeout=timeout)
+                    if event is None:
+                        return
+                    if self.callback:
+                        if asyncio.iscoroutinefunction(self.callback):
+                            result = await self.callback(event=event,
+                                                         tab=self.tab,
+                                                         buffer=self)
+                        else:
+                            result = await async_run(
+                                self.callback,
+                                dict(event=event, tab=self.tab, buffer=self))
+                        return result
+                    else:
+                        return event
+                except asyncio.TimeoutError:
+                    pass
+            else:
+                return
 
     async def __anext__(self):
         result = await self.wait_event()
@@ -3017,7 +3074,7 @@ class EventBuffer(asyncio.Queue):
 
 
 class FetchBuffer(EventBuffer):
-    """Enter and activate Fetch.enable, exit with Fetch.disable. Ensure only one FetchContext instance at the same moment.
+    """Enter and activate Fetch.enable, exit with Fetch.disable. Ensure only one FetchBuffer instance at the same moment.
     https://chromedevtools.github.io/devtools-protocol/tot/Fetch/
     """
 
@@ -3029,6 +3086,8 @@ class FetchBuffer(EventBuffer):
         handleAuthRequests=False,
         timeout: Union[float, int] = None,
         maxsize: int = 0,
+        kwargs: Any = None,
+        callback: Callable = None,
     ):
         self.patterns = patterns or [{'urlPattern': '*'}]
         self.handleAuthRequests = handleAuthRequests
@@ -3037,11 +3096,12 @@ class FetchBuffer(EventBuffer):
                 events = ['Fetch.requestPaused', 'Fetch.authRequired']
             else:
                 events = ['Fetch.requestPaused']
-        self.timeout = timeout
         super().__init__(events=events,
                          tab=tab,
                          timeout=timeout,
-                         maxsize=maxsize)
+                         maxsize=maxsize,
+                         kwargs=kwargs,
+                         callback=callback)
 
     async def __aenter__(self):
         await super().__aenter__()
