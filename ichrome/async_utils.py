@@ -1883,11 +1883,18 @@ JSON.stringify(result)""" % (
                                            action=action,
                                            timeout=timeout)
 
-    async def get_element_clip(self, cssselector: str, scale=1, timeout=NotSet):
-        """Element.getBoundingClientRect.
+    async def get_element_clip(self,
+                               cssselector: str,
+                               scale=1,
+                               timeout=NotSet,
+                               captureBeyondViewport=False):
+        """Element.getBoundingClientRect. If captureBeyondViewport is True, use scrollWidth & scrollHeight instead.
         {"x":241,"y":85.59375,"width":165,"height":36,"top":85.59375,"right":406,"bottom":121.59375,"left":241}
         """
-        js_str = 'JSON.stringify(document.querySelector(`%s`).getBoundingClientRect())' % cssselector
+        if captureBeyondViewport:
+            js_str = 'let node=document.querySelector(`%s`);let rect = node.getBoundingClientRect();rect.width=node.scrollWidth;rect.height=node.scrollHeight;JSON.stringify(rect)' % cssselector
+        else:
+            js_str = 'let node=document.querySelector(`%s`);let rect = node.getBoundingClientRect();JSON.stringify(rect)' % cssselector
         rect = await self.js(js_str,
                              timeout=timeout,
                              value_path='result.result.value')
@@ -1935,18 +1942,24 @@ JSON.stringify(result)""" % (
                                  fromSurface: bool = True,
                                  save_path=None,
                                  timeout=NotSet,
+                                 captureBeyondViewport=False,
                                  **kwargs):
         if cssselector:
-            clip = await self.get_element_clip(cssselector, scale=scale)
+            clip = await self.get_element_clip(
+                cssselector,
+                scale=scale,
+                captureBeyondViewport=captureBeyondViewport)
         else:
             clip = None
-        return await self.screenshot(format=format,
-                                     quality=quality,
-                                     clip=clip,
-                                     fromSurface=fromSurface,
-                                     save_path=save_path,
-                                     timeout=timeout,
-                                     **kwargs)
+        return await self.screenshot(
+            format=format,
+            quality=quality,
+            clip=clip,
+            fromSurface=fromSurface,
+            save_path=save_path,
+            timeout=timeout,
+            captureBeyondViewport=captureBeyondViewport,
+            **kwargs)
 
     async def screenshot(self,
                          format: str = 'png',
@@ -1955,6 +1968,7 @@ JSON.stringify(result)""" % (
                          fromSurface: bool = True,
                          save_path=None,
                          timeout=NotSet,
+                         captureBeyondViewport=False,
                          **kwargs):
         """Page.captureScreenshot.
 
@@ -1978,7 +1992,7 @@ JSON.stringify(result)""" % (
             kwargs['clip'] = clip
         result = await self.send('Page.captureScreenshot',
                                  timeout=timeout,
-                                 callback_function=None,
+                                 captureBeyondViewport=captureBeyondViewport,
                                  **kwargs)
         base64_img = self.get_data_value(result, value_path='result.data')
         if save_path and base64_img:
