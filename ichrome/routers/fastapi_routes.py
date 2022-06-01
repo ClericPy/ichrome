@@ -26,8 +26,7 @@ from ichrome.routers.fastapi_routes import ChromeAPIRouter
 app = FastAPI()
 # reset max_msg_size and window size for a large size screenshot
 AsyncTab._DEFAULT_WS_KWARGS['max_msg_size'] = 10 * 1024**2
-app.include_router(ChromeAPIRouter(workers_amount=os.cpu_count(),
-                                   headless=True,
+app.include_router(ChromeAPIRouter(headless=True,
                                    extra_config=['--window-size=1920,1080']),
                    prefix='/chrome')
 
@@ -60,13 +59,46 @@ r = req.post('http://127.0.0.1:8000/chrome/do',
 print(r.text)
 # "Herman Melville - Moby-Dick"
 
+# incognito_args demo
+
+async def tab_callback(task, tab, data, timeout):
+    await tab.wait_loading(3)
+    return await tab.html
+
+
+print(
+    requests.post('http://127.0.0.1:8000/chrome/do',
+                  json={
+                      'tab_callback': getsource(tab_callback),
+                      'timeout': 10,
+                      'incognito_args': {
+                          'url': 'http://httpbin.org/ip',
+                          'proxyServer': 'http://127.0.0.1:1080'
+                      }
+                  }).text)
+
 """
 
 
+class IncognitoArgs(BaseModel):
+    url: str = 'about:blank'
+    width: int = None
+    height: int = None
+    enableBeginFrameControl: bool = None
+    newWindow: bool = None
+    background: bool = None
+    disposeOnDetach: bool = True
+    proxyServer: str = None
+    proxyBypassList: str = None
+    originsWithUniversalNetworkAccess: typing.List[str] = None
+    flatten: bool = None
+
+
 class TabOperation(BaseModel):
-    data: typing.Any
     tab_callback: str
+    data: typing.Any = None
     timeout: float = None
+    incognito_args: IncognitoArgs = None
 
 
 class ChromeAPIRouter(APIRouter):
@@ -135,28 +167,36 @@ class ChromeAPIRouter(APIRouter):
     async def screenshot(self,
                          url: str,
                          cssselector: str = None,
-                         scale=1,
+                         scale: float = 1,
                          format: str = 'png',
                          quality: int = 100,
                          fromSurface: bool = True,
-                         timeout=None):
-        result = await self.chrome_engine.screenshot(url,
-                                                     cssselector=cssselector,
-                                                     scale=scale,
-                                                     format=format,
-                                                     quality=quality,
-                                                     fromSurface=fromSurface,
-                                                     timeout=timeout,
-                                                     as_base64=False)
+                         timeout: typing.Union[float, int] = None,
+                         captureBeyondViewport: bool = False):
+        result = await self.chrome_engine.screenshot(
+            url,
+            cssselector=cssselector,
+            scale=scale,
+            format=format,
+            quality=quality,
+            fromSurface=fromSurface,
+            captureBeyondViewport=captureBeyondViewport,
+            timeout=timeout,
+            as_base64=False)
         result = result or b''
         status_code = 200 if result else 400
         return Response(content=result, status_code=status_code)
 
     async def do(self, tab_operation: TabOperation):
+        if tab_operation.incognito_args is None:
+            incognito_args = None
+        else:
+            incognito_args = dict(tab_operation.incognito_args)
         result = await self.chrome_engine.do(
             data=tab_operation.data,
             tab_callback=tab_operation.tab_callback,
-            timeout=tab_operation.timeout)
+            timeout=tab_operation.timeout,
+            incognito_args=incognito_args)
         result = result or {}
         status_code = 200 if result else 400
         return JSONResponse(content=result, status_code=status_code)

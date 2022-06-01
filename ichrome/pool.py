@@ -24,7 +24,8 @@ class ChromeTask(asyncio.Future):
                  tab_callback: typing.Callable = None,
                  timeout=None,
                  tab_index=None,
-                 port=None):
+                 port=None,
+                 incognito_args=None):
         super().__init__()
         self.id = self.get_id()
         self.data = data
@@ -33,6 +34,10 @@ class ChromeTask(asyncio.Future):
         self.expire_time = time.time() + self._timeout
         self.tab_callback = self.ensure_tab_callback(tab_callback)
         self.port = port
+        if incognito_args is None:
+            self.incognito_args: dict = ChromeEngine.DEFAULT_INCOGNITO_ARGS
+        else:
+            self.incognito_args: dict = incognito_args
         self._running_task: asyncio.Task = None
         self._tries = 0
 
@@ -123,6 +128,7 @@ class ChromeWorker:
                  max_concurrent_tabs: int = None,
                  q: asyncio.PriorityQueue = None,
                  restart_every: typing.Union[float, int] = None,
+                 flatten=None,
                  **daemon_kwargs):
         assert q, 'queue should not be null'
         self.port = port
@@ -131,6 +137,7 @@ class ChromeWorker:
         self.restart_every = restart_every or self.RESTART_EVERY
         self.max_concurrent_tabs = max_concurrent_tabs or self.MAX_CONCURRENT_TABS
         self._tab_sem = None
+        self._flatten = flatten
         self._shutdown = False
         if self.DEFAULT_CACHE_SIZE:
             _extra = f'--disk-cache-size={self.DEFAULT_CACHE_SIZE}'
@@ -152,6 +159,14 @@ class ChromeWorker:
     def runnings(self):
         return len(self._running_futures)
 
+    @property
+    def is_need_restart(self):
+        return self._need_restart.is_set()
+
+    def set_need_restart(self):
+        if not self.is_need_restart:
+            self._need_restart.set()
+
     def start_daemon(self):
         self._chrome_daemon_ready = asyncio.Event()
         self._need_restart = asyncio.Event()
@@ -164,19 +179,27 @@ class ChromeWorker:
 
     async def _start_chrome_daemon(self):
         while not self._shutdown:
+            self._chrome_daemon_ready.clear()
+            self._need_restart.clear()
             self._restart_interval = round(
                 self.restart_every + self.get_random_secs(), 3)
             self._will_restart_peacefully = False
-            self._chrome_daemon_ready.clear()
-            self._need_restart.clear()
             async with AsyncChromeDaemon(port=self.port,
                                          **self.daemon_kwargs) as chrome_daemon:
                 self._daemon_start_time = time.time()
                 self.chrome_daemon = chrome_daemon
-                self._chrome_daemon_ready.set()
+                for _ in range(10):
+                    if await chrome_daemon.connection_ok:
+                        self._chrome_daemon_ready.set()
+                        break
+                    await asyncio.sleep(0.5)
+                else:
+                    logger.info(f'[error] {self} launch failed.')
+                    continue
                 logger.info(f'[online] {self} is online.')
                 while 1:
                     await self._need_restart.wait()
+                    self._chrome_daemon_ready.clear()
                     # waiting for all _running_futures done.
                     if not self._will_restart_peacefully:
                         break
@@ -188,7 +211,9 @@ class ChromeWorker:
 
     async def future_consumer(self, index=None):
         while not self._shutdown:
-            if time.time() - self._daemon_start_time > self._restart_interval:
+            run_too_long = time.time(
+            ) - self._daemon_start_time > self._restart_interval
+            if run_too_long and not self.is_need_restart:
                 # stop consuming new futures
                 self._chrome_daemon_ready.clear()
                 for f in self._running_futures:
@@ -196,7 +221,6 @@ class ChromeWorker:
                 self._will_restart_peacefully = True
                 # time to restart
                 self._need_restart.set()
-            await self._chrome_daemon_ready.wait()
             try:
                 # try self port queue at first
                 future: ChromeTask = self.port_queue.get_nowait()
@@ -212,18 +236,30 @@ class ChromeWorker:
             if future.done() or future.expire_time < time.time():
                 # overdue task, skip
                 continue
+            await self._chrome_daemon_ready.wait()
             if await self.chrome_daemon._check_chrome_connection():
-                # should not auto_close for int index (existing tab).
-                auto_close = not isinstance(future.tab_index, int)
-                async with self.chrome_daemon.connect_tab(
-                        index=future.tab_index, auto_close=auto_close) as tab:
-                    if isinstance(future.data, _TabWorker):
-                        await self.handle_tab_worker_future(tab, future)
-                    else:
-                        await self.handle_default_future(tab, future)
+                if isinstance(future.incognito_args, dict):
+                    # incognito mode
+                    async with self.chrome_daemon.incognito_tab(
+                            **future.incognito_args) as tab:
+                        if isinstance(future.data, _TabWorker):
+                            await self.handle_tab_worker_future(tab, future)
+                        else:
+                            await self.handle_default_future(tab, future)
+                else:
+                    # should not auto_close for int index (existing tab).
+                    auto_close = not isinstance(future.tab_index, int)
+                    async with self.chrome_daemon.connect_tab(
+                            index=future.tab_index,
+                            auto_close=auto_close,
+                            flatten=self._flatten) as tab:
+                        if isinstance(future.data, _TabWorker):
+                            await self.handle_tab_worker_future(tab, future)
+                        else:
+                            await self.handle_default_future(tab, future)
             else:
-                if not self._need_restart.is_set():
-                    self._need_restart.set()
+                self._chrome_daemon_ready.clear()
+                self.set_need_restart()
                 if future.port:
                     await self.port_queue.put(future)
                 else:
@@ -241,8 +277,7 @@ class ChromeWorker:
         except ChromeException as error:
             if not self._shutdown:
                 logger.error(f'{self} restarting for error {error!r}')
-                if not self._need_restart.is_set():
-                    self._need_restart.set()
+                self.set_need_restart()
         finally:
             logger.info(f'[finished]({self.todos}) {future}')
             del future
@@ -258,8 +293,7 @@ class ChromeWorker:
         except ChromeException as error:
             if not self._shutdown:
                 logger.error(f'{self} restarting for error {error!r}')
-                if not self._need_restart.is_set():
-                    self._need_restart.set()
+                self.set_need_restart()
         except Exception as error:
             # other errors may give a retry
             logger.error(f'{self} catch an error {error!r} for {future}')
@@ -297,6 +331,9 @@ class ChromeEngine:
     DEFAULT_WORKERS_AMOUNT = 1
     ERRORS_NOT_HANDLED = (KeyboardInterrupt,)
     SHORTEN_DATA_LENGTH = 150
+    FLATTEN = True
+    # Use incognico mode by default, or you can se ChromeEngine.DEFAULT_INCOGNITO_ARGS = None to use normal mode
+    DEFAULT_INCOGNITO_ARGS = {}
 
     def __init__(self,
                  workers_amount: int = None,
@@ -327,6 +364,7 @@ class ChromeEngine:
             worker = ChromeWorker(port=port,
                                   max_concurrent_tabs=self.max_concurrent_tabs,
                                   q=self.q,
+                                  flatten=self.FLATTEN,
                                   **self.daemon_kwargs)
             self.workers[port] = worker
 
@@ -349,14 +387,16 @@ class ChromeEngine:
                  tab_callback,
                  timeout: float = None,
                  tab_index=None,
-                 port=None):
+                 port=None,
+                 incognito_args: dict = None):
         if self._shutdown:
             raise RuntimeError(f'{self.__class__.__name__} has been shutdown.')
         future = ChromeTask(data,
                             tab_callback,
                             timeout=timeout,
                             tab_index=tab_index,
-                            port=port)
+                            port=port,
+                            incognito_args=incognito_args)
         if port:
             await self.workers[port].port_queue.put(future)
         else:
@@ -399,23 +439,26 @@ class ChromeEngine:
             except asyncio.QueueEmpty:
                 break
 
-    async def screenshot(self,
-                         url: str,
-                         cssselector: str = None,
-                         scale=1,
-                         format: str = 'png',
-                         quality: int = 100,
-                         fromSurface: bool = True,
-                         save_path=None,
-                         timeout=None,
-                         as_base64=True) -> typing.Union[str, bytes]:
+    async def screenshot(
+            self,
+            url: str,
+            cssselector: str = None,
+            scale=1,
+            format: str = 'png',
+            quality: int = 100,
+            fromSurface: bool = True,
+            save_path=None,
+            timeout=None,
+            as_base64=True,
+            captureBeyondViewport=False) -> typing.Union[str, bytes]:
         data = dict(url=url,
                     cssselector=cssselector,
                     scale=scale,
                     format=format,
                     quality=quality,
                     fromSurface=fromSurface,
-                    save_path=save_path)
+                    save_path=save_path,
+                    captureBeyondViewport=bool(captureBeyondViewport))
         image = await self.do(data=data,
                               tab_callback=CommonUtils.screenshot,
                               timeout=timeout,
