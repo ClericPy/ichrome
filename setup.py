@@ -9,7 +9,7 @@ rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -
 """
 version = __version__
 if sys.version_info < (3, 7):
-    sys.exit("pypinfo requires Python 3.7+")
+    sys.exit("Python 3.7+ requires")
 py_version = sys.version_info
 with open('requirements.txt') as f:
     install_requires = f.read().strip().splitlines()
