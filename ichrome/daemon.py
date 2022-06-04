@@ -184,6 +184,9 @@ class ChromeDaemon(object):
         self._wrap_user_data_dir()
         if not self.chrome_path:
             self.chrome_path = self._get_default_path()
+        _chrome_path = Path(self.chrome_path)
+        if _chrome_path.is_file():
+            CHROME_PROCESS_NAMES.add(_chrome_path.name)
         self._ensure_port_free()
         self.req = tPool()
         if self.before_startup:
@@ -379,7 +382,8 @@ class ChromeDaemon(object):
             args.append("--hide-scrollbars")
         if self.user_data_dir:
             # user_data_dir absolute path is faster while running
-            args.append(f"--user-data-dir={self.user_data_dir.absolute()}")
+            args.append(
+                f"--user-data-dir={self.user_data_dir.absolute().as_posix()}")
         if self.UA:
             args.append(f"--user-agent={self.UA}")
         if self.proxy:
@@ -723,6 +727,9 @@ class AsyncChromeDaemon(ChromeDaemon):
         await async_run(self._wrap_user_data_dir)
         if not self.chrome_path:
             self.chrome_path = await async_run(self._get_default_path)
+        _chrome_path = Path(self.chrome_path)
+        if _chrome_path.is_file():
+            CHROME_PROCESS_NAMES.add(_chrome_path.name)
         await async_run(self._ensure_port_free)
         self._req = Requests()
         if self.before_startup:
