@@ -17,8 +17,7 @@ For base usage with sync utils.
 
 NotSet = object()
 INF = float('inf')
-# msedge.exe
-CHROME_PROCESS_NAMES = {"chrome.exe", "chrome"}
+CHROME_PROCESS_NAMES = {"chrome.exe", "chrome", "msedge.exe"}
 
 
 class TagNotFound:
@@ -340,11 +339,11 @@ def install_chromium(path=None,
     install_folder_path = Path(path) / zip_file_name
     if _platform_name == 'Mac' and install_folder_path.is_dir():
         print('Install succeeded, check your folder:',
-              install_folder_path.absolute())
+              install_folder_path.absolute().as_posix())
         return
     chrome_path = install_folder_path / chrome_runner_name
     if chrome_path.is_file():
-        chrome_abs_path = chrome_path.absolute()
+        chrome_abs_path = chrome_path.absolute().as_posix()
         print('chrome_path:', chrome_abs_path)
         if _platform_name == 'Linux':
             print(f'chmod 755 {chrome_abs_path}')
