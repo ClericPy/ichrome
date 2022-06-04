@@ -1892,9 +1892,9 @@ JSON.stringify(result)""" % (
         {"x":241,"y":85.59375,"width":165,"height":36,"top":85.59375,"right":406,"bottom":121.59375,"left":241}
         """
         if captureBeyondViewport:
-            js_str = 'let node=document.querySelector(`%s`);let rect = node.getBoundingClientRect();rect.width=node.scrollWidth;rect.height=node.scrollHeight;JSON.stringify(rect)' % cssselector
+            js_str = 'node=document.querySelector(`%s`);rect = node.getBoundingClientRect();rect.width=node.scrollWidth;rect.height=node.scrollHeight;JSON.stringify(rect)' % cssselector
         else:
-            js_str = 'let node=document.querySelector(`%s`);let rect = node.getBoundingClientRect();JSON.stringify(rect)' % cssselector
+            js_str = 'node=document.querySelector(`%s`);rect = node.getBoundingClientRect();JSON.stringify(rect)' % cssselector
         rect = await self.js(js_str,
                              timeout=timeout,
                              value_path='result.result.value')
