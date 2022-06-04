@@ -2796,7 +2796,11 @@ class AsyncChrome(GetValueMixin):
                    max_deaths: int = 1) -> None:
         if self.req:
             await self.req.close()
-        await async_run(clear_chrome_process, self.port, timeout, max_deaths)
+        await async_run(clear_chrome_process,
+                        self.port,
+                        timeout,
+                        max_deaths,
+                        host=self.host)
 
     async def new_tab(self, url: str = "") -> Union[AsyncTab, None]:
         api = f'/json/new?{quote_plus(url)}'
@@ -2876,7 +2880,10 @@ class AsyncChrome(GetValueMixin):
 
     def get_memory(self, attr='uss', unit='MB'):
         """Only support local Daemon. `uss` is slower than `rss` but useful."""
-        return get_memory_by_port(port=self.port, attr=attr, unit=unit)
+        return get_memory_by_port(port=self.port,
+                                  attr=attr,
+                                  unit=unit,
+                                  host=self.host)
 
     def __repr__(self):
         return f"<Chrome({self.status}): {self.port}>"

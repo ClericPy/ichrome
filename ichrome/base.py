@@ -17,6 +17,8 @@ For base usage with sync utils.
 
 NotSet = object()
 INF = float('inf')
+# msedge.exe
+CHROME_PROCESS_NAMES = {"chrome.exe", "chrome"}
 
 
 class TagNotFound:
@@ -77,30 +79,38 @@ class Tag:
         return self.__str__()
 
 
-def get_proc_by_regex(regex, proc_names=None):
-    # win32 and linux chrome proc_names
+def get_proc_by_regex(regex, proc_names=None, host_regex=None):
+    proc_names = proc_names or CHROME_PROCESS_NAMES
     procs = []
     for _ in range(3):
         try:
             for proc in psutil.process_iter():
-                if (not proc_names or proc.name() in proc_names) and re.search(
-                        regex, ' '.join(proc.cmdline())):
-                    procs.append(proc)
+                if (not proc_names or proc.name() in proc_names):
+                    cmd_string = ' '.join(proc.cmdline())
+                    match_port = re.search(regex, cmd_string)
+                    if match_port:
+                        match_host = not host_regex or re.search(
+                            host_regex, cmd_string)
+                        if match_host:
+                            procs.append(proc)
             return procs
         except (psutil.Error, OSError, TypeError, AttributeError):
             procs.clear()
     return procs
 
 
-def get_proc(port=9222) -> List[psutil.Process]:
+def get_proc(port=9222, proc_names=None, host=None) -> List[psutil.Process]:
     regex = f"--remote-debugging-port={port or ''}"
-    proc_names = {"chrome.exe", "chrome"}
-    return get_proc_by_regex(regex, proc_names=proc_names)
+    host_regex = f"--remote-debugging-address={host}" if host else None
+    proc_names = proc_names or CHROME_PROCESS_NAMES
+    return get_proc_by_regex(regex,
+                             proc_names=proc_names,
+                             host_regex=host_regex)
 
 
-def get_memory_by_port(port=9222, attr='uss', unit='MB'):
+def get_memory_by_port(port=9222, attr='uss', unit='MB', host=None):
     """Only support local Daemon. `uss` is slower than `rss` but useful."""
-    procs = get_proc(port=port)
+    procs = get_proc(port=port, host=host)
     if procs:
         u = {'B': 1, 'KB': 1024, 'MB': 1024**2, 'GB': 1024**3}
         if attr == 'uss':
@@ -110,7 +120,11 @@ def get_memory_by_port(port=9222, attr='uss', unit='MB'):
         return result / u.get(unit, 1)
 
 
-def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
+def clear_chrome_process(port=None,
+                         timeout=None,
+                         max_deaths=1,
+                         interval=0.5,
+                         host=None):
     """kill chrome processes, if port is not set, kill all chrome with --remote-debugging-port.
     set timeout to avoid running forever.
     set max_deaths and port, will return before timeout.
@@ -120,7 +134,7 @@ def clear_chrome_process(port=None, timeout=None, max_deaths=1, interval=0.5):
     if timeout is None:
         timeout = max_deaths or 2
     while 1:
-        procs = get_proc(port)
+        procs = get_proc(port, host=host)
         for proc in procs:
             try:
                 logger.debug(

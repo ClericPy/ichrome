@@ -19,8 +19,8 @@ from torequests.utils import timepass, ttime
 
 from .async_utils import (AsyncChrome, BrowserContext,
                           _SingleTabConnectionManagerDaemon)
-from .base import (async_run, clear_chrome_process, ensure_awaitable,
-                   get_dir_size, get_memory_by_port, get_proc,
+from .base import (CHROME_PROCESS_NAMES, async_run, clear_chrome_process,
+                   ensure_awaitable, get_dir_size, get_memory_by_port, get_proc,
                    get_readable_dir_size)
 from .exceptions import ChromeException, ChromeRuntimeError, ChromeTypeError
 from .logs import logger
@@ -212,7 +212,10 @@ class ChromeDaemon(object):
 
     def get_memory(self, attr='uss', unit='MB'):
         """Only support local Daemon. `uss` is slower than `rss` but useful."""
-        return get_memory_by_port(port=self.port, attr=attr, unit=unit)
+        return get_memory_by_port(port=self.port,
+                                  attr=attr,
+                                  unit=unit,
+                                  host=self.host)
 
     @staticmethod
     def ensure_dir(path: Path):
@@ -486,6 +489,8 @@ class ChromeDaemon(object):
                 "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
                 "C:/Program Files/Google/Chrome/Application/chrome.exe",
                 f"{os.getenv('USERPROFILE')}\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
+                "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+                "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
             ]
             for path in paths:
                 if not path:
@@ -578,7 +583,9 @@ class ChromeDaemon(object):
             max_deaths = self.max_deaths
         else:
             max_deaths = 0
-        self.clear_chrome_process(self.port, max_deaths=max_deaths)
+        self.clear_chrome_process(self.port,
+                                  max_deaths=max_deaths,
+                                  host=self.host)
 
     def restart(self):
         logger.debug(f"restarting {self}")
@@ -612,18 +619,20 @@ class ChromeDaemon(object):
         self.shutdown()
 
     @staticmethod
-    def get_proc(port):
-        return get_proc(port)
+    def get_proc(port, host=None):
+        return get_proc(port, host=host)
 
     @staticmethod
     def clear_chrome_process(port=None,
                              timeout=None,
                              max_deaths=1,
-                             interval=0.5):
+                             interval=0.5,
+                             host=None):
         return clear_chrome_process(port=port,
                                     timeout=timeout,
                                     max_deaths=max_deaths,
-                                    interval=interval)
+                                    interval=interval,
+                                    host=host)
 
     def get_local_state(self):
         """Get the dict from {self.user-data-dir}/Local State which including online user profiles info.
