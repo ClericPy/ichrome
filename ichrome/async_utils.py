@@ -187,7 +187,10 @@ class _WSConnection:
 
     async def _stop_tasks(self):
         if self._recv_task and not self._recv_task.done():
-            self._recv_task.cancel()
+            try:
+                await asyncio.wait_for(self._recv_task, timeout=0.1)
+            except asyncio.TimeoutError:
+                pass
 
     async def shutdown(self):
         if self._closed:
@@ -3354,7 +3357,10 @@ class BrowserContext:
 
     async def __aexit__(self, *_):
         if self.browserContextId:
-            await self.browser.send('Target.disposeBrowserContext')
+            try:
+                await self.browser.send('Target.disposeBrowserContext')
+            except ChromeRuntimeError:
+                pass
             self.browserContextId = None
         if self._need_init_chrome:
             await self.chrome.__aexit__()
