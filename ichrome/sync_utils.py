@@ -122,7 +122,8 @@ class Chrome(object):
     def kill(self, timeout=None, max_deaths=1):
         ChromeDaemon.clear_chrome_process(self.port,
                                           timeout=timeout,
-                                          max_deaths=max_deaths)
+                                          max_deaths=max_deaths,
+                                          host=self.host)
 
     @property
     def meta(self):

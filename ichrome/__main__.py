@@ -203,7 +203,8 @@ Other operations:
     if args.shutdown:
         logger.setLevel(1)
         ChromeDaemon.clear_chrome_process(args.shutdown,
-                                          max_deaths=args.max_deaths)
+                                          max_deaths=args.max_deaths,
+                                          host=args.host)
         return
     if args.killall:
         logger.setLevel(1)

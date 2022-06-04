@@ -75,7 +75,7 @@ class SyncLoop:
 
 def quit_while_daemon_missing(daemon):
     # quit the whole program while missing daemon process for daemon debugger
-    if not daemon.get_proc(daemon.port):
+    if not daemon.get_proc(daemon.port, host=daemon.host):
         os._exit(1)
 
 
