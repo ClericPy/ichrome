@@ -988,26 +988,36 @@ class ChromeWorkers:
         self.workers = workers or 1
         self.kwargs = kwargs or {}
         self.daemons = []
+        self.tasks = []
 
     async def __aenter__(self):
         return await self.create_chrome_workers()
+
+    async def start_daemon(self, cd):
+        async with cd:
+            await cd._daemon_thread
 
     async def create_chrome_workers(self):
         for port in range(self.start_port, self.start_port + self.workers):
             logger.debug("ChromeDaemon cmd args: port=%s, %s" %
                          (port, self.kwargs))
-            self.daemons.append(await
-                                AsyncChromeDaemon(port=port,
-                                                  daemon=True,
-                                                  block=False,
-                                                  **self.kwargs).__aenter__())
+            cd = AsyncChromeDaemon(port=port, **self.kwargs)
+            self.daemons.append(cd)
+            self.tasks.append(asyncio.ensure_future(self.start_daemon(cd)))
+        return self
+
+    async def wait(self):
+        for task in self.tasks:
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
     async def __aexit__(self, *args):
         for daemon in self.daemons:
-            await daemon._daemon_thread
-            await daemon.__aexit__()
+            await daemon.shutdown()
 
     @classmethod
     async def run_chrome_workers(cls, start_port, workers, kwargs):
-        async with cls(start_port, workers, kwargs):
-            pass
+        async with cls(start_port, workers, kwargs) as cd:
+            await cd.wait()
