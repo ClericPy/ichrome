@@ -190,9 +190,9 @@ Other operations:
         return install_chromium(args.install, version=args.install_version)
     if args.config:
         path = Path(args.config)
-        if not (path.is_file() and path.exists()):
+        if not path.is_file():
             logger.error(f'config file not found: {path}')
-            return
+            raise FileNotFoundError(path.as_posix())
         import json
         kwargs = json.loads(path.read_text())
         start_port = kwargs.pop('port', 9222)

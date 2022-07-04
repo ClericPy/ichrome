@@ -9,7 +9,7 @@ try:
     from pydantic import BaseModel
 except ImportError as error:
     logger.error(
-        'requirements is not all ready, run `pip install ichrome[web]` or `pip install fastapi uvicorn` first.'
+        'requirements are not all ready, run `pip install ichrome[web]` or `pip install fastapi uvicorn` first.'
     )
     raise error
 """
