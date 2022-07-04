@@ -338,6 +338,7 @@ class ChromeEngine:
     def __init__(self,
                  workers_amount: int = None,
                  max_concurrent_tabs=None,
+                 start_port: int = None,
                  **daemon_kwargs):
         self._q: typing.Union[asyncio.PriorityQueue, asyncio.Queue] = None
         self._shutdown = False
@@ -345,7 +346,8 @@ class ChromeEngine:
         self.workers: typing.Dict[int, ChromeWorker] = {}
         self.workers_amount = workers_amount or self.DEFAULT_WORKERS_AMOUNT
         self.max_concurrent_tabs = max_concurrent_tabs
-        self.start_port = daemon_kwargs.pop('port', None) or self.START_PORT
+        self.start_port = daemon_kwargs.pop('port',
+                                            start_port) or self.START_PORT
         self.daemon_kwargs = daemon_kwargs
 
     @property
