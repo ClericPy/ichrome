@@ -486,6 +486,7 @@ class ChromeEngine:
                       url: str,
                       wait_tag: str = None,
                       timeout=None) -> bytes:
+        "Not recommended for use. Use (await self.download(url, wait_tag=wait_tag, timeout=timeout))['html'] instead."
         data = await self.download(url, wait_tag=wait_tag, timeout=timeout)
         if data:
             return data['html'].encode(data.get('encoding') or 'utf-8')
