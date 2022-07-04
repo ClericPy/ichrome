@@ -4,8 +4,8 @@ from ..logs import logger
 from ..pool import ChromeEngine
 
 try:
-    from fastapi.routing import APIRouter, APIRoute
-    from fastapi.responses import JSONResponse, Response
+    from fastapi.responses import HTMLResponse, JSONResponse, Response
+    from fastapi.routing import APIRoute, APIRouter
     from pydantic import BaseModel
 except ImportError as error:
     logger.error(
@@ -145,12 +145,13 @@ class ChromeAPIRouter(APIRouter):
                       url: str,
                       wait_tag: str = None,
                       timeout: float = None):
-        result = await self.chrome_engine.preview(url,
-                                                  wait_tag=wait_tag,
-                                                  timeout=timeout)
-        result = result or b''
-        status_code = 200 if result else 400
-        return Response(content=result, status_code=status_code)
+        data = await self.chrome_engine.download(url,
+                                                 wait_tag=wait_tag,
+                                                 timeout=timeout)
+        if data:
+            return HTMLResponse(data['html'])
+        else:
+            return Response(content=b'', status_code=400)
 
     async def download(self,
                        url: str,

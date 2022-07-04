@@ -11,7 +11,7 @@ Config = {
         'workers_amount': 1,
         'max_concurrent_tabs': 5,
         'headless': True,
-        'extra_config': ['--window-size=1920,1080'],
+        'extra_config': ['--window-size=800,600'],
     },
     'ChromeWorkerArgs': {
         'RESTART_EVERY': 8 * 60,
