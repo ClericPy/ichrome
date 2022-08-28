@@ -486,7 +486,7 @@ class ChromeDaemon(object):
             return None
 
     @staticmethod
-    def _get_default_path():
+    def _iter_chrome_path():
         current_platform = platform.system()
         if current_platform == 'Windows':
             paths = [
@@ -500,7 +500,7 @@ class ChromeDaemon(object):
                 if not path:
                     continue
                 if os.path.isfile(path):
-                    return path
+                    yield path
         else:
             if current_platform == 'Linux':
                 paths = [
@@ -521,9 +521,15 @@ class ChromeDaemon(object):
                     if not out:
                         continue
                     if out.startswith(b"Google Chrome "):
-                        return path
+                        yield path
                 except (FileNotFoundError, subprocess.TimeoutExpired):
                     continue
+        raise ChromeRuntimeError("Executable chrome file was not found.")
+
+    @classmethod
+    def _get_default_path(cls):
+        for path in cls._iter_chrome_path():
+            return path
         raise ChromeRuntimeError("Executable chrome file was not found.")
 
     def _daemon(self, interval=None):
