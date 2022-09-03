@@ -83,7 +83,7 @@ class Chrome(object):
                 rjson["webSocketDebuggerUrl"],
             )
             tab = Tab(tab_id, title, _url, webSocketDebuggerUrl, self)
-            tab._create_time = tab.now
+            tab._create_time = int(time.time())
             logger.info(f"new tab {tab}")
             return tab
 
@@ -276,6 +276,7 @@ class Tab(object):
                 callback_function) else result
 
     def refresh_ws(self):
+        "reconnect ws"
         self.ws.close()
         self._connect()
 
@@ -391,7 +392,7 @@ class Tab(object):
         Navigate the tab to the URL
         """
         self.enable('Page')
-        start_load_ts = self.now
+        start_load_ts = int(time.time())
         if url:
             self._url = url
             if referrer is None:
@@ -403,7 +404,7 @@ class Tab(object):
                                  timeout=timeout)
         else:
             data = self.send("Page.reload", timeout=timeout)
-        time_passed = self.now - start_load_ts
+        time_passed = int(time.time()) - start_load_ts
         real_timeout = max((timeout - time_passed, 0))
         if self.wait_loading(timeout=real_timeout) is None:
             self.send("Page.stopLoading", timeout=0)

@@ -2,6 +2,7 @@
 import asyncio
 import atexit
 import os
+import time
 from functools import wraps
 from inspect import isawaitable
 from typing import Set
@@ -178,7 +179,7 @@ class Chrome(SyncLoop):
         if r:
             rjson = r.json()
             tab = Tab(self, **rjson)
-            tab._self._created_time = tab.now
+            tab._self._created_time = int(time.time())
             logger.debug(f"[new_tab] {tab._self} {rjson}")
             return tab
         else:
