@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Base utils and configs for ichrome
+"""
 import re
 import time
 from base64 import b64encode
@@ -11,16 +14,14 @@ from torequests.utils import get_readable_size
 
 from .exceptions import ChromeValueError
 from .logs import logger
-"""
-For base usage with sync utils.
-"""
 
-NotSet = object()
+NotSet = ...
 INF = float('inf')
 CHROME_PROCESS_NAMES = {"chrome.exe", "chrome", "msedge.exe"}
 
 
 class TagNotFound:
+    "Same attributes like Tag, but return None"
 
     def __init__(self, *args, **kwargs):
         pass
@@ -59,9 +60,11 @@ class Tag:
         self.text = textContent
 
     def get(self, name, default=None):
+        "get the attribute of the tag"
         return self.attributes.get(name, default)
 
     def to_dict(self):
+        "convert Tag object to dict"
         return {
             "tagName": self.tagName,
             "innerHTML": self.innerHTML,
@@ -79,6 +82,7 @@ class Tag:
 
 
 def get_proc_by_regex(regex, proc_names=None, host_regex=None):
+    "find the procs with given proc_names and host_regex"
     proc_names = proc_names or CHROME_PROCESS_NAMES
     procs = []
     for _ in range(3):
@@ -99,6 +103,7 @@ def get_proc_by_regex(regex, proc_names=None, host_regex=None):
 
 
 def get_proc(port=9222, proc_names=None, host=None) -> List[psutil.Process]:
+    "find procs with given port and proc_names and host"
     regex = f"--remote-debugging-port={port or ''}"
     host_regex = f"--remote-debugging-address={host}" if host else None
     proc_names = proc_names or CHROME_PROCESS_NAMES
@@ -107,9 +112,13 @@ def get_proc(port=9222, proc_names=None, host=None) -> List[psutil.Process]:
                              host_regex=host_regex)
 
 
-def get_memory_by_port(port=9222, attr='uss', unit='MB', host=None):
-    """Only support local Daemon. `uss` is slower than `rss` but useful."""
-    procs = get_proc(port=port, host=host)
+def get_memory_by_port(port=9222,
+                       attr='uss',
+                       unit='MB',
+                       host=None,
+                       proc_names=None):
+    """get memory usage of chrome proc found with port and host.Only support local Daemon. `uss` is slower than `rss` but useful."""
+    procs = get_proc(port=port, host=host, proc_names=proc_names)
     if procs:
         u = {'B': 1, 'KB': 1024, 'MB': 1024**2, 'GB': 1024**3}
         if attr == 'uss':
@@ -123,7 +132,8 @@ def clear_chrome_process(port=None,
                          timeout=None,
                          max_deaths=1,
                          interval=0.5,
-                         host=None):
+                         host=None,
+                         proc_names=None):
     """kill chrome processes, if port is not set, kill all chrome with --remote-debugging-port.
     set timeout to avoid running forever.
     set max_deaths and port, will return before timeout.
@@ -133,7 +143,7 @@ def clear_chrome_process(port=None,
     if timeout is None:
         timeout = max_deaths or 2
     while 1:
-        procs = get_proc(port, host=host)
+        procs = get_proc(port, host=host, proc_names=proc_names)
         for proc in procs:
             try:
                 logger.debug(
@@ -160,6 +170,7 @@ def clear_chrome_process(port=None,
 
 
 def get_dir_size(path):
+    "return the dir space usage of the given dir path"
 
     def get_st_size(f):
         try:
@@ -184,6 +195,7 @@ def get_dir_size(path):
 
 
 def get_readable_dir_size(path):
+    "return the dir space usage of the given dir path with readable text."
     return get_readable_size(get_dir_size(path), rounded=1)
 
 
@@ -192,6 +204,7 @@ def install_chromium(path=None,
                      x64=True,
                      max_threads=5,
                      version=None):
+    "download and unzip the portable chromium automatically"
     import os
     import platform
     import time
@@ -373,6 +386,7 @@ async_run = to_thread
 
 
 async def ensure_awaitable(result):
+    "avoid raising awaitable error while await something"
     if isawaitable(result):
         return await result
     else:
