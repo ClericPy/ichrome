@@ -668,6 +668,51 @@ class ChromeDaemon(object):
 
 
 class AsyncChromeDaemon(ChromeDaemon):
+    _demo = r'''
+
+    demo::
+
+        import asyncio
+        import json
+
+        from ichrome import AsyncChromeDaemon
+
+
+        async def main():
+            async with AsyncChromeDaemon(clear_after_shutdown=True,
+                                        headless=False,
+                                        disable_image=False,
+                                        user_data_dir='./ichrome_user_data') as cd:
+                async with cd.connect_tab(0, auto_close=True) as tab:
+                    loaded = await tab.goto('https://httpbin.org/forms/post',
+                                            timeout=10)
+                    html = await tab.html
+                    title = await tab.title
+                    print(
+                        f'page loaded ok: {loaded}, HTML length is {len(html)}, title is "{title}"'
+                    )
+                    # try setting the input tag value with JS
+                    await tab.js(
+                        r"""document.querySelector('[value="bacon"]').checked = true""")
+                    # or you can click the checkbox
+                    await tab.click('[value="cheese"]')
+                    # you can set the value of input
+                    await tab.js(
+                        r"""document.querySelector('[name="custname"]').value = "1234" """
+                    )
+                    # now click the submit button
+                    await tab.click('form button')
+                    await tab.wait_loading(5)
+                    # extract the JSON with regex
+                    result = await tab.findone(r'<pre.*?>([\s\S]*?)</pre>')
+                    print(json.loads(result))
+
+
+        if __name__ == "__main__":
+            asyncio.run(main())
+
+'''
+    __doc__ = ChromeDaemon.__doc__ + _demo
 
     def __init__(self,
                  chrome_path=None,
@@ -748,11 +793,13 @@ class AsyncChromeDaemon(ChromeDaemon):
         return self
 
     async def restart(self):
+        "restart the chrome process"
         logger.debug(f"restarting {self}")
         await async_run(self.kill)
         return await self.launch_chrome()
 
     async def launch_chrome(self):
+        "launch the chrome with remote-debugging mode"
         await async_run(self._start_chrome_process)
         error = None
         for _ in range(int(self.MAX_WAIT_CHECKING_SECONDS * 2)):
@@ -774,6 +821,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         return r and r.ok
 
     async def check_connection(self):
+        "check chrome connection ok"
         for _ in range(int(self.MAX_WAIT_CHECKING_SECONDS * 2)):
             if await self._check_chrome_connection():
                 self.ready = True
@@ -783,12 +831,10 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     @property
     def connection_ok(self):
-        # awaitable property
         return self.check_connection()
 
     @property
     def ok(self):
-        # awaitable property
         return self.check_chrome_ready()
 
     @classmethod
@@ -797,6 +843,7 @@ class AsyncChromeDaemon(ChromeDaemon):
                             start=9222,
                             max_tries=100,
                             timeout=1):
+        "find a free port which can be used"
         return await async_run(super().get_free_port,
                                host=host,
                                start=start,
@@ -804,6 +851,7 @@ class AsyncChromeDaemon(ChromeDaemon):
                                timeout=timeout)
 
     async def check_chrome_ready(self):
+        "check if the chrome api is available"
         if self.proc_ok and await self.check_connection():
             logger.debug(
                 f"launch_chrome success: {self}, args: {self.proc.args}")
@@ -817,6 +865,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         return asyncio.get_running_loop()
 
     async def run_forever(self, block=True, interval=None):
+        "start the daemon and ensure proc is alive"
         interval = interval or self.proc_check_interval
         if self._shutdown:
             raise ChromeRuntimeError(
@@ -877,6 +926,7 @@ class AsyncChromeDaemon(ChromeDaemon):
             return asyncio.sleep(0)
 
     async def shutdown(self, reason=None):
+        "shutdown the chrome, but do not use it, use async with instead."
         if self._shutdown:
             # logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
@@ -925,6 +975,7 @@ class AsyncChromeDaemon(ChromeDaemon):
                                                  flatten=flatten)
 
     async def close_browser(self):
+        "close browser peacefully"
         try:
             async with self.connect_tab(0) as tab:
                 await tab.close_browser()
@@ -942,6 +993,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         proxyBypassList: str = None,
         originsWithUniversalNetworkAccess: List[str] = None,
     ) -> BrowserContext:
+        "create a new browser context, which can be set new proxy, same like the incognito mode"
         return BrowserContext(
             chrome=AsyncChrome(host=self.host,
                                port=self.port,
@@ -966,6 +1018,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         originsWithUniversalNetworkAccess: List[str] = None,
         flatten: bool = None,
     ):
+        "create a new tab with incognito mode, this is really a good choice"
         chrome = AsyncChrome(host=self.host,
                              port=self.port,
                              timeout=self._timeout)
