@@ -1,0 +1,1997 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.3.1, mkdocs-material-8.4.0">
+    
+    
+      
+        <title>AsyncChrome - ichrome</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.69437709.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.cbb835fc.min.css">
+        
+      
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ichrome" class="md-header__button md-logo" aria-label="ichrome" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ichrome
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              AsyncChrome
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ichrome" class="md-nav__button md-logo" aria-label="ichrome" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    ichrome
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Intro
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        Quick Start
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cmd/" class="md-nav__link">
+        Command Line
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="reference" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AsyncTab/" class="md-nav__link">
+        AsyncTab
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AsyncChromeDaemon/" class="md-nav__link">
+        AsyncChromeDaemon
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          AsyncChrome
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        AsyncChrome
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.AsyncChrome" class="md-nav__link">
+    ichrome.AsyncChrome
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.check" class="md-nav__link">
+    check()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.connect" class="md-nav__link">
+    connect()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.connect_tab" class="md-nav__link">
+    connect_tab()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.connect_tabs" class="md-nav__link">
+    connect_tabs()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.create_context" class="md-nav__link">
+    create_context()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.get_memory" class="md-nav__link">
+    get_memory()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.get_tab" class="md-nav__link">
+    get_tab()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.get_tabs" class="md-nav__link">
+    get_tabs()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.get_version" class="md-nav__link">
+    get_version()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.incognito_tab" class="md-nav__link">
+    incognito_tab()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.ok" class="md-nav__link">
+    ok()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.server" class="md-nav__link">
+    server()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.tabs" class="md-nav__link">
+    tabs()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.version" class="md-nav__link">
+    version()
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../base/" class="md-nav__link">
+        base
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.AsyncChrome" class="md-nav__link">
+    ichrome.AsyncChrome
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.check" class="md-nav__link">
+    check()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.connect" class="md-nav__link">
+    connect()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.connect_tab" class="md-nav__link">
+    connect_tab()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.connect_tabs" class="md-nav__link">
+    connect_tabs()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.create_context" class="md-nav__link">
+    create_context()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.get_memory" class="md-nav__link">
+    get_memory()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.get_tab" class="md-nav__link">
+    get_tab()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.get_tabs" class="md-nav__link">
+    get_tabs()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.get_version" class="md-nav__link">
+    get_version()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.incognito_tab" class="md-nav__link">
+    incognito_tab()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.ok" class="md-nav__link">
+    ok()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.server" class="md-nav__link">
+    server()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.tabs" class="md-nav__link">
+    tabs()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ichrome.async_utils.AsyncChrome.version" class="md-nav__link">
+    version()
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+
+
+<h1 id="reference">Reference</h1>
+
+
+<div class="doc doc-object doc-class">
+
+
+<a id="ichrome.AsyncChrome"></a>
+  <div class="doc doc-contents first">
+      <p class="doc doc-class-bases">
+        Bases: <code><span title="ichrome.async_utils.GetValueMixin">GetValueMixin</span></code></p>
+
+
+
+        <details class="quote">
+          <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2609</span>
+<span class="normal">2610</span>
+<span class="normal">2611</span>
+<span class="normal">2612</span>
+<span class="normal">2613</span>
+<span class="normal">2614</span>
+<span class="normal">2615</span>
+<span class="normal">2616</span>
+<span class="normal">2617</span>
+<span class="normal">2618</span>
+<span class="normal">2619</span>
+<span class="normal">2620</span>
+<span class="normal">2621</span>
+<span class="normal">2622</span>
+<span class="normal">2623</span>
+<span class="normal">2624</span>
+<span class="normal">2625</span>
+<span class="normal">2626</span>
+<span class="normal">2627</span>
+<span class="normal">2628</span>
+<span class="normal">2629</span>
+<span class="normal">2630</span>
+<span class="normal">2631</span>
+<span class="normal">2632</span>
+<span class="normal">2633</span>
+<span class="normal">2634</span>
+<span class="normal">2635</span>
+<span class="normal">2636</span>
+<span class="normal">2637</span>
+<span class="normal">2638</span>
+<span class="normal">2639</span>
+<span class="normal">2640</span>
+<span class="normal">2641</span>
+<span class="normal">2642</span>
+<span class="normal">2643</span>
+<span class="normal">2644</span>
+<span class="normal">2645</span>
+<span class="normal">2646</span>
+<span class="normal">2647</span>
+<span class="normal">2648</span>
+<span class="normal">2649</span>
+<span class="normal">2650</span>
+<span class="normal">2651</span>
+<span class="normal">2652</span>
+<span class="normal">2653</span>
+<span class="normal">2654</span>
+<span class="normal">2655</span>
+<span class="normal">2656</span>
+<span class="normal">2657</span>
+<span class="normal">2658</span>
+<span class="normal">2659</span>
+<span class="normal">2660</span>
+<span class="normal">2661</span>
+<span class="normal">2662</span>
+<span class="normal">2663</span>
+<span class="normal">2664</span>
+<span class="normal">2665</span>
+<span class="normal">2666</span>
+<span class="normal">2667</span>
+<span class="normal">2668</span>
+<span class="normal">2669</span>
+<span class="normal">2670</span>
+<span class="normal">2671</span>
+<span class="normal">2672</span>
+<span class="normal">2673</span>
+<span class="normal">2674</span>
+<span class="normal">2675</span>
+<span class="normal">2676</span>
+<span class="normal">2677</span>
+<span class="normal">2678</span>
+<span class="normal">2679</span>
+<span class="normal">2680</span>
+<span class="normal">2681</span>
+<span class="normal">2682</span>
+<span class="normal">2683</span>
+<span class="normal">2684</span>
+<span class="normal">2685</span>
+<span class="normal">2686</span>
+<span class="normal">2687</span>
+<span class="normal">2688</span>
+<span class="normal">2689</span>
+<span class="normal">2690</span>
+<span class="normal">2691</span>
+<span class="normal">2692</span>
+<span class="normal">2693</span>
+<span class="normal">2694</span>
+<span class="normal">2695</span>
+<span class="normal">2696</span>
+<span class="normal">2697</span>
+<span class="normal">2698</span>
+<span class="normal">2699</span>
+<span class="normal">2700</span>
+<span class="normal">2701</span>
+<span class="normal">2702</span>
+<span class="normal">2703</span>
+<span class="normal">2704</span>
+<span class="normal">2705</span>
+<span class="normal">2706</span>
+<span class="normal">2707</span>
+<span class="normal">2708</span>
+<span class="normal">2709</span>
+<span class="normal">2710</span>
+<span class="normal">2711</span>
+<span class="normal">2712</span>
+<span class="normal">2713</span>
+<span class="normal">2714</span>
+<span class="normal">2715</span>
+<span class="normal">2716</span>
+<span class="normal">2717</span>
+<span class="normal">2718</span>
+<span class="normal">2719</span>
+<span class="normal">2720</span>
+<span class="normal">2721</span>
+<span class="normal">2722</span>
+<span class="normal">2723</span>
+<span class="normal">2724</span>
+<span class="normal">2725</span>
+<span class="normal">2726</span>
+<span class="normal">2727</span>
+<span class="normal">2728</span>
+<span class="normal">2729</span>
+<span class="normal">2730</span>
+<span class="normal">2731</span>
+<span class="normal">2732</span>
+<span class="normal">2733</span>
+<span class="normal">2734</span>
+<span class="normal">2735</span>
+<span class="normal">2736</span>
+<span class="normal">2737</span>
+<span class="normal">2738</span>
+<span class="normal">2739</span>
+<span class="normal">2740</span>
+<span class="normal">2741</span>
+<span class="normal">2742</span>
+<span class="normal">2743</span>
+<span class="normal">2744</span>
+<span class="normal">2745</span>
+<span class="normal">2746</span>
+<span class="normal">2747</span>
+<span class="normal">2748</span>
+<span class="normal">2749</span>
+<span class="normal">2750</span>
+<span class="normal">2751</span>
+<span class="normal">2752</span>
+<span class="normal">2753</span>
+<span class="normal">2754</span>
+<span class="normal">2755</span>
+<span class="normal">2756</span>
+<span class="normal">2757</span>
+<span class="normal">2758</span>
+<span class="normal">2759</span>
+<span class="normal">2760</span>
+<span class="normal">2761</span>
+<span class="normal">2762</span>
+<span class="normal">2763</span>
+<span class="normal">2764</span>
+<span class="normal">2765</span>
+<span class="normal">2766</span>
+<span class="normal">2767</span>
+<span class="normal">2768</span>
+<span class="normal">2769</span>
+<span class="normal">2770</span>
+<span class="normal">2771</span>
+<span class="normal">2772</span>
+<span class="normal">2773</span>
+<span class="normal">2774</span>
+<span class="normal">2775</span>
+<span class="normal">2776</span>
+<span class="normal">2777</span>
+<span class="normal">2778</span>
+<span class="normal">2779</span>
+<span class="normal">2780</span>
+<span class="normal">2781</span>
+<span class="normal">2782</span>
+<span class="normal">2783</span>
+<span class="normal">2784</span>
+<span class="normal">2785</span>
+<span class="normal">2786</span>
+<span class="normal">2787</span>
+<span class="normal">2788</span>
+<span class="normal">2789</span>
+<span class="normal">2790</span>
+<span class="normal">2791</span>
+<span class="normal">2792</span>
+<span class="normal">2793</span>
+<span class="normal">2794</span>
+<span class="normal">2795</span>
+<span class="normal">2796</span>
+<span class="normal">2797</span>
+<span class="normal">2798</span>
+<span class="normal">2799</span>
+<span class="normal">2800</span>
+<span class="normal">2801</span>
+<span class="normal">2802</span>
+<span class="normal">2803</span>
+<span class="normal">2804</span>
+<span class="normal">2805</span>
+<span class="normal">2806</span>
+<span class="normal">2807</span>
+<span class="normal">2808</span>
+<span class="normal">2809</span>
+<span class="normal">2810</span>
+<span class="normal">2811</span>
+<span class="normal">2812</span>
+<span class="normal">2813</span>
+<span class="normal">2814</span>
+<span class="normal">2815</span>
+<span class="normal">2816</span>
+<span class="normal">2817</span>
+<span class="normal">2818</span>
+<span class="normal">2819</span>
+<span class="normal">2820</span>
+<span class="normal">2821</span>
+<span class="normal">2822</span>
+<span class="normal">2823</span>
+<span class="normal">2824</span>
+<span class="normal">2825</span>
+<span class="normal">2826</span>
+<span class="normal">2827</span>
+<span class="normal">2828</span>
+<span class="normal">2829</span>
+<span class="normal">2830</span>
+<span class="normal">2831</span>
+<span class="normal">2832</span>
+<span class="normal">2833</span>
+<span class="normal">2834</span>
+<span class="normal">2835</span>
+<span class="normal">2836</span>
+<span class="normal">2837</span>
+<span class="normal">2838</span>
+<span class="normal">2839</span>
+<span class="normal">2840</span>
+<span class="normal">2841</span>
+<span class="normal">2842</span>
+<span class="normal">2843</span>
+<span class="normal">2844</span>
+<span class="normal">2845</span>
+<span class="normal">2846</span>
+<span class="normal">2847</span>
+<span class="normal">2848</span>
+<span class="normal">2849</span>
+<span class="normal">2850</span>
+<span class="normal">2851</span>
+<span class="normal">2852</span>
+<span class="normal">2853</span>
+<span class="normal">2854</span>
+<span class="normal">2855</span>
+<span class="normal">2856</span>
+<span class="normal">2857</span>
+<span class="normal">2858</span>
+<span class="normal">2859</span>
+<span class="normal">2860</span>
+<span class="normal">2861</span>
+<span class="normal">2862</span>
+<span class="normal">2863</span>
+<span class="normal">2864</span>
+<span class="normal">2865</span>
+<span class="normal">2866</span>
+<span class="normal">2867</span>
+<span class="normal">2868</span>
+<span class="normal">2869</span>
+<span class="normal">2870</span>
+<span class="normal">2871</span>
+<span class="normal">2872</span>
+<span class="normal">2873</span>
+<span class="normal">2874</span>
+<span class="normal">2875</span>
+<span class="normal">2876</span>
+<span class="normal">2877</span>
+<span class="normal">2878</span>
+<span class="normal">2879</span>
+<span class="normal">2880</span>
+<span class="normal">2881</span>
+<span class="normal">2882</span>
+<span class="normal">2883</span>
+<span class="normal">2884</span>
+<span class="normal">2885</span>
+<span class="normal">2886</span>
+<span class="normal">2887</span>
+<span class="normal">2888</span>
+<span class="normal">2889</span>
+<span class="normal">2890</span>
+<span class="normal">2891</span>
+<span class="normal">2892</span>
+<span class="normal">2893</span>
+<span class="normal">2894</span>
+<span class="normal">2895</span>
+<span class="normal">2896</span>
+<span class="normal">2897</span>
+<span class="normal">2898</span>
+<span class="normal">2899</span>
+<span class="normal">2900</span>
+<span class="normal">2901</span>
+<span class="normal">2902</span>
+<span class="normal">2903</span>
+<span class="normal">2904</span>
+<span class="normal">2905</span>
+<span class="normal">2906</span>
+<span class="normal">2907</span>
+<span class="normal">2908</span>
+<span class="normal">2909</span>
+<span class="normal">2910</span>
+<span class="normal">2911</span>
+<span class="normal">2912</span>
+<span class="normal">2913</span>
+<span class="normal">2914</span>
+<span class="normal">2915</span>
+<span class="normal">2916</span>
+<span class="normal">2917</span>
+<span class="normal">2918</span>
+<span class="normal">2919</span>
+<span class="normal">2920</span>
+<span class="normal">2921</span>
+<span class="normal">2922</span>
+<span class="normal">2923</span>
+<span class="normal">2924</span>
+<span class="normal">2925</span>
+<span class="normal">2926</span>
+<span class="normal">2927</span>
+<span class="normal">2928</span>
+<span class="normal">2929</span>
+<span class="normal">2930</span>
+<span class="normal">2931</span>
+<span class="normal">2932</span>
+<span class="normal">2933</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AsyncChrome</span><span class="p">(</span><span class="n">GetValueMixin</span><span class="p">):</span>
+    <span class="n">_DEFAULT_CONNECT_TIMEOUT</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">_DEFAULT_RETRY</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
+                 <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">9222</span><span class="p">,</span>
+                 <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">retry</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
+        <span class="c1"># port can be null for chrome address without port.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">timeout</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_DEFAULT_CONNECT_TIMEOUT</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">retry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_DEFAULT_RETRY</span> <span class="k">if</span> <span class="n">retry</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">retry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s1">&#39;init&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_req</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span><span class="p">:</span> <span class="n">AsyncTab</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">browser</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncTab</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span>
+        <span class="k">raise</span> <span class="n">ChromeRuntimeError</span><span class="p">(</span><span class="s1">&#39;`async with` context needed.&#39;</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">init_browser_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ChromeRuntimeError</span><span class="p">(</span><span class="s1">&#39;`async with` context is already in use.&#39;</span><span class="p">)</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span>
+        <span class="c1"># print(version)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span> <span class="o">=</span> <span class="n">AsyncTab</span><span class="p">(</span>
+            <span class="n">tab_id</span><span class="o">=</span><span class="s1">&#39;browser&#39;</span><span class="p">,</span>
+            <span class="n">webSocketDebuggerUrl</span><span class="o">=</span><span class="n">version</span><span class="p">[</span><span class="s1">&#39;webSocketDebuggerUrl&#39;</span><span class="p">],</span>
+            <span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">flatten</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span><span class="o">.</span><span class="n">ws_connection</span><span class="o">.</span><span class="fm">__aenter__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s1">&#39;connected&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_tab</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="fm">__aenter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">():</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_browser_tab</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="fm">__aexit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="s1">&#39;disconnected&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">req</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">req</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s1">&#39;connected&#39;</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span><span class="o">.</span><span class="n">ws_connection</span><span class="o">.</span><span class="fm">__aexit__</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_browser</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">close_browser</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">tab0</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_tab</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tab0</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">tab0</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">await</span> <span class="n">tab0</span><span class="o">.</span><span class="n">close_browser</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">server</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;return like &#39;http://127.0.0.1:9222&#39;&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^https?://&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">):</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># filled the scheme</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">prefix</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;`await self.get_version()`</span>
+<span class="sd">        /json/version&quot;&quot;&quot;</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">(</span><span class="s1">&#39;/json/version&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">resp</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">resp</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Awaitable</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;`await self.version`</span>
+<span class="sd">        {&#39;Browser&#39;: &#39;Chrome/77.0.3865.90&#39;, &#39;Protocol-Version&#39;: &#39;1.3&#39;, &#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36&#39;, &#39;V8-Version&#39;: &#39;7.7.299.11&#39;, &#39;WebKit-Version&#39;: &#39;537.36 (@58c425ba843df2918d9d4b409331972646c393dd)&#39;, &#39;webSocketDebuggerUrl&#39;: &#39;ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1&#39;}&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_version</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">meta</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># same for Sync Chrome</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_version</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;await self.connect()&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_req</span> <span class="o">=</span> <span class="n">Requests</span><span class="p">()</span>
+        <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">req</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_req</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ChromeRuntimeError</span><span class="p">(</span>
+                <span class="s1">&#39;please use Chrome in `async with` context&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_req</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Test http connection to cdp. `await self.check()`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ok</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;await self.ok&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_server</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NewResponse</span><span class="p">:</span>
+        <span class="c1"># maybe return failure request</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="p">,</span> <span class="n">api</span><span class="p">)</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span> <span class="n">retry</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">retry</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">resp</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">return</span> <span class="n">resp</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filt_page_type</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;`await self.get_tabs()`.</span>
+<span class="sd">        cdp url: /json&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">(</span><span class="s1">&#39;/json&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[</span>
+                    <span class="n">AsyncTab</span><span class="p">(</span><span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">rjson</span><span class="p">,</span> <span class="o">**</span><span class="n">rjson</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">rjson</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">rjson</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;page&quot;</span> <span class="ow">or</span> <span class="n">filt_page_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">True</span><span class="p">)</span>
+                <span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;fail to get_tabs from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">error</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;`await self.get_tab(1)` &lt;=&gt; await `(await self.get_tabs())[1]`</span>
+<span class="sd">        If not exist, return None</span>
+<span class="sd">        cdp url: /json&quot;&quot;&quot;</span>
+        <span class="n">tabs</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_tabs</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">tabs</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">tab</span> <span class="ow">in</span> <span class="n">tabs</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">tab</span><span class="o">.</span><span class="n">tab_id</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">tab</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;`await self.tabs`. tabs[0] is the current activated tab&quot;&quot;&quot;</span>
+        <span class="c1"># [{&#39;description&#39;: &#39;&#39;, &#39;devtoolsFrontendUrl&#39;: &#39;/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4&#39;, &#39;id&#39;: &#39;30C16F9165C525A4002E827EDABD48A4&#39;, &#39;title&#39;: &#39;about:blank&#39;, &#39;type&#39;: &#39;page&#39;, &#39;url&#39;: &#39;about:blank&#39;, &#39;webSocketDebuggerUrl&#39;: &#39;ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4&#39;}]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_tabs</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">kill</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">timeout</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">max_deaths</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">req</span><span class="p">:</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">req</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="n">clear_chrome_process</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                        <span class="n">timeout</span><span class="p">,</span>
+                        <span class="n">max_deaths</span><span class="p">,</span>
+                        <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">new_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+        <span class="n">api</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;/json/new?</span><span class="si">{</span><span class="n">quote_plus</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">(</span><span class="n">api</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="n">rjson</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+            <span class="n">tab</span> <span class="o">=</span> <span class="n">AsyncTab</span><span class="p">(</span><span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">rjson</span><span class="p">)</span>
+            <span class="n">tab</span><span class="o">.</span><span class="n">_created_time</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[new_tab] </span><span class="si">{</span><span class="n">tab</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">rjson</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">tab</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">do_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tab_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+                     <span class="n">action</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+        <span class="n">ok</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tab_id</span><span class="p">,</span> <span class="n">AsyncTab</span><span class="p">):</span>
+            <span class="n">tab_id</span> <span class="o">=</span> <span class="n">tab_id</span><span class="o">.</span><span class="n">tab_id</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;/json/</span><span class="si">{</span><span class="n">action</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">tab_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">action</span> <span class="o">==</span> <span class="s1">&#39;close&#39;</span><span class="p">:</span>
+                <span class="n">ok</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span> <span class="o">==</span> <span class="s2">&quot;Target is closing&quot;</span>
+            <span class="k">elif</span> <span class="n">action</span> <span class="o">==</span> <span class="s1">&#39;activate&#39;</span><span class="p">:</span>
+                <span class="n">ok</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span> <span class="o">==</span> <span class="s2">&quot;Target activated&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ok</span> <span class="o">==</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">action</span><span class="si">}</span><span class="s2">_tab] &lt;Tab: </span><span class="si">{</span><span class="n">tab_id</span><span class="si">}</span><span class="s2">&gt;: </span><span class="si">{</span><span class="n">ok</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ok</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">activate_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tab_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">,</span>
+                                               <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">do_tab</span><span class="p">(</span><span class="n">tab_id</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;activate&#39;</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">close_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tab_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">do_tab</span><span class="p">(</span><span class="n">tab_id</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;close&#39;</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">close_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">tab_ids</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]]:</span>
+        <span class="k">if</span> <span class="n">tab_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tab_ids</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">tabs</span>
+        <span class="k">return</span> <span class="p">[</span><span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_tab</span><span class="p">(</span><span class="n">tab_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">tab_id</span> <span class="ow">in</span> <span class="n">tab_ids</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">connect_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="n">auto_close</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;More easier way to init a connected Tab with `async with`.</span>
+
+<span class="sd">        Got a connected Tab object by using `async with chrome.connect_tab(0) as tab::`</span>
+
+<span class="sd">            index = 0 means the current tab.</span>
+<span class="sd">            index = None means create a new tab.</span>
+<span class="sd">            index = &#39;http://python.org&#39; means create a new tab with url.</span>
+<span class="sd">            index = &#39;F130D0295DB5879791AA490322133AFC&#39; means the tab with this id.</span>
+
+<span class="sd">            If auto_close is True: close this tab while exiting context.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">_SingleTabConnectionManager</span><span class="p">(</span><span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                           <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+                                           <span class="n">auto_close</span><span class="o">=</span><span class="n">auto_close</span><span class="p">,</span>
+                                           <span class="n">flatten</span><span class="o">=</span><span class="n">flatten</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">connect_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">tabs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_TabConnectionManager&#39;</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39;async with chrome.connect_tabs([tab1, tab2]):.</span>
+<span class="sd">        or</span>
+<span class="sd">        async with chrome.connect_tabs(tab1, tab2)&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tabs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ChromeValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;tabs should not be null, but `</span><span class="si">{</span><span class="n">tabs</span><span class="si">!r}</span><span class="s1">` was given.&#39;</span><span class="p">)</span>
+        <span class="n">tab0</span> <span class="o">=</span> <span class="n">tabs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tab0</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">tabs_todo</span> <span class="o">=</span> <span class="n">tab0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tabs_todo</span> <span class="o">=</span> <span class="n">tabs</span>
+        <span class="k">return</span> <span class="n">_TabConnectionManager</span><span class="p">(</span><span class="n">tabs_todo</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="s1">&#39;uss&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;MB&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Only support local Daemon. `uss` is slower than `rss` but useful.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_memory_by_port</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                                  <span class="n">attr</span><span class="o">=</span><span class="n">attr</span><span class="p">,</span>
+                                  <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span>
+                                  <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&lt;Chrome(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">&gt;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&lt;Chrome(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="si">}</span><span class="s2">&gt;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_exhaust_simple_coro</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">create_context</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">disposeOnDetach</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">proxyServer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">proxyBypassList</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">originsWithUniversalNetworkAccess</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;BrowserContext&#39;</span><span class="p">:</span>
+        <span class="s2">&quot;create a new Incognito BrowserContext&quot;</span>
+        <span class="k">return</span> <span class="n">BrowserContext</span><span class="p">(</span>
+            <span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">disposeOnDetach</span><span class="o">=</span><span class="n">disposeOnDetach</span><span class="p">,</span>
+            <span class="n">proxyServer</span><span class="o">=</span><span class="n">proxyServer</span><span class="p">,</span>
+            <span class="n">proxyBypassList</span><span class="o">=</span><span class="n">proxyBypassList</span><span class="p">,</span>
+            <span class="n">originsWithUniversalNetworkAccess</span><span class="o">=</span><span class="n">originsWithUniversalNetworkAccess</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">incognito_tab</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;about:blank&#39;</span><span class="p">,</span>
+        <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">enableBeginFrameControl</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">newWindow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">background</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">disposeOnDetach</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">proxyServer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">proxyBypassList</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">originsWithUniversalNetworkAccess</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;IncognitoTabContext&#39;</span><span class="p">:</span>
+        <span class="s2">&quot;create a new Incognito tab&quot;</span>
+        <span class="k">return</span> <span class="n">IncognitoTabContext</span><span class="p">(</span>
+            <span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
+            <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+            <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
+            <span class="n">enableBeginFrameControl</span><span class="o">=</span><span class="n">enableBeginFrameControl</span><span class="p">,</span>
+            <span class="n">newWindow</span><span class="o">=</span><span class="n">newWindow</span><span class="p">,</span>
+            <span class="n">background</span><span class="o">=</span><span class="n">background</span><span class="p">,</span>
+            <span class="n">flatten</span><span class="o">=</span><span class="n">flatten</span><span class="p">,</span>
+            <span class="n">disposeOnDetach</span><span class="o">=</span><span class="n">disposeOnDetach</span><span class="p">,</span>
+            <span class="n">proxyServer</span><span class="o">=</span><span class="n">proxyServer</span><span class="p">,</span>
+            <span class="n">proxyBypassList</span><span class="o">=</span><span class="n">proxyBypassList</span><span class="p">,</span>
+            <span class="n">originsWithUniversalNetworkAccess</span><span class="o">=</span><span class="n">originsWithUniversalNetworkAccess</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+        </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.check" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">check</span><span class="p">()</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Test http connection to cdp. <code>await self.check()</code></p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2725</span>
+<span class="normal">2726</span>
+<span class="normal">2727</span>
+<span class="normal">2728</span>
+<span class="normal">2729</span>
+<span class="normal">2730</span>
+<span class="normal">2731</span>
+<span class="normal">2732</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Test http connection to cdp. `await self.check()`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.connect" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">connect</span><span class="p">()</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>await self.connect()</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2710</span>
+<span class="normal">2711</span>
+<span class="normal">2712</span>
+<span class="normal">2713</span>
+<span class="normal">2714</span>
+<span class="normal">2715</span>
+<span class="normal">2716</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;await self.connect()&quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_req</span> <span class="o">=</span> <span class="n">Requests</span><span class="p">()</span>
+    <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.connect_tab" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">connect_tab</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">auto_close</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">flatten</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>More easier way to init a connected Tab with <code>async with</code>.</p>
+<p>Got a connected Tab object by using <code>async with chrome.connect_tab(0) as tab::</code></p>
+<pre><code>index = 0 means the current tab.
+index = None means create a new tab.
+index = 'http://python.org' means create a new tab with url.
+index = 'F130D0295DB5879791AA490322133AFC' means the tab with this id.
+
+If auto_close is True: close this tab while exiting context.
+</code></pre>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2839</span>
+<span class="normal">2840</span>
+<span class="normal">2841</span>
+<span class="normal">2842</span>
+<span class="normal">2843</span>
+<span class="normal">2844</span>
+<span class="normal">2845</span>
+<span class="normal">2846</span>
+<span class="normal">2847</span>
+<span class="normal">2848</span>
+<span class="normal">2849</span>
+<span class="normal">2850</span>
+<span class="normal">2851</span>
+<span class="normal">2852</span>
+<span class="normal">2853</span>
+<span class="normal">2854</span>
+<span class="normal">2855</span>
+<span class="normal">2856</span>
+<span class="normal">2857</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">connect_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="n">auto_close</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;More easier way to init a connected Tab with `async with`.</span>
+
+<span class="sd">        Got a connected Tab object by using `async with chrome.connect_tab(0) as tab::`</span>
+
+<span class="sd">            index = 0 means the current tab.</span>
+<span class="sd">            index = None means create a new tab.</span>
+<span class="sd">            index = &#39;http://python.org&#39; means create a new tab with url.</span>
+<span class="sd">            index = &#39;F130D0295DB5879791AA490322133AFC&#39; means the tab with this id.</span>
+
+<span class="sd">            If auto_close is True: close this tab while exiting context.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">_SingleTabConnectionManager</span><span class="p">(</span><span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                           <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+                                           <span class="n">auto_close</span><span class="o">=</span><span class="n">auto_close</span><span class="p">,</span>
+                                           <span class="n">flatten</span><span class="o">=</span><span class="n">flatten</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.connect_tabs" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">connect_tabs</span><span class="p">(</span><span class="o">*</span><span class="n">tabs</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>async with chrome.connect_tabs([tab1, tab2]):.
+or
+async with chrome.connect_tabs(tab1, tab2)</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2859</span>
+<span class="normal">2860</span>
+<span class="normal">2861</span>
+<span class="normal">2862</span>
+<span class="normal">2863</span>
+<span class="normal">2864</span>
+<span class="normal">2865</span>
+<span class="normal">2866</span>
+<span class="normal">2867</span>
+<span class="normal">2868</span>
+<span class="normal">2869</span>
+<span class="normal">2870</span>
+<span class="normal">2871</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">connect_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">tabs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_TabConnectionManager&#39;</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;async with chrome.connect_tabs([tab1, tab2]):.</span>
+<span class="sd">    or</span>
+<span class="sd">    async with chrome.connect_tabs(tab1, tab2)&#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tabs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ChromeValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;tabs should not be null, but `</span><span class="si">{</span><span class="n">tabs</span><span class="si">!r}</span><span class="s1">` was given.&#39;</span><span class="p">)</span>
+    <span class="n">tab0</span> <span class="o">=</span> <span class="n">tabs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tab0</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="n">tabs_todo</span> <span class="o">=</span> <span class="n">tab0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tabs_todo</span> <span class="o">=</span> <span class="n">tabs</span>
+    <span class="k">return</span> <span class="n">_TabConnectionManager</span><span class="p">(</span><span class="n">tabs_todo</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.create_context" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">create_context</span><span class="p">(</span><span class="n">disposeOnDetach</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">proxyServer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proxyBypassList</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">originsWithUniversalNetworkAccess</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>create a new Incognito BrowserContext</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2889</span>
+<span class="normal">2890</span>
+<span class="normal">2891</span>
+<span class="normal">2892</span>
+<span class="normal">2893</span>
+<span class="normal">2894</span>
+<span class="normal">2895</span>
+<span class="normal">2896</span>
+<span class="normal">2897</span>
+<span class="normal">2898</span>
+<span class="normal">2899</span>
+<span class="normal">2900</span>
+<span class="normal">2901</span>
+<span class="normal">2902</span>
+<span class="normal">2903</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_context</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">disposeOnDetach</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">proxyServer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">proxyBypassList</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">originsWithUniversalNetworkAccess</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;BrowserContext&#39;</span><span class="p">:</span>
+    <span class="s2">&quot;create a new Incognito BrowserContext&quot;</span>
+    <span class="k">return</span> <span class="n">BrowserContext</span><span class="p">(</span>
+        <span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+        <span class="n">disposeOnDetach</span><span class="o">=</span><span class="n">disposeOnDetach</span><span class="p">,</span>
+        <span class="n">proxyServer</span><span class="o">=</span><span class="n">proxyServer</span><span class="p">,</span>
+        <span class="n">proxyBypassList</span><span class="o">=</span><span class="n">proxyBypassList</span><span class="p">,</span>
+        <span class="n">originsWithUniversalNetworkAccess</span><span class="o">=</span><span class="n">originsWithUniversalNetworkAccess</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.get_memory" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_memory</span><span class="p">(</span><span class="n">attr</span><span class="o">=</span><span class="s1">&#39;uss&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;MB&#39;</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Only support local Daemon. <code>uss</code> is slower than <code>rss</code> but useful.</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2873</span>
+<span class="normal">2874</span>
+<span class="normal">2875</span>
+<span class="normal">2876</span>
+<span class="normal">2877</span>
+<span class="normal">2878</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="s1">&#39;uss&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;MB&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Only support local Daemon. `uss` is slower than `rss` but useful.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">get_memory_by_port</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                              <span class="n">attr</span><span class="o">=</span><span class="n">attr</span><span class="p">,</span>
+                              <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span>
+                              <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.get_tab" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_tab</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p><code>await self.get_tab(1)</code> &lt;=&gt; await <code>(await self.get_tabs())[1]</code>
+If not exist, return None
+cdp url: /json</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2763</span>
+<span class="normal">2764</span>
+<span class="normal">2765</span>
+<span class="normal">2766</span>
+<span class="normal">2767</span>
+<span class="normal">2768</span>
+<span class="normal">2769</span>
+<span class="normal">2770</span>
+<span class="normal">2771</span>
+<span class="normal">2772</span>
+<span class="normal">2773</span>
+<span class="normal">2774</span>
+<span class="normal">2775</span>
+<span class="normal">2776</span>
+<span class="normal">2777</span>
+<span class="normal">2778</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;`await self.get_tab(1)` &lt;=&gt; await `(await self.get_tabs())[1]`</span>
+<span class="sd">    If not exist, return None</span>
+<span class="sd">    cdp url: /json&quot;&quot;&quot;</span>
+    <span class="n">tabs</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_tabs</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">tabs</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">tab</span> <span class="ow">in</span> <span class="n">tabs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">tab</span><span class="o">.</span><span class="n">tab_id</span> <span class="o">==</span> <span class="n">index</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">tab</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="kc">None</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.get_tabs" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_tabs</span><span class="p">(</span><span class="n">filt_page_type</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p><code>await self.get_tabs()</code>.
+cdp url: /json</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2747</span>
+<span class="normal">2748</span>
+<span class="normal">2749</span>
+<span class="normal">2750</span>
+<span class="normal">2751</span>
+<span class="normal">2752</span>
+<span class="normal">2753</span>
+<span class="normal">2754</span>
+<span class="normal">2755</span>
+<span class="normal">2756</span>
+<span class="normal">2757</span>
+<span class="normal">2758</span>
+<span class="normal">2759</span>
+<span class="normal">2760</span>
+<span class="normal">2761</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filt_page_type</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;`await self.get_tabs()`.</span>
+<span class="sd">    cdp url: /json&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">(</span><span class="s1">&#39;/json&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="n">AsyncTab</span><span class="p">(</span><span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">rjson</span><span class="p">,</span> <span class="o">**</span><span class="n">rjson</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">rjson</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">rjson</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;page&quot;</span> <span class="ow">or</span> <span class="n">filt_page_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="p">]</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;fail to get_tabs from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">error</span>
+    <span class="k">return</span> <span class="p">[]</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.get_version" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_version</span><span class="p">()</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p><code>await self.get_version()</code>
+/json/version</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2690</span>
+<span class="normal">2691</span>
+<span class="normal">2692</span>
+<span class="normal">2693</span>
+<span class="normal">2694</span>
+<span class="normal">2695</span>
+<span class="normal">2696</span>
+<span class="normal">2697</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;`await self.get_version()`</span>
+<span class="sd">    /json/version&quot;&quot;&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">(</span><span class="s1">&#39;/json/version&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">resp</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">resp</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.incognito_tab" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">incognito_tab</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s1">&#39;about:blank&#39;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">enableBeginFrameControl</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">newWindow</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">background</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">flatten</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">disposeOnDetach</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">proxyServer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proxyBypassList</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">originsWithUniversalNetworkAccess</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>create a new Incognito tab</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2905</span>
+<span class="normal">2906</span>
+<span class="normal">2907</span>
+<span class="normal">2908</span>
+<span class="normal">2909</span>
+<span class="normal">2910</span>
+<span class="normal">2911</span>
+<span class="normal">2912</span>
+<span class="normal">2913</span>
+<span class="normal">2914</span>
+<span class="normal">2915</span>
+<span class="normal">2916</span>
+<span class="normal">2917</span>
+<span class="normal">2918</span>
+<span class="normal">2919</span>
+<span class="normal">2920</span>
+<span class="normal">2921</span>
+<span class="normal">2922</span>
+<span class="normal">2923</span>
+<span class="normal">2924</span>
+<span class="normal">2925</span>
+<span class="normal">2926</span>
+<span class="normal">2927</span>
+<span class="normal">2928</span>
+<span class="normal">2929</span>
+<span class="normal">2930</span>
+<span class="normal">2931</span>
+<span class="normal">2932</span>
+<span class="normal">2933</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">incognito_tab</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;about:blank&#39;</span><span class="p">,</span>
+    <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">enableBeginFrameControl</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">newWindow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">background</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">disposeOnDetach</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">proxyServer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">proxyBypassList</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">originsWithUniversalNetworkAccess</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;IncognitoTabContext&#39;</span><span class="p">:</span>
+    <span class="s2">&quot;create a new Incognito tab&quot;</span>
+    <span class="k">return</span> <span class="n">IncognitoTabContext</span><span class="p">(</span>
+        <span class="n">chrome</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+        <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
+        <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+        <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span>
+        <span class="n">enableBeginFrameControl</span><span class="o">=</span><span class="n">enableBeginFrameControl</span><span class="p">,</span>
+        <span class="n">newWindow</span><span class="o">=</span><span class="n">newWindow</span><span class="p">,</span>
+        <span class="n">background</span><span class="o">=</span><span class="n">background</span><span class="p">,</span>
+        <span class="n">flatten</span><span class="o">=</span><span class="n">flatten</span><span class="p">,</span>
+        <span class="n">disposeOnDetach</span><span class="o">=</span><span class="n">disposeOnDetach</span><span class="p">,</span>
+        <span class="n">proxyServer</span><span class="o">=</span><span class="n">proxyServer</span><span class="p">,</span>
+        <span class="n">proxyBypassList</span><span class="o">=</span><span class="n">proxyBypassList</span><span class="p">,</span>
+        <span class="n">originsWithUniversalNetworkAccess</span><span class="o">=</span><span class="n">originsWithUniversalNetworkAccess</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.ok" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">ok</span><span class="p">()</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>await self.ok</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2734</span>
+<span class="normal">2735</span>
+<span class="normal">2736</span>
+<span class="normal">2737</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
+<span class="k">def</span> <span class="nf">ok</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;await self.ok&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.server" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">server</span><span class="p">()</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>return like 'http://127.0.0.1:9222'</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2677</span>
+<span class="normal">2678</span>
+<span class="normal">2679</span>
+<span class="normal">2680</span>
+<span class="normal">2681</span>
+<span class="normal">2682</span>
+<span class="normal">2683</span>
+<span class="normal">2684</span>
+<span class="normal">2685</span>
+<span class="normal">2686</span>
+<span class="normal">2687</span>
+<span class="normal">2688</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
+<span class="k">def</span> <span class="nf">server</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;return like &#39;http://127.0.0.1:9222&#39;&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^https?://&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">):</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># filled the scheme</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">prefix</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.tabs" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">tabs</span><span class="p">()</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p><code>await self.tabs</code>. tabs[0] is the current activated tab</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2780</span>
+<span class="normal">2781</span>
+<span class="normal">2782</span>
+<span class="normal">2783</span>
+<span class="normal">2784</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
+<span class="k">def</span> <span class="nf">tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">]]:</span>
+    <span class="sd">&quot;&quot;&quot;`await self.tabs`. tabs[0] is the current activated tab&quot;&quot;&quot;</span>
+    <span class="c1"># [{&#39;description&#39;: &#39;&#39;, &#39;devtoolsFrontendUrl&#39;: &#39;/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4&#39;, &#39;id&#39;: &#39;30C16F9165C525A4002E827EDABD48A4&#39;, &#39;title&#39;: &#39;about:blank&#39;, &#39;type&#39;: &#39;page&#39;, &#39;url&#39;: &#39;about:blank&#39;, &#39;webSocketDebuggerUrl&#39;: &#39;ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4&#39;}]</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_tabs</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="ichrome.async_utils.AsyncChrome.version" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">version</span><span class="p">()</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p><code>await self.version</code>
+{'Browser': 'Chrome/77.0.3865.90', 'Protocol-Version': '1.3', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36', 'V8-Version': '7.7.299.11', 'WebKit-Version': '537.36 (@58c425ba843df2918d9d4b409331972646c393dd)', 'webSocketDebuggerUrl': 'ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1'}</p>
+
+      <details class="quote">
+        <summary>Source code in <code>ichrome\async_utils.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2699</span>
+<span class="normal">2700</span>
+<span class="normal">2701</span>
+<span class="normal">2702</span>
+<span class="normal">2703</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
+<span class="k">def</span> <span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Awaitable</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;`await self.version`</span>
+<span class="sd">    {&#39;Browser&#39;: &#39;Chrome/77.0.3865.90&#39;, &#39;Protocol-Version&#39;: &#39;1.3&#39;, &#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36&#39;, &#39;V8-Version&#39;: &#39;7.7.299.11&#39;, &#39;WebKit-Version&#39;: &#39;537.36 (@58c425ba843df2918d9d4b409331972646c393dd)&#39;, &#39;webSocketDebuggerUrl&#39;: &#39;ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1&#39;}&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_version</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+
+
+              
+            </article>
+            
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="../AsyncChromeDaemon/" class="md-footer__link md-footer__link--prev" aria-label="Previous: AsyncChromeDaemon" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              AsyncChromeDaemon
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../base/" class="md-footer__link md-footer__link--next" aria-label="Next: base" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              base
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.ecf98df9.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.9c69f0bc.min.js"></script>
+      
+    
+  </body>
+</html>

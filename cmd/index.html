@@ -1,0 +1,497 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.3.1, mkdocs-material-8.4.0">
+    
+    
+      
+        <title>Command Line - ichrome</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.69437709.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cbb835fc.min.css">
+        
+      
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#command-line" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ichrome" class="md-header__button md-logo" aria-label="ichrome" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ichrome
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Command Line
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ichrome" class="md-nav__button md-logo" aria-label="ichrome" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    ichrome
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Intro
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        Quick Start
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Command Line
+      </a>
+      
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="reference" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/AsyncTab/" class="md-nav__link">
+        AsyncTab
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/AsyncChromeDaemon/" class="md-nav__link">
+        AsyncChromeDaemon
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/AsyncChrome/" class="md-nav__link">
+        AsyncChrome
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/base/" class="md-nav__link">
+        base
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+
+
+<h1 id="command-line">Command Line</h1>
+<blockquote>
+<p>Be used for launching a chrome daemon process. The unhandled args will be treated as chrome raw args and appended to extra_config list.</p>
+<p><a href="https://peter.sh/experiments/chromium-command-line-switches/">Chromium Command Line Args List</a></p>
+</blockquote>
+<p>Shutdown Chrome process with the given port</p>
+<pre><code class="language-bash">λ python3 -m ichrome -s 9222
+2018-11-27 23:01:59 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
+2018-11-27 23:02:00 DEBUG [ichrome] base.py(329): kill chrome.exe --remote-debugging-port=9222
+</code></pre>
+<p>Launch a Chrome daemon process</p>
+<pre><code class="language-bash">λ python3 -m ichrome -p 9222 --start_url &quot;http://bing.com&quot; --disable_image
+2018-11-27 23:03:57 INFO  [ichrome] __main__.py(69): ChromeDaemon cmd args: {'daemon': True, 'block': True, 'chrome_path': '', 'host': 'localhost', 'port': 9222, 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': None, 'disable_image': True, 'start_url': 'http://bing.com', 'extra_config': '', 'max_deaths': 1, 'timeout': 2}
+</code></pre>
+<p>Crawl the given URL, output the HTML DOM</p>
+<pre><code class="language-bash">λ python3 -m ichrome --crawl --headless --timeout=2 http://api.ipify.org/
+&lt;html&gt;&lt;head&gt;&lt;/head&gt;&lt;body&gt;&lt;pre style=&quot;word-wrap: break-word; white-space: pre-wrap;&quot;&gt;38.143.68.66&lt;/pre&gt;&lt;/body&gt;&lt;/html&gt;
+</code></pre>
+<p>To use default user dir (ignore ichrome user-dir settings)</p>
+<blockquote>
+<p>ensure the existing Chromes get closed</p>
+</blockquote>
+<pre><code class="language-bash">λ python -m ichrome -U null
+</code></pre>
+<p>Details:</p>
+<pre><code>$ python3 -m ichrome --help
+</code></pre>
+<pre><code>usage:
+    All the unknown args will be appended to extra_config as chrome original args.
+    Maybe you can have a try by typing: `python3 -m ichrome --try`
+
+Demo:
+    &gt; python -m ichrome -H 127.0.0.1 -p 9222 --window-size=1212,1212 --incognito
+    &gt; ChromeDaemon cmd args: port=9222, {'chrome_path': '', 'host': '127.0.0.1', 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': WindowsPath('C:/Users/root/ichrome_user_data'), 'disable_image': False, 'start_url': 'about:blank', 'extra_config': ['--window-size=1212,1212', '--incognito'], 'max_deaths': 1, 'timeout':1, 'proc_check_interval': 5, 'debug': False}
+
+    &gt; python -m ichrome
+    &gt; ChromeDaemon cmd args: port=9222, {'chrome_path': '', 'host': '127.0.0.1', 'headless': False, 'user_agent': '', 'proxy': '', 'user_data_dir': WindowsPath('C:/Users/root/ichrome_user_data'), 'disable_image': False, 'start_url': 'about:blank', 'extra_config': [], 'max_deaths': 1, 'timeout': 1, 'proc_check_interval': 5, 'debug': False}
+
+Other operations:
+    1. kill local chrome process with given port:
+        python -m ichrome -s 9222
+        python -m ichrome -k 9222
+    2. clear user_data_dir path (remove the folder and files):
+        python -m ichrome --clear
+        python -m ichrome --clean
+        python -m ichrome -C -p 9222
+    3. show ChromeDaemon.__doc__:
+        python -m ichrome --doc
+    4. crawl the URL, output the HTML DOM:
+        python -m ichrome --crawl --headless --timeout=2 http://myip.ipip.net/
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, -V, --version     ichrome version info
+  -c CONFIG, --config CONFIG
+                        load config dict from JSON file of given path
+  -cp CHROME_PATH, --chrome-path CHROME_PATH, --chrome_path CHROME_PATH
+                        chrome executable file path, default to null for
+                        automatic searching
+  -H HOST, --host HOST  --remote-debugging-address, default to 127.0.0.1
+  -p PORT, --port PORT  --remote-debugging-port, default to 9222
+  --headless            --headless and --hide-scrollbars, default to False
+  -s SHUTDOWN, -k SHUTDOWN, --shutdown SHUTDOWN
+                        shutdown the given port, only for local running chrome
+  -A USER_AGENT, --user-agent USER_AGENT, --user_agent USER_AGENT
+                        --user-agent, default to Chrome PC: Mozilla/5.0
+                        (Linux; Android 6.0; Nexus 5 Build/MRA58N)
+                        AppleWebKit/537.36 (KHTML, like Gecko)
+                        Chrome/83.0.4103.106 Mobile Safari/537.36
+  -x PROXY, --proxy PROXY
+                        --proxy-server, default to None
+  -U USER_DATA_DIR, --user-data-dir USER_DATA_DIR, --user_data_dir USER_DATA_DIR
+                        user_data_dir to save user data, default to
+                        ~/ichrome_user_data
+  --disable-image, --disable_image
+                        disable image for loading performance, default to
+                        False
+  -url START_URL, --start-url START_URL, --start_url START_URL
+                        start url while launching chrome, default to
+                        about:blank
+  --max-deaths MAX_DEATHS, --max_deaths MAX_DEATHS
+                        restart times. default to 1 for without auto-restart
+  --timeout TIMEOUT     timeout to connect the remote server, default to 1 for
+                        localhost
+  -w WORKERS, --workers WORKERS
+                        the number of worker processes, default to 1
+  --proc-check-interval PROC_CHECK_INTERVAL, --proc_check_interval PROC_CHECK_INTERVAL
+                        check chrome process alive every interval seconds
+  --crawl               crawl the given URL, output the HTML DOM
+  -C, --clear, --clear  clean user_data_dir
+  --doc                 show ChromeDaemon.__doc__
+  --debug               set logger level to DEBUG
+  -K, --killall         killall chrome launched local with --remote-debugging-
+                        port
+  -t, --try, --demo, --repl
+                        Have a try for ichrome with repl mode.
+  -tc, --try-connection, --repl-connection
+                        Have a try for ichrome with repl mode (connect to a launched chrome).
+</code></pre>
+
+
+
+
+              
+            </article>
+            
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="../quickstart/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Quick Start" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Quick Start
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../reference/AsyncTab/" class="md-footer__link md-footer__link--next" aria-label="Next: AsyncTab" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              AsyncTab
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.ecf98df9.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.9c69f0bc.min.js"></script>
+      
+    
+  </body>
+</html>
