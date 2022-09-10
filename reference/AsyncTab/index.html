@@ -5269,7 +5269,7 @@ int / float:
 <span class="sd">            cssselector (str, optional): which element.outerHTML to be matched, defaults to &#39;html&#39;.</span>
 <span class="sd">            attribute (str, optional): attribute of the selected element, defaults to &#39;outerHTML&#39;</span>
 <span class="sd">            flags (str, optional): regex flags, defaults to &#39;g&#39;.</span>
-<span class="sd">            timeout: defaults to NotSet.</span>
+<span class="sd">            timeout (float): defaults to NotSet.</span>
 
 <span class="sd">        Demo::</span>
 
@@ -5481,13 +5481,13 @@ int / float:
         <span class="sd">&quot;&quot;&quot;Insert HTML source code into document. Often used for injecting CSS element.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            html(str): HTML source code</span>
-<span class="sd">            cssselector(str, optional): cssselector to find the target node, defaults to &#39;body&#39;</span>
-<span class="sd">            position(str, optional): [&#39;beforebegin&#39;, &#39;afterbegin&#39;, &#39;beforeend&#39;, &#39;afterend&#39;],  defaults to &#39;beforeend&#39;</span>
-<span class="sd">            timeout([type], optional): defaults to NotSet</span>
+<span class="sd">            html (str): HTML source code</span>
+<span class="sd">            cssselector (str, optional): cssselector to find the target node, defaults to &#39;body&#39;</span>
+<span class="sd">            position (str, optional): [&#39;beforebegin&#39;, &#39;afterbegin&#39;, &#39;beforeend&#39;, &#39;afterend&#39;],  defaults to &#39;beforeend&#39;</span>
+<span class="sd">            timeout ([type], optional): defaults to NotSet</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">template</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;&#39;&#39;document.querySelector(`</span><span class="si">{</span><span class="n">cssselector</span><span class="si">}</span><span class="s1">`).insertAdjacentHTML(&#39;</span><span class="si">{</span><span class="n">position</span><span class="si">}</span><span class="s1">&#39;, `</span><span class="si">{</span><span class="n">html</span><span class="si">}</span><span class="s1">`)&#39;&#39;&#39;</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">js</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">js</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="nf">inject_html</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                           <span class="n">html</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -7639,6 +7639,7 @@ None: timeout.</p>
         <tr>
           <td><code>timeout</code></td>
           <td>
+                <code>float</code>
           </td>
           <td><p>defaults to NotSet.</p></td>
           <td>
@@ -7732,7 +7733,7 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 <span class="sd">            cssselector (str, optional): which element.outerHTML to be matched, defaults to &#39;html&#39;.</span>
 <span class="sd">            attribute (str, optional): attribute of the selected element, defaults to &#39;outerHTML&#39;</span>
 <span class="sd">            flags (str, optional): regex flags, defaults to &#39;g&#39;.</span>
-<span class="sd">            timeout: defaults to NotSet.</span>
+<span class="sd">            timeout (float): defaults to NotSet.</span>
 
 <span class="sd">        Demo::</span>
 
@@ -9231,8 +9232,9 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
     </thead>
     <tbody>
         <tr>
-          <td><code>html(str)</code></td>
+          <td><code>html</code></td>
           <td>
+                <code>str</code>
           </td>
           <td><p>HTML source code</p></td>
           <td>
@@ -9240,33 +9242,33 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
           </td>
         </tr>
         <tr>
-          <td><code>cssselector(str,</code></td>
+          <td><code>cssselector</code></td>
           <td>
-                <code>optional</code>
+                <code>str</code>
           </td>
           <td><p>cssselector to find the target node, defaults to 'body'</p></td>
           <td>
-              <em>required</em>
+                <code>&#39;body&#39;</code>
           </td>
         </tr>
         <tr>
-          <td><code>position(str,</code></td>
+          <td><code>position</code></td>
           <td>
-                <code>optional</code>
+                <code>str</code>
           </td>
           <td><p>['beforebegin', 'afterbegin', 'beforeend', 'afterend'],  defaults to 'beforeend'</p></td>
           <td>
-              <em>required</em>
+                <code>&#39;beforeend&#39;</code>
           </td>
         </tr>
         <tr>
-          <td><code>timeout([type],</code></td>
+          <td><code>timeout</code></td>
           <td>
-                <code>optional</code>
+                <code>[<span title="ichrome.async_utils.AsyncTab.type">type</span>]</code>
           </td>
           <td><p>defaults to NotSet</p></td>
           <td>
-              <em>required</em>
+                <code>NotSet</code>
           </td>
         </tr>
     </tbody>
@@ -9296,13 +9298,13 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
     <span class="sd">&quot;&quot;&quot;Insert HTML source code into document. Often used for injecting CSS element.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        html(str): HTML source code</span>
-<span class="sd">        cssselector(str, optional): cssselector to find the target node, defaults to &#39;body&#39;</span>
-<span class="sd">        position(str, optional): [&#39;beforebegin&#39;, &#39;afterbegin&#39;, &#39;beforeend&#39;, &#39;afterend&#39;],  defaults to &#39;beforeend&#39;</span>
-<span class="sd">        timeout([type], optional): defaults to NotSet</span>
+<span class="sd">        html (str): HTML source code</span>
+<span class="sd">        cssselector (str, optional): cssselector to find the target node, defaults to &#39;body&#39;</span>
+<span class="sd">        position (str, optional): [&#39;beforebegin&#39;, &#39;afterbegin&#39;, &#39;beforeend&#39;, &#39;afterend&#39;],  defaults to &#39;beforeend&#39;</span>
+<span class="sd">        timeout ([type], optional): defaults to NotSet</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">template</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;&#39;&#39;document.querySelector(`</span><span class="si">{</span><span class="n">cssselector</span><span class="si">}</span><span class="s1">`).insertAdjacentHTML(&#39;</span><span class="si">{</span><span class="n">position</span><span class="si">}</span><span class="s1">&#39;, `</span><span class="si">{</span><span class="n">html</span><span class="si">}</span><span class="s1">`)&#39;&#39;&#39;</span>
-    <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">js</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">js</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
       </details>
   </div>
