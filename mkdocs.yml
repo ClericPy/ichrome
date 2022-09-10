@@ -1,0 +1,16 @@
+site_name: ichrome
+
+theme:
+  name: "material"
+
+nav:
+  - index.md
+  - quickstart.md
+  - cmd.md
+  - reference:
+      - AsyncTab: "reference/AsyncTab.md"
+      - AsyncChromeDaemon: "reference/AsyncChromeDaemon.md"
+      - AsyncChrome: "reference/AsyncChrome.md"
+      - base: "reference/base.md"
+plugins:
+  - mkdocstrings
