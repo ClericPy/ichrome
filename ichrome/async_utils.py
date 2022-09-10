@@ -304,7 +304,8 @@ class AsyncTab(GetValueMixin):
                  _recv_daemon_break_callback: Callable = None,
                  flatten: bool = None,
                  **kwargs):
-        """
+        """Init AsyncTab instance.
+
         original Tab JSON::
 
             [{
@@ -316,35 +317,25 @@ class AsyncTab(GetValueMixin):
                 "url": "http://localhost:9222/json",
                 "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/8ED4BDD54713572BCE026393A0137214"
             }]
-        :param tab_id: defaults to kwargs.pop('id')
-        :type tab_id: str, optional
-        :param title: tab title, defaults to None
-        :type title: str, optional
-        :param url: tab url, binded to self._url, defaults to None
-        :type url: str, optional
-        :param type: tab type, often be `page` type, defaults to None
-        :type type: str, optional
-        :param description: tab description, defaults to None
-        :type description: str, optional
-        :param webSocketDebuggerUrl: ws URL to connect, defaults to None
-        :type webSocketDebuggerUrl: str, optional
-        :param devtoolsFrontendUrl: devtools UI URL, defaults to None
-        :type devtoolsFrontendUrl: str, optional
-        :param json: raw Tab JSON, defaults to None
-        :type json: str, optional
-        :param chrome: the Chrome object which the Tab belongs to, defaults to None
-        :type chrome: Chrome, optional
-        :param timeout: default recv timeout, defaults to Tab._DEFAULT_RECV_TIMEOUT
-        :type timeout: [type], optional
-        :param ws_kwargs: kwargs for ws connection, defaults to None
-        :type ws_kwargs: dict, optional
-        :param default_recv_callback: called for each data received, sync/async function only accept 1 arg of data comes from ws recv, defaults to None
-        :type default_recv_callback: Callable, optional
-        :param _recv_daemon_break_callback: like the tab_close_callback. sync/async function only accept 1 arg of self while _recv_daemon break, defaults to None
-        :type _recv_daemon_break_callback: Callable, optional
-        :param flatten: use flatten mode with sessionId
-        :type flatten: bool, optional
+
+        Args:
+            tab_id (str, optional): defaults to kwargs.pop('id').
+            title (str, optional): tab title. Defaults to None.
+            url (str, optional): tab url, binded to self._url. Defaults to None.
+            type (str, optional): tab type, often be `page` type. Defaults to None.
+            description (str, optional): tab description. Defaults to None.
+            webSocketDebuggerUrl (str, optional): ws URL to connect. Defaults to None.
+            devtoolsFrontendUrl (str, optional): devtools UI URL. Defaults to None.
+            json (str, optional): raw Tab JSON. Defaults to None.
+            chrome (AsyncChrome, optional): the AsyncChrome object which the Tab belongs to. Defaults to None.
+            timeout (_type_, optional): default recv timeout, defaults to AsyncTab._DEFAULT_RECV_TIMEOUT. Defaults to NotSet.
+            ws_kwargs (dict, optional): kwargs for ws connection. Defaults to AsyncTab._DEFAULT_WS_KWARGS.
+            default_recv_callback (Callable, optional): called for each data received, sync/async function only accept 1 arg of data comes from ws recv. Defaults to None.
+            _recv_daemon_break_callback (Callable, optional): like the tab_close_callback. sync/async function only accept 1 arg of self while _recv_daemon break. defaults to None.
+            flatten (bool, optional): use flatten mode with sessionId. Defaults to AsyncTab._DEFAULT_FLATTEN.
+
         """
+
         tab_id = tab_id or kwargs.pop('id')
         if not tab_id:
             raise ChromeValueError(f'tab_id should not be null, {tab_id}')
@@ -485,19 +476,19 @@ class AsyncTab(GetValueMixin):
         self,
         event_dict: dict,
         timeout=NotSet,
-        callback_function=None,
+        callback_function: Callable = None,
     ) -> Awaitable[Union[dict, None]]:
         """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
 
-        :param event_dict: dict like {'id': 1} or {'method': 'Page.loadEventFired'} or other JSON serializable dict.
-        :type event_dict: dict
-        :param timeout: await seconds, None for self._MAX_WAIT_TIMEOUT, 0 for 0 seconds.
-        :type timeout: float / None, optional
-        :param callback_function: event callback_function function accept only one arg(the event dict).
-        :type callback_function: callable, optional
-        :return: the event dict from websocket recv.
-        :rtype: dict
+        Args:
+            event_dict (dict):  dict like {'id': 1} or {'method': 'Page.loadEventFired'} or other JSON serializable dict.
+            timeout (_type_, optional): await seconds, None for self._MAX_WAIT_TIMEOUT, 0 for 0 seconds.. Defaults to NotSet.
+            callback_function (_type_, optional): event callback_function function accept only one arg(the event dict).. Defaults to None.
+
+        Returns:
+            Awaitable[Union[dict, None]]: the event dict from websocket recv
         """
+
         timeout = self.ensure_timeout(timeout)
         if isinstance(timeout, (float, int)) and timeout <= 0:
             # no wait
@@ -1093,9 +1084,6 @@ Fetch.RequestPattern:
                 timeout=timeout)
 
     async def set_headers(self, headers: dict, timeout=NotSet):
-        '''
-        # if 'Referer' in headers or 'referer' in headers:
-        #     logger.warning('`Referer` is not valid header, please use the `referrer` arg of set_url')'''
         logger.debug(f'[set_headers] {self!r} headers => {headers}')
         data = await self.send('Network.setExtraHTTPHeaders',
                                headers=headers,
@@ -1175,8 +1163,6 @@ Fetch.RequestPattern:
 
     async def setBlockedURLs(self, urls: List[str], timeout=NotSet):
         """(Network.setBlockedURLs) Blocks URLs from loading. [EXPERIMENTAL].
-        :param urls: URL patterns to block. Wildcards ('*') are allowed.
-        :type urls: List[str]
 
         Demo::
 
@@ -1403,6 +1389,13 @@ Fetch.RequestPattern:
                       timeout=NotSet) -> list:
         """Similar to python re.findall.
 
+        Args:
+            regex (str): raw regex string to be set in /%s/g.
+            cssselector (str, optional): which element.outerHTML to be matched, defaults to 'html'.
+            attribute (str, optional): attribute of the selected element, defaults to 'outerHTML'
+            flags (str, optional): regex flags, defaults to 'g'.
+            timeout: defaults to NotSet.
+
         Demo::
 
             # no group / (?:) / (?<=) / (?!)
@@ -1416,17 +1409,6 @@ Fetch.RequestPattern:
             # multi-groups
             print(await tab.findall('<title>(1)(2).*?</title>'))
             # [['1', '2']]
-
-        :param regex: raw regex string to be set in /%s/g
-        :type regex: str
-        :param cssselector: which element.outerHTML to be matched, defaults to 'html'
-        :type cssselector: str, optional
-        :param attribute: attribute of the selected element, defaults to 'outerHTML'
-        :type attribute: str, optional
-        :param flags: regex flags, defaults to 'g'
-        :type flags: str, optional
-        :param timeout: defaults to NotSet
-        :type timeout: [type], optional
         """
         if re.search(r'(?<!\\)/', regex):
             regex = re.sub(r'(?<!\\)/', r'\/', regex)
@@ -1475,14 +1457,12 @@ JSON.stringify(result)
                        timeout=NotSet) -> bool:
         """String.prototype.includes.
 
-        :param text: substring
-        :type text: str
-        :param cssselector: css selector for outerHTML, defaults to 'html'
-        :type cssselector: str, optional
-        :param attribute: attribute of the selected element, defaults to 'outerHTML'. Sometimes for case-insensitive usage by setting `attribute='textContent.toLowerCase()'`
-        :type attribute: str, optional
-        :return: whether the outerHTML contains substring.
-        :rtype: bool
+        Args:
+            text (str): substring
+            cssselector (str, optional): css selector for outerHTML, defaults to 'html'
+            attribute (str, optional): attribute of the selected element, defaults to 'outerHTML'. Sometimes for case-insensitive usage by setting `attribute='textContent.toLowerCase()'`
+        Returns:
+            whether the outerHTML contains substring.
         """
         js = f'document.querySelector(`{cssselector}`).{attribute}.includes(`{text}`)'
         return await self.get_value(js, jsonify=True, timeout=timeout)
@@ -1625,16 +1605,11 @@ JSON.stringify(result)""" % (
                                  timeout=NotSet):
         """Insert HTML source code into document. Often used for injecting CSS element.
 
-        :param html: HTML source code
-        :type html: str
-        :param cssselector: cssselector to find the target node, defaults to 'body'
-        :type cssselector: str, optional
-        :param position: ['beforebegin', 'afterbegin', 'beforeend', 'afterend'],  defaults to 'beforeend'
-        :type position: str, optional
-        :param timeout: defaults to NotSet
-        :type timeout: [type], optional
-        :return: [description]
-        :rtype: [type]
+        Args:
+            html(str): HTML source code
+            cssselector(str, optional): cssselector to find the target node, defaults to 'body'
+            position(str, optional): ['beforebegin', 'afterbegin', 'beforeend', 'afterend'],  defaults to 'beforeend'
+            timeout([type], optional): defaults to NotSet
         """
         template = f'''document.querySelector(`{cssselector}`).insertAdjacentHTML('{position}', `{html}`)'''
         return await self.js(template)
@@ -1765,18 +1740,13 @@ JSON.stringify(result)""" % (
                          timeout=NotSet,
                          captureBeyondViewport=False,
                          **kwargs):
-        """Page.captureScreenshot.
+        """Page.captureScreenshot. clip's keys: x, y, width, height, scale
 
-        :param format: Image compression format (defaults to png)., defaults to 'png'
-        :type format: str, optional
-        :param quality: Compression quality from range [0..100], defaults to None. (jpeg only).
-        :type quality: int, optional
-        :param clip: Capture the screenshot of a given region only. defaults to None, means whole page.
-        :type clip: dict, optional
-        :param fromSurface: Capture the screenshot from the surface, rather than the view. Defaults to true.
-        :type fromSurface: bool, optional
-
-        clip's keys: x, y, width, height, scale"""
+        format(str, optional): Image compression format (defaults to png)., defaults to 'png'
+        quality(int, optional): Compression quality from range [0..100], defaults to None. (jpeg only).
+        clip(dict, optional): Capture the screenshot of a given region only. defaults to None, means whole page.
+        fromSurface(bool, optional): Capture the screenshot from the surface, rather than the view. Defaults to true.
+"""
 
         def save_file(save_path, file_bytes):
             with open(save_path, 'wb') as f:
@@ -3202,18 +3172,12 @@ class FetchBuffer(EventBuffer):
                              **_kwargs):
         """Fetch.fulfillRequest. Provides response to the request.
 
-        :param requestId: An id the client received in requestPaused event.
-        :type requestId: str
-        :param responseCode: An HTTP response code.
-        :type responseCode: int
-        :param responseHeaders: Response headers, defaults to None
-        :type responseHeaders: List[Dict[str, str]], optional
-        :param binaryResponseHeaders: Alternative way of specifying response headers as a \0-separated series of name: value pairs. Prefer the above method unless you need to represent some non-UTF8 values that can't be transmitted over the protocol as text. (Encoded as a base64 string when passed over JSON), defaults to None
-        :type binaryResponseHeaders: str, optional
-        :param body: A response body. If absent, original response body will be used if the request is intercepted at the response stage and empty body will be used if the request is intercepted at the request stage. (Encoded as a base64 string when passed over JSON), defaults to None. If given as bytes type, will be translate to base64 string automatically.
-        :type body: Union[str, bytes], optional
-        :param responsePhrase: A textual representation of responseCode. If absent, a standard phrase matching responseCode is used., defaults to None
-        :type responsePhrase: str, optional
+        requestId(str): An id the client received in requestPaused event.
+        responseCode(int): An HTTP response code.
+        responseHeaders(List[Dict[str, str]], optional): Response headers, defaults to None
+        binaryResponseHeaders(str, optional): Alternative way of specifying response headers as a \0-separated series of name: value pairs. Prefer the above method unless you need to represent some non-UTF8 values that can't be transmitted over the protocol as text. (Encoded as a base64 string when passed over JSON), defaults to None
+        body(Union[str, bytes], optional): A response body. If absent, original response body will be used if the request is intercepted at the response stage and empty body will be used if the request is intercepted at the request stage. (Encoded as a base64 string when passed over JSON), defaults to None. If given as bytes type, will be translate to base64 string automatically.
+        responsePhrase(str, optional): A textual representation of responseCode. If absent, a standard phrase matching responseCode is used., defaults to None
         """
         requestId = self.ensure_request_id(requestId)
         if kwargs:
@@ -3240,18 +3204,12 @@ class FetchBuffer(EventBuffer):
                               **_kwargs):
         """Fetch.continueRequest. Continues the request, optionally modifying some of its parameters.
 
-        :param requestId: An id the client received in requestPaused event.
-        :type requestId: str
-        :param url: If set, the request url will be modified in a way that's not observable by page., defaults to None
-        :type url: str, optional
-        :param method: If set, the request method is overridden., defaults to None
-        :type method: str, optional
-        :param postData: If set, overrides the post data in the request. (Encoded as a base64 string when passed over JSON), defaults to None
-        :type postData: str, optional
-        :param headers: If set, overrides the request headers., defaults to None
-        :type headers: List[Dict[str, str]], optional
-        :param kwargs: other params, defaults to None
-        :type kwargs: dict, optional
+        requestId(str): An id the client received in requestPaused event.
+        url(str, optional): If set, the request url will be modified in a way that's not observable by page., defaults to None
+        method(str, optional): If set, the request method is overridden., defaults to None
+        postData(str, optional): If set, overrides the post data in the request. (Encoded as a base64 string when passed over JSON), defaults to None
+        headers(List[Dict[str, str]], optional): If set, overrides the request headers., defaults to None
+        kwargs(dict, optional): other params, defaults to None
         """
         requestId = self.ensure_request_id(requestId)
         if kwargs:
