@@ -1394,7 +1394,7 @@ Fetch.RequestPattern:
             cssselector (str, optional): which element.outerHTML to be matched, defaults to 'html'.
             attribute (str, optional): attribute of the selected element, defaults to 'outerHTML'
             flags (str, optional): regex flags, defaults to 'g'.
-            timeout: defaults to NotSet.
+            timeout (float): defaults to NotSet.
 
         Demo::
 
@@ -1606,13 +1606,13 @@ JSON.stringify(result)""" % (
         """Insert HTML source code into document. Often used for injecting CSS element.
 
         Args:
-            html(str): HTML source code
-            cssselector(str, optional): cssselector to find the target node, defaults to 'body'
-            position(str, optional): ['beforebegin', 'afterbegin', 'beforeend', 'afterend'],  defaults to 'beforeend'
-            timeout([type], optional): defaults to NotSet
+            html (str): HTML source code
+            cssselector (str, optional): cssselector to find the target node, defaults to 'body'
+            position (str, optional): ['beforebegin', 'afterbegin', 'beforeend', 'afterend'],  defaults to 'beforeend'
+            timeout ([type], optional): defaults to NotSet
         """
         template = f'''document.querySelector(`{cssselector}`).insertAdjacentHTML('{position}', `{html}`)'''
-        return await self.js(template)
+        return await self.js(template, timeout=timeout)
 
     async def inject_html(self,
                           html: str,
