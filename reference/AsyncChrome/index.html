@@ -576,10 +576,7 @@
 
         <details class="quote">
           <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2609</span>
-<span class="normal">2610</span>
-<span class="normal">2611</span>
-<span class="normal">2612</span>
+          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2612</span>
 <span class="normal">2613</span>
 <span class="normal">2614</span>
 <span class="normal">2615</span>
@@ -900,7 +897,10 @@
 <span class="normal">2930</span>
 <span class="normal">2931</span>
 <span class="normal">2932</span>
-<span class="normal">2933</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AsyncChrome</span><span class="p">(</span><span class="n">GetValueMixin</span><span class="p">):</span>
+<span class="normal">2933</span>
+<span class="normal">2934</span>
+<span class="normal">2935</span>
+<span class="normal">2936</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AsyncChrome</span><span class="p">(</span><span class="n">GetValueMixin</span><span class="p">):</span>
     <span class="n">_DEFAULT_CONNECT_TIMEOUT</span> <span class="o">=</span> <span class="mi">3</span>
     <span class="n">_DEFAULT_RETRY</span> <span class="o">=</span> <span class="mi">1</span>
 
@@ -1260,14 +1260,14 @@
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2725</span>
-<span class="normal">2726</span>
-<span class="normal">2727</span>
-<span class="normal">2728</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2728</span>
 <span class="normal">2729</span>
 <span class="normal">2730</span>
 <span class="normal">2731</span>
-<span class="normal">2732</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">2732</span>
+<span class="normal">2733</span>
+<span class="normal">2734</span>
+<span class="normal">2735</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Test http connection to cdp. `await self.check()`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">r</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">()</span>
@@ -1301,13 +1301,13 @@
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2710</span>
-<span class="normal">2711</span>
-<span class="normal">2712</span>
-<span class="normal">2713</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2713</span>
 <span class="normal">2714</span>
 <span class="normal">2715</span>
-<span class="normal">2716</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">2716</span>
+<span class="normal">2717</span>
+<span class="normal">2718</span>
+<span class="normal">2719</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;await self.connect()&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_req</span> <span class="o">=</span> <span class="n">Requests</span><span class="p">()</span>
     <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">():</span>
@@ -1344,10 +1344,7 @@ If auto_close is True: close this tab while exiting context.
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2839</span>
-<span class="normal">2840</span>
-<span class="normal">2841</span>
-<span class="normal">2842</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2842</span>
 <span class="normal">2843</span>
 <span class="normal">2844</span>
 <span class="normal">2845</span>
@@ -1362,7 +1359,10 @@ If auto_close is True: close this tab while exiting context.
 <span class="normal">2854</span>
 <span class="normal">2855</span>
 <span class="normal">2856</span>
-<span class="normal">2857</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">connect_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">2857</span>
+<span class="normal">2858</span>
+<span class="normal">2859</span>
+<span class="normal">2860</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">connect_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                     <span class="n">auto_close</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                     <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
@@ -1405,10 +1405,7 @@ async with chrome.connect_tabs(tab1, tab2)</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2859</span>
-<span class="normal">2860</span>
-<span class="normal">2861</span>
-<span class="normal">2862</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2862</span>
 <span class="normal">2863</span>
 <span class="normal">2864</span>
 <span class="normal">2865</span>
@@ -1417,7 +1414,10 @@ async with chrome.connect_tabs(tab1, tab2)</p>
 <span class="normal">2868</span>
 <span class="normal">2869</span>
 <span class="normal">2870</span>
-<span class="normal">2871</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">connect_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">tabs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_TabConnectionManager&#39;</span><span class="p">:</span>
+<span class="normal">2871</span>
+<span class="normal">2872</span>
+<span class="normal">2873</span>
+<span class="normal">2874</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">connect_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">tabs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;_TabConnectionManager&#39;</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;async with chrome.connect_tabs([tab1, tab2]):.</span>
 <span class="sd">    or</span>
 <span class="sd">    async with chrome.connect_tabs(tab1, tab2)&#39;&#39;&#39;</span>
@@ -1452,10 +1452,7 @@ async with chrome.connect_tabs(tab1, tab2)</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2889</span>
-<span class="normal">2890</span>
-<span class="normal">2891</span>
-<span class="normal">2892</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2892</span>
 <span class="normal">2893</span>
 <span class="normal">2894</span>
 <span class="normal">2895</span>
@@ -1466,7 +1463,10 @@ async with chrome.connect_tabs(tab1, tab2)</p>
 <span class="normal">2900</span>
 <span class="normal">2901</span>
 <span class="normal">2902</span>
-<span class="normal">2903</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_context</span><span class="p">(</span>
+<span class="normal">2903</span>
+<span class="normal">2904</span>
+<span class="normal">2905</span>
+<span class="normal">2906</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_context</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">disposeOnDetach</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">proxyServer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1503,12 +1503,12 @@ async with chrome.connect_tabs(tab1, tab2)</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2873</span>
-<span class="normal">2874</span>
-<span class="normal">2875</span>
-<span class="normal">2876</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2876</span>
 <span class="normal">2877</span>
-<span class="normal">2878</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="s1">&#39;uss&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;MB&#39;</span><span class="p">):</span>
+<span class="normal">2878</span>
+<span class="normal">2879</span>
+<span class="normal">2880</span>
+<span class="normal">2881</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="s1">&#39;uss&#39;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;MB&#39;</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Only support local Daemon. `uss` is slower than `rss` but useful.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">get_memory_by_port</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
                               <span class="n">attr</span><span class="o">=</span><span class="n">attr</span><span class="p">,</span>
@@ -1542,10 +1542,7 @@ cdp url: /json</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2763</span>
-<span class="normal">2764</span>
-<span class="normal">2765</span>
-<span class="normal">2766</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2766</span>
 <span class="normal">2767</span>
 <span class="normal">2768</span>
 <span class="normal">2769</span>
@@ -1557,7 +1554,10 @@ cdp url: /json</p>
 <span class="normal">2775</span>
 <span class="normal">2776</span>
 <span class="normal">2777</span>
-<span class="normal">2778</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">2778</span>
+<span class="normal">2779</span>
+<span class="normal">2780</span>
+<span class="normal">2781</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                   <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;`await self.get_tab(1)` &lt;=&gt; await `(await self.get_tabs())[1]`</span>
 <span class="sd">    If not exist, return None</span>
@@ -1600,10 +1600,7 @@ cdp url: /json</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2747</span>
-<span class="normal">2748</span>
-<span class="normal">2749</span>
-<span class="normal">2750</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2750</span>
 <span class="normal">2751</span>
 <span class="normal">2752</span>
 <span class="normal">2753</span>
@@ -1614,7 +1611,10 @@ cdp url: /json</p>
 <span class="normal">2758</span>
 <span class="normal">2759</span>
 <span class="normal">2760</span>
-<span class="normal">2761</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filt_page_type</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">]:</span>
+<span class="normal">2761</span>
+<span class="normal">2762</span>
+<span class="normal">2763</span>
+<span class="normal">2764</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filt_page_type</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;`await self.get_tabs()`.</span>
 <span class="sd">    cdp url: /json&quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
@@ -1656,14 +1656,14 @@ cdp url: /json</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2690</span>
-<span class="normal">2691</span>
-<span class="normal">2692</span>
-<span class="normal">2693</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2693</span>
 <span class="normal">2694</span>
 <span class="normal">2695</span>
 <span class="normal">2696</span>
-<span class="normal">2697</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="normal">2697</span>
+<span class="normal">2698</span>
+<span class="normal">2699</span>
+<span class="normal">2700</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;`await self.get_version()`</span>
 <span class="sd">    /json/version&quot;&quot;&quot;</span>
     <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server</span><span class="p">(</span><span class="s1">&#39;/json/version&#39;</span><span class="p">)</span>
@@ -1693,10 +1693,7 @@ cdp url: /json</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2905</span>
-<span class="normal">2906</span>
-<span class="normal">2907</span>
-<span class="normal">2908</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2908</span>
 <span class="normal">2909</span>
 <span class="normal">2910</span>
 <span class="normal">2911</span>
@@ -1721,7 +1718,10 @@ cdp url: /json</p>
 <span class="normal">2930</span>
 <span class="normal">2931</span>
 <span class="normal">2932</span>
-<span class="normal">2933</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">incognito_tab</span><span class="p">(</span>
+<span class="normal">2933</span>
+<span class="normal">2934</span>
+<span class="normal">2935</span>
+<span class="normal">2936</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">incognito_tab</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;about:blank&#39;</span><span class="p">,</span>
     <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1776,10 +1776,10 @@ cdp url: /json</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2734</span>
-<span class="normal">2735</span>
-<span class="normal">2736</span>
-<span class="normal">2737</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2737</span>
+<span class="normal">2738</span>
+<span class="normal">2739</span>
+<span class="normal">2740</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
 <span class="k">def</span> <span class="nf">ok</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;await self.ok&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
@@ -1809,10 +1809,7 @@ cdp url: /json</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2677</span>
-<span class="normal">2678</span>
-<span class="normal">2679</span>
-<span class="normal">2680</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2680</span>
 <span class="normal">2681</span>
 <span class="normal">2682</span>
 <span class="normal">2683</span>
@@ -1820,7 +1817,10 @@ cdp url: /json</p>
 <span class="normal">2685</span>
 <span class="normal">2686</span>
 <span class="normal">2687</span>
-<span class="normal">2688</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
+<span class="normal">2688</span>
+<span class="normal">2689</span>
+<span class="normal">2690</span>
+<span class="normal">2691</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
 <span class="k">def</span> <span class="nf">server</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;return like &#39;http://127.0.0.1:9222&#39;&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^https?://&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">):</span>
@@ -1858,11 +1858,11 @@ cdp url: /json</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2780</span>
-<span class="normal">2781</span>
-<span class="normal">2782</span>
-<span class="normal">2783</span>
-<span class="normal">2784</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2783</span>
+<span class="normal">2784</span>
+<span class="normal">2785</span>
+<span class="normal">2786</span>
+<span class="normal">2787</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
 <span class="k">def</span> <span class="nf">tabs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">AsyncTab</span><span class="p">]]:</span>
     <span class="sd">&quot;&quot;&quot;`await self.tabs`. tabs[0] is the current activated tab&quot;&quot;&quot;</span>
     <span class="c1"># [{&#39;description&#39;: &#39;&#39;, &#39;devtoolsFrontendUrl&#39;: &#39;/devtools/inspector.html?ws=127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4&#39;, &#39;id&#39;: &#39;30C16F9165C525A4002E827EDABD48A4&#39;, &#39;title&#39;: &#39;about:blank&#39;, &#39;type&#39;: &#39;page&#39;, &#39;url&#39;: &#39;about:blank&#39;, &#39;webSocketDebuggerUrl&#39;: &#39;ws://127.0.0.1:9222/devtools/page/30C16F9165C525A4002E827EDABD48A4&#39;}]</span>
@@ -1894,11 +1894,11 @@ cdp url: /json</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2699</span>
-<span class="normal">2700</span>
-<span class="normal">2701</span>
-<span class="normal">2702</span>
-<span class="normal">2703</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2702</span>
+<span class="normal">2703</span>
+<span class="normal">2704</span>
+<span class="normal">2705</span>
+<span class="normal">2706</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@property</span>
 <span class="k">def</span> <span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Awaitable</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;`await self.version`</span>
 <span class="sd">    {&#39;Browser&#39;: &#39;Chrome/77.0.3865.90&#39;, &#39;Protocol-Version&#39;: &#39;1.3&#39;, &#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36&#39;, &#39;V8-Version&#39;: &#39;7.7.299.11&#39;, &#39;WebKit-Version&#39;: &#39;537.36 (@58c425ba843df2918d9d4b409331972646c393dd)&#39;, &#39;webSocketDebuggerUrl&#39;: &#39;ws://127.0.0.1:9222/devtools/browser/b5fbd149-959b-4603-b209-cfd26d66bdc1&#39;}&quot;&quot;&quot;</span>

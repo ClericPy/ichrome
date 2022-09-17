@@ -4125,7 +4125,10 @@ int / float:
 <span class="normal">2473</span>
 <span class="normal">2474</span>
 <span class="normal">2475</span>
-<span class="normal">2476</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AsyncTab</span><span class="p">(</span><span class="n">GetValueMixin</span><span class="p">):</span>
+<span class="normal">2476</span>
+<span class="normal">2477</span>
+<span class="normal">2478</span>
+<span class="normal">2479</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AsyncTab</span><span class="p">(</span><span class="n">GetValueMixin</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Tab operations in async environment.</span>
 
 <span class="sd">        The timeout variable -- wait for the events::</span>
@@ -4827,6 +4830,7 @@ int / float:
                    <span class="n">callback</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;FetchBuffer&#39;</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Fetch.RequestPattern:</span>
+
 <span class="sd">    urlPattern</span>
 <span class="sd">        string(Wildcards)</span>
 <span class="sd">    resourceType</span>
@@ -4834,45 +4838,46 @@ int / float:
 <span class="sd">    requestStage</span>
 <span class="sd">        Stage at which to begin intercepting requests. Default is Request.</span>
 <span class="sd">        Allowed Values: Request, Response</span>
-<span class="sd">        ::</span>
 
-<span class="sd">            async with tab.iter_fetch(patterns=[{</span>
-<span class="sd">                    &#39;urlPattern&#39;: &#39;*httpbin.org/get?a=*&#39;</span>
-<span class="sd">            }]) as f:</span>
-<span class="sd">                await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
-<span class="sd">                data = await f</span>
-<span class="sd">                assert data</span>
-<span class="sd">                # test continueRequest</span>
-<span class="sd">                await f.continueRequest(data)</span>
-<span class="sd">                assert await tab.wait_includes(&#39;origin&#39;)</span>
+<span class="sd">Demo::</span>
 
-<span class="sd">                await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
-<span class="sd">                data = await f</span>
-<span class="sd">                assert data</span>
-<span class="sd">                # test modify response</span>
-<span class="sd">                await f.fulfillRequest(data,</span>
-<span class="sd">                                       200,</span>
-<span class="sd">                                       body=b&#39;hello world.&#39;)</span>
-<span class="sd">                assert await tab.wait_includes(&#39;hello world.&#39;)</span>
-<span class="sd">                await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
-<span class="sd">                data = await f</span>
-<span class="sd">                assert data</span>
-<span class="sd">                await f.failRequest(data, &#39;AccessDenied&#39;)</span>
-<span class="sd">                assert (await tab.url).startswith(&#39;chrome-error://&#39;)</span>
+<span class="sd">    async with tab.iter_fetch(patterns=[{</span>
+<span class="sd">            &#39;urlPattern&#39;: &#39;*httpbin.org/get?a=*&#39;</span>
+<span class="sd">    }]) as f:</span>
+<span class="sd">        await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
+<span class="sd">        data = await f</span>
+<span class="sd">        assert data</span>
+<span class="sd">        # test continueRequest</span>
+<span class="sd">        await f.continueRequest(data)</span>
+<span class="sd">        assert await tab.wait_includes(&#39;origin&#39;)</span>
 
-<span class="sd">            # use callback</span>
-<span class="sd">            async def cb(event, tab, buffer):</span>
-<span class="sd">                await buffer.continueRequest(event)</span>
+<span class="sd">        await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
+<span class="sd">        data = await f</span>
+<span class="sd">        assert data</span>
+<span class="sd">        # test modify response</span>
+<span class="sd">        await f.fulfillRequest(data,</span>
+<span class="sd">                                200,</span>
+<span class="sd">                                body=b&#39;hello world.&#39;)</span>
+<span class="sd">        assert await tab.wait_includes(&#39;hello world.&#39;)</span>
+<span class="sd">        await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
+<span class="sd">        data = await f</span>
+<span class="sd">        assert data</span>
+<span class="sd">        await f.failRequest(data, &#39;AccessDenied&#39;)</span>
+<span class="sd">        assert (await tab.url).startswith(&#39;chrome-error://&#39;)</span>
 
-<span class="sd">            async with tab.iter_fetch(</span>
-<span class="sd">                    patterns=[{</span>
-<span class="sd">                        &#39;urlPattern&#39;: &#39;*httpbin.org/ip*&#39;</span>
-<span class="sd">                    }],</span>
-<span class="sd">                    callback=cb,</span>
-<span class="sd">            ) as f:</span>
-<span class="sd">                await tab.goto(&#39;http://httpbin.org/ip&#39;, timeout=0)</span>
-<span class="sd">                async for r in f:</span>
-<span class="sd">                    break</span>
+<span class="sd">    # use callback</span>
+<span class="sd">    async def cb(event, tab, buffer):</span>
+<span class="sd">        await buffer.continueRequest(event)</span>
+
+<span class="sd">    async with tab.iter_fetch(</span>
+<span class="sd">            patterns=[{</span>
+<span class="sd">                &#39;urlPattern&#39;: &#39;*httpbin.org/ip*&#39;</span>
+<span class="sd">            }],</span>
+<span class="sd">            callback=cb,</span>
+<span class="sd">    ) as f:</span>
+<span class="sd">        await tab.goto(&#39;http://httpbin.org/ip&#39;, timeout=0)</span>
+<span class="sd">        async for r in f:</span>
+<span class="sd">            break</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">FetchBuffer</span><span class="p">(</span><span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
@@ -5027,7 +5032,9 @@ int / float:
         <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="nf">get_history_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;return dict: {&#39;currentIndex&#39;: 0, &#39;entries&#39;: [{&#39;id&#39;: 1, &#39;url&#39;: &#39;about:blank&#39;, &#39;userTypedURL&#39;: &#39;about:blank&#39;, &#39;title&#39;: &#39;&#39;, &#39;transitionType&#39;: &#39;auto_toplevel&#39;}, {&#39;id&#39;: 7, &#39;url&#39;: &#39;http://3.p.cn/&#39;, &#39;userTypedURL&#39;: &#39;http://3.p.cn/&#39;, &#39;title&#39;: &#39;Not Found&#39;, &#39;transitionType&#39;: &#39;typed&#39;}, {&#39;id&#39;: 9, &#39;url&#39;: &#39;http://p.3.cn/&#39;, &#39;userTypedURL&#39;: &#39;http://p.3.cn/&#39;, &#39;title&#39;: &#39;&#39;, &#39;transitionType&#39;: &#39;typed&#39;}]}}&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;(Page.getNavigationHistory) Get the page history list.</span>
+<span class="sd">        return example:</span>
+<span class="sd">            {&#39;currentIndex&#39;: 0, &#39;entries&#39;: [{&#39;id&#39;: 1, &#39;url&#39;: &#39;about:blank&#39;, &#39;userTypedURL&#39;: &#39;about:blank&#39;, &#39;title&#39;: &#39;&#39;, &#39;transitionType&#39;: &#39;auto_toplevel&#39;}, {&#39;id&#39;: 7, &#39;url&#39;: &#39;http://3.p.cn/&#39;, &#39;userTypedURL&#39;: &#39;http://3.p.cn/&#39;, &#39;title&#39;: &#39;Not Found&#39;, &#39;transitionType&#39;: &#39;typed&#39;}, {&#39;id&#39;: 9, &#39;url&#39;: &#39;http://p.3.cn/&#39;, &#39;userTypedURL&#39;: &#39;http://p.3.cn/&#39;, &#39;title&#39;: &#39;&#39;, &#39;transitionType&#39;: &#39;typed&#39;}]}}&quot;&quot;&quot;</span>
         <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Page.getNavigationHistory&#39;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_data_value</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">value_path</span><span class="o">=</span><span class="s1">&#39;result&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">{})</span>
 
@@ -5039,14 +5046,12 @@ int / float:
     <span class="k">async</span> <span class="k">def</span> <span class="nf">setBlockedURLs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">urls</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;(Network.setBlockedURLs) Blocks URLs from loading. [EXPERIMENTAL].</span>
 
-<span class="sd">        Demo::</span>
+<span class="sd">Demo::</span>
 
-<span class="sd">            await tab.setBlockedURLs(urls=[&#39;*.jpg&#39;, &#39;*.png&#39;])</span>
+<span class="sd">    await tab.setBlockedURLs(urls=[&#39;*.jpg&#39;, &#39;*.png&#39;])</span>
 
-<span class="sd">        WARNING: This method is EXPERIMENTAL, the official suggestion is using Fetch.enable, even Fetch is also EXPERIMENTAL, and wait events to control the requests (continue / abort / modify), especially block urls with resourceType: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Other.</span>
-<span class="sd">        https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable</span>
-
-
+<span class="sd">WARNING: This method is EXPERIMENTAL, the official suggestion is using Fetch.enable, even Fetch is also EXPERIMENTAL, and wait events to control the requests (continue / abort / modify), especially block urls with resourceType: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Other.</span>
+<span class="sd">https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Network.setBlockedURLs&#39;</span><span class="p">,</span>
                                <span class="n">urls</span><span class="o">=</span><span class="n">urls</span><span class="p">,</span>
@@ -5127,10 +5132,11 @@ int / float:
                       <span class="n">kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                       <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;javascript will be filled into function template.</span>
-<span class="sd">        Demo::</span>
-<span class="sd">            javascript = `return document.title`</span>
-<span class="sd">            will run js like, and get the return result</span>
-<span class="sd">            `(()=&gt;{return document.title})()`</span>
+
+<span class="sd">Demo::</span>
+
+<span class="sd">    javascript = `return document.title`</span>
+<span class="sd">    will run js like `(()=&gt;{return document.title})()`, and get the return result</span>
 <span class="sd">&quot;&quot;&quot;</span>
         <span class="n">javascript</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;(()=&gt;{</span><span class="si">%s</span><span class="s1">})()&#39;&#39;&#39;</span> <span class="o">%</span> <span class="n">javascript</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">js</span><span class="p">(</span><span class="n">javascript</span><span class="p">,</span>
@@ -5271,19 +5277,19 @@ int / float:
 <span class="sd">            flags (str, optional): regex flags, defaults to &#39;g&#39;.</span>
 <span class="sd">            timeout (float): defaults to NotSet.</span>
 
-<span class="sd">        Demo::</span>
+<span class="sd">Demo::</span>
 
-<span class="sd">            # no group / (?:) / (?&lt;=) / (?!)</span>
-<span class="sd">            print(await tab.findall(&#39;&lt;title&gt;.*?&lt;/title&gt;&#39;))</span>
-<span class="sd">            # [&#39;&lt;title&gt;123456789&lt;/title&gt;&#39;]</span>
+<span class="sd">    # no group / (?:) / (?&lt;=) / (?!)</span>
+<span class="sd">    print(await tab.findall(&#39;&lt;title&gt;.*?&lt;/title&gt;&#39;))</span>
+<span class="sd">    # [&#39;&lt;title&gt;123456789&lt;/title&gt;&#39;]</span>
 
-<span class="sd">            # only 1 group</span>
-<span class="sd">            print(await tab.findall(&#39;&lt;title&gt;(.*?)&lt;/title&gt;&#39;))</span>
-<span class="sd">            # [&#39;123456789&#39;]</span>
+<span class="sd">    # only 1 group</span>
+<span class="sd">    print(await tab.findall(&#39;&lt;title&gt;(.*?)&lt;/title&gt;&#39;))</span>
+<span class="sd">    # [&#39;123456789&#39;]</span>
 
-<span class="sd">            # multi-groups</span>
-<span class="sd">            print(await tab.findall(&#39;&lt;title&gt;(1)(2).*?&lt;/title&gt;&#39;))</span>
-<span class="sd">            # [[&#39;1&#39;, &#39;2&#39;]]</span>
+<span class="sd">    # multi-groups</span>
+<span class="sd">    print(await tab.findall(&#39;&lt;title&gt;(1)(2).*?&lt;/title&gt;&#39;))</span>
+<span class="sd">    # [[&#39;1&#39;, &#39;2&#39;]]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?&lt;!</span><span class="se">\\</span><span class="s1">)/&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="p">):</span>
             <span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?&lt;!</span><span class="se">\\</span><span class="s1">)/&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;\/&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="p">)</span>
@@ -5891,12 +5897,12 @@ int / float:
                              <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Drag with offset continuously.</span>
 
-<span class="sd">        Demo::</span>
+<span class="sd">Demo::</span>
 
-<span class="sd">                await tab.set_url(&#39;https://draw.yunser.com/&#39;)</span>
-<span class="sd">                walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(</span>
-<span class="sd">                    0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)</span>
-<span class="sd">                await walker.move(50 * 1.414, 50 * 1.414, 0.2)</span>
+<span class="sd">        await tab.set_url(&#39;https://draw.yunser.com/&#39;)</span>
+<span class="sd">        walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(</span>
+<span class="sd">            0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)</span>
+<span class="sd">        await walker.move(50 * 1.414, 50 * 1.414, 0.2)</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">return</span> <span class="n">OffsetDragWalker</span><span class="p">(</span><span class="n">start_x</span><span class="p">,</span>
                                 <span class="n">start_y</span><span class="p">,</span>
@@ -6380,9 +6386,9 @@ int / float:
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2310</span>
-<span class="normal">2311</span>
-<span class="normal">2312</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_WSConnection</span><span class="p">:</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2313</span>
+<span class="normal">2314</span>
+<span class="normal">2315</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_WSConnection</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;`async with tab() as tab:` or just `async with tab():` and reuse `tab` variable.&#39;&#39;&#39;</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
@@ -6847,12 +6853,12 @@ int / float:
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1768</span>
-<span class="normal">1769</span>
-<span class="normal">1770</span>
-<span class="normal">1771</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1771</span>
 <span class="normal">1772</span>
-<span class="normal">1773</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">add_js_onload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal">1773</span>
+<span class="normal">1774</span>
+<span class="normal">1775</span>
+<span class="normal">1776</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">add_js_onload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;[Page.addScriptToEvaluateOnNewDocument], return the identifier [str].&#39;&#39;&#39;</span>
     <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Page.addScriptToEvaluateOnNewDocument&#39;</span><span class="p">,</span>
                            <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
@@ -6890,15 +6896,15 @@ None: timeout.</p>
 </details>
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2036</span>
-<span class="normal">2037</span>
-<span class="normal">2038</span>
-<span class="normal">2039</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2039</span>
 <span class="normal">2040</span>
 <span class="normal">2041</span>
 <span class="normal">2042</span>
 <span class="normal">2043</span>
-<span class="normal">2044</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">alert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+<span class="normal">2044</span>
+<span class="normal">2045</span>
+<span class="normal">2046</span>
+<span class="normal">2047</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">alert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;run alert(`{text}`) in console, the `text` should be escaped before passing.</span>
 <span class="sd">    Block until user click [OK] or timeout.</span>
 <span class="sd">    Returned as:</span>
@@ -6933,15 +6939,15 @@ None: timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2426</span>
-<span class="normal">2427</span>
-<span class="normal">2428</span>
-<span class="normal">2429</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2429</span>
 <span class="normal">2430</span>
 <span class="normal">2431</span>
 <span class="normal">2432</span>
 <span class="normal">2433</span>
-<span class="normal">2434</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">auto_enable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_or_method</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+<span class="normal">2434</span>
+<span class="normal">2435</span>
+<span class="normal">2436</span>
+<span class="normal">2437</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">auto_enable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_or_method</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;auto enable the domain&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event_or_method</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="n">method</span> <span class="o">=</span> <span class="n">event_or_method</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">)</span>
@@ -7040,10 +7046,7 @@ await tab.click("#sc_hdu&gt;li&gt;a", index=3, action="removeAttribute('href')")
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1649</span>
-<span class="normal">1650</span>
-<span class="normal">1651</span>
-<span class="normal">1652</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1652</span>
 <span class="normal">1653</span>
 <span class="normal">1654</span>
 <span class="normal">1655</span>
@@ -7052,7 +7055,10 @@ await tab.click("#sc_hdu&gt;li&gt;a", index=3, action="removeAttribute('href')")
 <span class="normal">1658</span>
 <span class="normal">1659</span>
 <span class="normal">1660</span>
-<span class="normal">1661</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">click</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1661</span>
+<span class="normal">1662</span>
+<span class="normal">1663</span>
+<span class="normal">1664</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">click</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                 <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                 <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                 <span class="n">action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;click()&quot;</span><span class="p">,</span>
@@ -7168,16 +7174,16 @@ None: timeout.</p>
 </details>
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2046</span>
-<span class="normal">2047</span>
-<span class="normal">2048</span>
-<span class="normal">2049</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2049</span>
 <span class="normal">2050</span>
 <span class="normal">2051</span>
 <span class="normal">2052</span>
 <span class="normal">2053</span>
 <span class="normal">2054</span>
-<span class="normal">2055</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">confirm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+<span class="normal">2055</span>
+<span class="normal">2056</span>
+<span class="normal">2057</span>
+<span class="normal">2058</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">confirm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;run confirm(`{text}`) in console, the `text` should be escaped before passing.</span>
 <span class="sd">    Block until user click [OK] or click [Cancel] or timeout.</span>
 <span class="sd">    Returned as:</span>
@@ -7209,10 +7215,10 @@ None: timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2330</span>
-<span class="normal">2331</span>
-<span class="normal">2332</span>
-<span class="normal">2333</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_WSConnection</span><span class="p">:</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2333</span>
+<span class="normal">2334</span>
+<span class="normal">2335</span>
+<span class="normal">2336</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_WSConnection</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;`async with tab.connect() as tab:`&#39;&#39;&#39;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_enabled_domains</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ws_connection</span>
@@ -7242,16 +7248,16 @@ None: timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1442</span>
-<span class="normal">1443</span>
-<span class="normal">1444</span>
-<span class="normal">1445</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1445</span>
 <span class="normal">1446</span>
 <span class="normal">1447</span>
 <span class="normal">1448</span>
 <span class="normal">1449</span>
 <span class="normal">1450</span>
-<span class="normal">1451</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">contains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1451</span>
+<span class="normal">1452</span>
+<span class="normal">1453</span>
+<span class="normal">1454</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">contains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">text</span><span class="p">,</span>
                    <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span>
                    <span class="n">attribute</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;outerHTML&#39;</span><span class="p">,</span>
@@ -7493,10 +7499,7 @@ None: timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2293</span>
-<span class="normal">2294</span>
-<span class="normal">2295</span>
-<span class="normal">2296</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2296</span>
 <span class="normal">2297</span>
 <span class="normal">2298</span>
 <span class="normal">2299</span>
@@ -7508,7 +7511,10 @@ None: timeout.</p>
 <span class="normal">2305</span>
 <span class="normal">2306</span>
 <span class="normal">2307</span>
-<span class="normal">2308</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="normal">2308</span>
+<span class="normal">2309</span>
+<span class="normal">2310</span>
+<span class="normal">2311</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">ensure_callback_type</span><span class="p">(</span><span class="n">_default_recv_callback</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Ensure callback function has correct args</span>
@@ -7546,14 +7552,14 @@ None: timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2261</span>
-<span class="normal">2262</span>
-<span class="normal">2263</span>
-<span class="normal">2264</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2264</span>
 <span class="normal">2265</span>
 <span class="normal">2266</span>
 <span class="normal">2267</span>
-<span class="normal">2268</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">ensure_timeout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+<span class="normal">2268</span>
+<span class="normal">2269</span>
+<span class="normal">2270</span>
+<span class="normal">2271</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">ensure_timeout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
     <span class="s2">&quot;replace the timeout variable to real value&quot;</span>
     <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="n">NotSet</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
@@ -7584,71 +7590,14 @@ None: timeout.</p>
   <div class="doc doc-contents ">
   
       <p>Similar to python re.findall.</p>
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
-        <tr>
-          <td><code>regex</code></td>
-          <td>
-                <code>str</code>
-          </td>
-          <td><p>raw regex string to be set in /%s/g.</p></td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>cssselector</code></td>
-          <td>
-                <code>str</code>
-          </td>
-          <td><p>which element.outerHTML to be matched, defaults to 'html'.</p></td>
-          <td>
-                <code>&#39;html&#39;</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>attribute</code></td>
-          <td>
-                <code>str</code>
-          </td>
-          <td><p>attribute of the selected element, defaults to 'outerHTML'</p></td>
-          <td>
-                <code>&#39;outerHTML&#39;</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>flags</code></td>
-          <td>
-                <code>str</code>
-          </td>
-          <td><p>regex flags, defaults to 'g'.</p></td>
-          <td>
-                <code>&#39;g&#39;</code>
-          </td>
-        </tr>
-        <tr>
-          <td><code>timeout</code></td>
-          <td>
-                <code>float</code>
-          </td>
-          <td><p>defaults to NotSet.</p></td>
-          <td>
-                <code>NotSet</code>
-          </td>
-        </tr>
-    </tbody>
-  </table>
-      <p>Demo::</p>
+<pre><code>    Args:
+        regex (str): raw regex string to be set in /%s/g.
+        cssselector (str, optional): which element.outerHTML to be matched, defaults to 'html'.
+        attribute (str, optional): attribute of the selected element, defaults to 'outerHTML'
+        flags (str, optional): regex flags, defaults to 'g'.
+        timeout (float): defaults to NotSet.
+</code></pre>
+<p>Demo::</p>
 <pre><code># no group / (?:) / (?&lt;=) / (?!)
 print(await tab.findall('&lt;title&gt;.*?&lt;/title&gt;'))
 # ['&lt;title&gt;123456789&lt;/title&gt;']
@@ -7664,10 +7613,7 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1384</span>
-<span class="normal">1385</span>
-<span class="normal">1386</span>
-<span class="normal">1387</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1387</span>
 <span class="normal">1388</span>
 <span class="normal">1389</span>
 <span class="normal">1390</span>
@@ -7720,7 +7666,10 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 <span class="normal">1437</span>
 <span class="normal">1438</span>
 <span class="normal">1439</span>
-<span class="normal">1440</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">findall</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1440</span>
+<span class="normal">1441</span>
+<span class="normal">1442</span>
+<span class="normal">1443</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">findall</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                       <span class="n">regex</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                       <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span>
                       <span class="n">attribute</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;outerHTML&#39;</span><span class="p">,</span>
@@ -7735,19 +7684,19 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 <span class="sd">            flags (str, optional): regex flags, defaults to &#39;g&#39;.</span>
 <span class="sd">            timeout (float): defaults to NotSet.</span>
 
-<span class="sd">        Demo::</span>
+<span class="sd">Demo::</span>
 
-<span class="sd">            # no group / (?:) / (?&lt;=) / (?!)</span>
-<span class="sd">            print(await tab.findall(&#39;&lt;title&gt;.*?&lt;/title&gt;&#39;))</span>
-<span class="sd">            # [&#39;&lt;title&gt;123456789&lt;/title&gt;&#39;]</span>
+<span class="sd">    # no group / (?:) / (?&lt;=) / (?!)</span>
+<span class="sd">    print(await tab.findall(&#39;&lt;title&gt;.*?&lt;/title&gt;&#39;))</span>
+<span class="sd">    # [&#39;&lt;title&gt;123456789&lt;/title&gt;&#39;]</span>
 
-<span class="sd">            # only 1 group</span>
-<span class="sd">            print(await tab.findall(&#39;&lt;title&gt;(.*?)&lt;/title&gt;&#39;))</span>
-<span class="sd">            # [&#39;123456789&#39;]</span>
+<span class="sd">    # only 1 group</span>
+<span class="sd">    print(await tab.findall(&#39;&lt;title&gt;(.*?)&lt;/title&gt;&#39;))</span>
+<span class="sd">    # [&#39;123456789&#39;]</span>
 
-<span class="sd">            # multi-groups</span>
-<span class="sd">            print(await tab.findall(&#39;&lt;title&gt;(1)(2).*?&lt;/title&gt;&#39;))</span>
-<span class="sd">            # [[&#39;1&#39;, &#39;2&#39;]]</span>
+<span class="sd">    # multi-groups</span>
+<span class="sd">    print(await tab.findall(&#39;&lt;title&gt;(1)(2).*?&lt;/title&gt;&#39;))</span>
+<span class="sd">    # [[&#39;1&#39;, &#39;2&#39;]]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?&lt;!</span><span class="se">\\</span><span class="s1">)/&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="p">):</span>
             <span class="n">regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?&lt;!</span><span class="se">\\</span><span class="s1">)/&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;\/&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="p">)</span>
@@ -7803,10 +7752,7 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1370</span>
-<span class="normal">1371</span>
-<span class="normal">1372</span>
-<span class="normal">1373</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1373</span>
 <span class="normal">1374</span>
 <span class="normal">1375</span>
 <span class="normal">1376</span>
@@ -7815,7 +7761,10 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 <span class="normal">1379</span>
 <span class="normal">1380</span>
 <span class="normal">1381</span>
-<span class="normal">1382</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">findone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1382</span>
+<span class="normal">1383</span>
+<span class="normal">1384</span>
+<span class="normal">1385</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">findone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                   <span class="n">regex</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                   <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span>
                   <span class="n">attribute</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;outerHTML&#39;</span><span class="p">,</span>
@@ -7854,9 +7803,9 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2032</span>
-<span class="normal">2033</span>
-<span class="normal">2034</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">gc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2035</span>
+<span class="normal">2036</span>
+<span class="normal">2037</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">gc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="s2">&quot;[HeapProfiler.collectGarbage]&quot;</span>
     <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;HeapProfiler.collectGarbage&#39;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -8040,10 +7989,7 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1663</span>
-<span class="normal">1664</span>
-<span class="normal">1665</span>
-<span class="normal">1666</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1666</span>
 <span class="normal">1667</span>
 <span class="normal">1668</span>
 <span class="normal">1669</span>
@@ -8061,7 +8007,10 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 <span class="normal">1681</span>
 <span class="normal">1682</span>
 <span class="normal">1683</span>
-<span class="normal">1684</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_element_clip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1684</span>
+<span class="normal">1685</span>
+<span class="normal">1686</span>
+<span class="normal">1687</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_element_clip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                            <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                            <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                            <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span>
@@ -8140,9 +8089,7 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1114</span>
-<span class="normal">1115</span>
-<span class="normal">1116</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1116</span>
 <span class="normal">1117</span>
 <span class="normal">1118</span>
 <span class="normal">1119</span>
@@ -8154,7 +8101,9 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 <span class="normal">1125</span>
 <span class="normal">1126</span>
 <span class="normal">1127</span>
-<span class="normal">1128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_history_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1128</span>
+<span class="normal">1129</span>
+<span class="normal">1130</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_history_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                             <span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                             <span class="n">relative_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                             <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
@@ -8191,15 +8140,23 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 
   <div class="doc doc-contents ">
   
-      <p>return dict: {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}</p>
+      <p>(Page.getNavigationHistory) Get the page history list.</p>
 
+<details class="return-example">
+  <summary>return example</summary>
+  <p>{'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}</p>
+</details>
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1154</span>
-<span class="normal">1155</span>
-<span class="normal">1156</span>
-<span class="normal">1157</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_history_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;return dict: {&#39;currentIndex&#39;: 0, &#39;entries&#39;: [{&#39;id&#39;: 1, &#39;url&#39;: &#39;about:blank&#39;, &#39;userTypedURL&#39;: &#39;about:blank&#39;, &#39;title&#39;: &#39;&#39;, &#39;transitionType&#39;: &#39;auto_toplevel&#39;}, {&#39;id&#39;: 7, &#39;url&#39;: &#39;http://3.p.cn/&#39;, &#39;userTypedURL&#39;: &#39;http://3.p.cn/&#39;, &#39;title&#39;: &#39;Not Found&#39;, &#39;transitionType&#39;: &#39;typed&#39;}, {&#39;id&#39;: 9, &#39;url&#39;: &#39;http://p.3.cn/&#39;, &#39;userTypedURL&#39;: &#39;http://p.3.cn/&#39;, &#39;title&#39;: &#39;&#39;, &#39;transitionType&#39;: &#39;typed&#39;}]}}&quot;&quot;&quot;</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1156</span>
+<span class="normal">1157</span>
+<span class="normal">1158</span>
+<span class="normal">1159</span>
+<span class="normal">1160</span>
+<span class="normal">1161</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_history_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;(Page.getNavigationHistory) Get the page history list.</span>
+<span class="sd">    return example:</span>
+<span class="sd">        {&#39;currentIndex&#39;: 0, &#39;entries&#39;: [{&#39;id&#39;: 1, &#39;url&#39;: &#39;about:blank&#39;, &#39;userTypedURL&#39;: &#39;about:blank&#39;, &#39;title&#39;: &#39;&#39;, &#39;transitionType&#39;: &#39;auto_toplevel&#39;}, {&#39;id&#39;: 7, &#39;url&#39;: &#39;http://3.p.cn/&#39;, &#39;userTypedURL&#39;: &#39;http://3.p.cn/&#39;, &#39;title&#39;: &#39;Not Found&#39;, &#39;transitionType&#39;: &#39;typed&#39;}, {&#39;id&#39;: 9, &#39;url&#39;: &#39;http://p.3.cn/&#39;, &#39;userTypedURL&#39;: &#39;http://p.3.cn/&#39;, &#39;title&#39;: &#39;&#39;, &#39;transitionType&#39;: &#39;typed&#39;}]}}&quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Page.getNavigationHistory&#39;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_data_value</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">value_path</span><span class="o">=</span><span class="s1">&#39;result&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">{})</span>
 </code></pre></div></td></tr></table></div>
@@ -8298,11 +8255,11 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1789</span>
-<span class="normal">1790</span>
-<span class="normal">1791</span>
-<span class="normal">1792</span>
-<span class="normal">1793</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_page_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1792</span>
+<span class="normal">1793</span>
+<span class="normal">1794</span>
+<span class="normal">1795</span>
+<span class="normal">1796</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_page_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;get page size with javascript&quot;</span>
     <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span>
         <span class="s2">&quot;[window.innerWidth||document.documentElement.clientWidth||document.querySelector(&#39;body&#39;).clientWidth,window.innerHeight||document.documentElement.clientHeight||document.querySelector(&#39;body&#39;).clientHeight]&quot;</span><span class="p">,</span>
@@ -8333,9 +8290,7 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1053</span>
-<span class="normal">1054</span>
-<span class="normal">1055</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1055</span>
 <span class="normal">1056</span>
 <span class="normal">1057</span>
 <span class="normal">1058</span>
@@ -8343,7 +8298,9 @@ print(await tab.findall('&lt;title&gt;(1)(2).*?&lt;/title&gt;'))
 <span class="normal">1060</span>
 <span class="normal">1061</span>
 <span class="normal">1062</span>
-<span class="normal">1063</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_request_post_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1063</span>
+<span class="normal">1064</span>
+<span class="normal">1065</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_request_post_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                                 <span class="n">request_dict</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
                                 <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
     <span class="sd">&quot;&quot;&quot;Get the post data of the POST request. No need for wait_request_loading.&quot;&quot;&quot;</span>
@@ -8386,9 +8343,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1012</span>
-<span class="normal">1013</span>
-<span class="normal">1014</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1014</span>
 <span class="normal">1015</span>
 <span class="normal">1016</span>
 <span class="normal">1017</span>
@@ -8415,7 +8370,9 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">1038</span>
 <span class="normal">1039</span>
 <span class="normal">1040</span>
-<span class="normal">1041</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_response</span><span class="p">(</span>
+<span class="normal">1041</span>
+<span class="normal">1042</span>
+<span class="normal">1043</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_response</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">request_dict</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
     <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span>
@@ -8471,15 +8428,15 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1043</span>
-<span class="normal">1044</span>
-<span class="normal">1045</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1045</span>
 <span class="normal">1046</span>
 <span class="normal">1047</span>
 <span class="normal">1048</span>
 <span class="normal">1049</span>
 <span class="normal">1050</span>
-<span class="normal">1051</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_response_body</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1051</span>
+<span class="normal">1052</span>
+<span class="normal">1053</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_response_body</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                             <span class="n">request_dict</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
                             <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span>
                             <span class="n">wait_loading</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
@@ -8514,10 +8471,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1784</span>
-<span class="normal">1785</span>
-<span class="normal">1786</span>
-<span class="normal">1787</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_screen_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1787</span>
+<span class="normal">1788</span>
+<span class="normal">1789</span>
+<span class="normal">1790</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_screen_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;get [window.screen.width, window.screen.height] with javascript&quot;</span>
     <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">(</span>
         <span class="s1">&#39;[window.screen.width, window.screen.height]&#39;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
@@ -8547,10 +8504,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1879</span>
-<span class="normal">1880</span>
-<span class="normal">1881</span>
-<span class="normal">1882</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1882</span>
 <span class="normal">1883</span>
 <span class="normal">1884</span>
 <span class="normal">1885</span>
@@ -8567,7 +8521,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">1896</span>
 <span class="normal">1897</span>
 <span class="normal">1898</span>
-<span class="normal">1899</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="normal">1899</span>
+<span class="normal">1900</span>
+<span class="normal">1901</span>
+<span class="normal">1902</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">get_smooth_steps</span><span class="p">(</span><span class="n">target_x</span><span class="p">,</span> <span class="n">target_y</span><span class="p">,</span> <span class="n">start_x</span><span class="p">,</span> <span class="n">start_y</span><span class="p">,</span> <span class="n">steps_count</span><span class="o">=</span><span class="mi">30</span><span class="p">):</span>
     <span class="s2">&quot;smooth move steps&quot;</span>
 
@@ -8614,9 +8571,9 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2453</span>
-<span class="normal">2454</span>
-<span class="normal">2455</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2456</span>
+<span class="normal">2457</span>
+<span class="normal">2458</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;name or expression. jsonify will transport the data by JSON, such as the array.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="n">jsonify</span><span class="o">=</span><span class="n">jsonify</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -8645,10 +8602,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2457</span>
-<span class="normal">2458</span>
-<span class="normal">2459</span>
-<span class="normal">2460</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2460</span>
 <span class="normal">2461</span>
 <span class="normal">2462</span>
 <span class="normal">2463</span>
@@ -8664,7 +8618,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">2473</span>
 <span class="normal">2474</span>
 <span class="normal">2475</span>
-<span class="normal">2476</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_variable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">2476</span>
+<span class="normal">2477</span>
+<span class="normal">2478</span>
+<span class="normal">2479</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_variable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                        <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span>
                        <span class="n">jsonify</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
@@ -8710,16 +8667,16 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1180</span>
-<span class="normal">1181</span>
-<span class="normal">1182</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1182</span>
 <span class="normal">1183</span>
 <span class="normal">1184</span>
 <span class="normal">1185</span>
 <span class="normal">1186</span>
 <span class="normal">1187</span>
 <span class="normal">1188</span>
-<span class="normal">1189</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">goto</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1189</span>
+<span class="normal">1190</span>
+<span class="normal">1191</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">goto</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                <span class="n">url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">referrer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span>
@@ -8755,12 +8712,12 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1107</span>
-<span class="normal">1108</span>
-<span class="normal">1109</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1109</span>
 <span class="normal">1110</span>
 <span class="normal">1111</span>
-<span class="normal">1112</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">goto_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entryId</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">1112</span>
+<span class="normal">1113</span>
+<span class="normal">1114</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">goto_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entryId</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="s2">&quot;[Page.navigateToHistoryEntry]&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Page.navigateToHistoryEntry&#39;</span><span class="p">,</span>
                              <span class="n">entryId</span><span class="o">=</span><span class="n">entryId</span><span class="p">,</span>
@@ -8792,9 +8749,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1140</span>
-<span class="normal">1141</span>
-<span class="normal">1142</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1142</span>
 <span class="normal">1143</span>
 <span class="normal">1144</span>
 <span class="normal">1145</span>
@@ -8804,7 +8759,9 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">1149</span>
 <span class="normal">1150</span>
 <span class="normal">1151</span>
-<span class="normal">1152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">goto_history_relative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1152</span>
+<span class="normal">1153</span>
+<span class="normal">1154</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">goto_history_relative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                                 <span class="n">relative_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                                 <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;go to the relative history&quot;</span>
@@ -8843,10 +8800,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1266</span>
-<span class="normal">1267</span>
-<span class="normal">1268</span>
-<span class="normal">1269</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1269</span>
 <span class="normal">1270</span>
 <span class="normal">1271</span>
 <span class="normal">1272</span>
@@ -8855,7 +8809,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">1275</span>
 <span class="normal">1276</span>
 <span class="normal">1277</span>
-<span class="normal">1278</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">handle_dialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1278</span>
+<span class="normal">1279</span>
+<span class="normal">1280</span>
+<span class="normal">1281</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">handle_dialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="n">accept</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                         <span class="n">promptText</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                         <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -8894,10 +8851,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1130</span>
-<span class="normal">1131</span>
-<span class="normal">1132</span>
-<span class="normal">1133</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">history_back</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1132</span>
+<span class="normal">1133</span>
+<span class="normal">1134</span>
+<span class="normal">1135</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">history_back</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;go to back history&quot;</span>
     <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">goto_history_relative</span><span class="p">(</span><span class="n">relative_index</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
                                             <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
@@ -8927,10 +8884,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1135</span>
-<span class="normal">1136</span>
-<span class="normal">1137</span>
-<span class="normal">1138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">history_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1137</span>
+<span class="normal">1138</span>
+<span class="normal">1139</span>
+<span class="normal">1140</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">history_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;go to forward history&quot;</span>
     <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">goto_history_relative</span><span class="p">(</span><span class="n">relative_index</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                                             <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
@@ -9055,10 +9012,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1453</span>
-<span class="normal">1454</span>
-<span class="normal">1455</span>
-<span class="normal">1456</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1456</span>
 <span class="normal">1457</span>
 <span class="normal">1458</span>
 <span class="normal">1459</span>
@@ -9070,7 +9024,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">1465</span>
 <span class="normal">1466</span>
 <span class="normal">1467</span>
-<span class="normal">1468</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">includes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1468</span>
+<span class="normal">1469</span>
+<span class="normal">1470</span>
+<span class="normal">1471</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">includes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">text</span><span class="p">,</span>
                    <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span>
                    <span class="n">attribute</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;outerHTML&#39;</span><span class="p">,</span>
@@ -9112,16 +9069,16 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1617</span>
-<span class="normal">1618</span>
-<span class="normal">1619</span>
-<span class="normal">1620</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1620</span>
 <span class="normal">1621</span>
 <span class="normal">1622</span>
 <span class="normal">1623</span>
 <span class="normal">1624</span>
 <span class="normal">1625</span>
-<span class="normal">1626</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">inject_html</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1626</span>
+<span class="normal">1627</span>
+<span class="normal">1628</span>
+<span class="normal">1629</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">inject_html</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                       <span class="n">html</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                       <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;body&#39;</span><span class="p">,</span>
                       <span class="n">position</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;beforeend&#39;</span><span class="p">,</span>
@@ -9157,10 +9114,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1628</span>
-<span class="normal">1629</span>
-<span class="normal">1630</span>
-<span class="normal">1631</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1631</span>
 <span class="normal">1632</span>
 <span class="normal">1633</span>
 <span class="normal">1634</span>
@@ -9176,7 +9130,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">1644</span>
 <span class="normal">1645</span>
 <span class="normal">1646</span>
-<span class="normal">1647</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">inject_js_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1647</span>
+<span class="normal">1648</span>
+<span class="normal">1649</span>
+<span class="normal">1650</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">inject_js_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="n">url</span><span class="p">,</span>
                         <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                         <span class="n">retry</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -9276,10 +9233,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1601</span>
-<span class="normal">1602</span>
-<span class="normal">1603</span>
-<span class="normal">1604</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1604</span>
 <span class="normal">1605</span>
 <span class="normal">1606</span>
 <span class="normal">1607</span>
@@ -9290,7 +9244,10 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">1612</span>
 <span class="normal">1613</span>
 <span class="normal">1614</span>
-<span class="normal">1615</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">insertAdjacentHTML</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1615</span>
+<span class="normal">1616</span>
+<span class="normal">1617</span>
+<span class="normal">1618</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">insertAdjacentHTML</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                              <span class="n">html</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                              <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;body&#39;</span><span class="p">,</span>
                              <span class="n">position</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;beforeend&#39;</span><span class="p">,</span>
@@ -9420,52 +9377,53 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 
   <div class="doc doc-contents ">
   
-      <p>Fetch.RequestPattern:
-    urlPattern
-        string(Wildcards)
-    resourceType
-        Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Preflight, Other
-    requestStage
-        Stage at which to begin intercepting requests. Default is Request.
-        Allowed Values: Request, Response
-        ::</p>
-<pre><code>        async with tab.iter_fetch(patterns=[{
-                'urlPattern': '*httpbin.org/get?a=*'
-        }]) as f:
-            await tab.goto('http://httpbin.org/get?a=1', timeout=0)
-            data = await f
-            assert data
-            # test continueRequest
-            await f.continueRequest(data)
-            assert await tab.wait_includes('origin')
+      <p>Fetch.RequestPattern:</p>
+<pre><code>urlPattern
+    string(Wildcards)
+resourceType
+    Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Preflight, Other
+requestStage
+    Stage at which to begin intercepting requests. Default is Request.
+    Allowed Values: Request, Response
+</code></pre>
+<p>Demo::</p>
+<pre><code>async with tab.iter_fetch(patterns=[{
+        'urlPattern': '*httpbin.org/get?a=*'
+}]) as f:
+    await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+    data = await f
+    assert data
+    # test continueRequest
+    await f.continueRequest(data)
+    assert await tab.wait_includes('origin')
 
-            await tab.goto('http://httpbin.org/get?a=1', timeout=0)
-            data = await f
-            assert data
-            # test modify response
-            await f.fulfillRequest(data,
-                                   200,
-                                   body=b'hello world.')
-            assert await tab.wait_includes('hello world.')
-            await tab.goto('http://httpbin.org/get?a=1', timeout=0)
-            data = await f
-            assert data
-            await f.failRequest(data, 'AccessDenied')
-            assert (await tab.url).startswith('chrome-error://')
+    await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+    data = await f
+    assert data
+    # test modify response
+    await f.fulfillRequest(data,
+                            200,
+                            body=b'hello world.')
+    assert await tab.wait_includes('hello world.')
+    await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+    data = await f
+    assert data
+    await f.failRequest(data, 'AccessDenied')
+    assert (await tab.url).startswith('chrome-error://')
 
-        # use callback
-        async def cb(event, tab, buffer):
-            await buffer.continueRequest(event)
+# use callback
+async def cb(event, tab, buffer):
+    await buffer.continueRequest(event)
 
-        async with tab.iter_fetch(
-                patterns=[{
-                    'urlPattern': '*httpbin.org/ip*'
-                }],
-                callback=cb,
-        ) as f:
-            await tab.goto('http://httpbin.org/ip', timeout=0)
-            async for r in f:
-                break
+async with tab.iter_fetch(
+        patterns=[{
+            'urlPattern': '*httpbin.org/ip*'
+        }],
+        callback=cb,
+) as f:
+    await tab.goto('http://httpbin.org/ip', timeout=0)
+    async for r in f:
+        break
 </code></pre>
 
       <details class="quote">
@@ -9535,7 +9493,9 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="normal">1007</span>
 <span class="normal">1008</span>
 <span class="normal">1009</span>
-<span class="normal">1010</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">iter_fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1010</span>
+<span class="normal">1011</span>
+<span class="normal">1012</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">iter_fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">patterns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                    <span class="n">handleAuthRequests</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                    <span class="n">events</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -9545,6 +9505,7 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
                    <span class="n">callback</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;FetchBuffer&#39;</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Fetch.RequestPattern:</span>
+
 <span class="sd">    urlPattern</span>
 <span class="sd">        string(Wildcards)</span>
 <span class="sd">    resourceType</span>
@@ -9552,45 +9513,46 @@ loadingFinished (or sleep some secs) and wait_loading=None will auto check respo
 <span class="sd">    requestStage</span>
 <span class="sd">        Stage at which to begin intercepting requests. Default is Request.</span>
 <span class="sd">        Allowed Values: Request, Response</span>
-<span class="sd">        ::</span>
 
-<span class="sd">            async with tab.iter_fetch(patterns=[{</span>
-<span class="sd">                    &#39;urlPattern&#39;: &#39;*httpbin.org/get?a=*&#39;</span>
-<span class="sd">            }]) as f:</span>
-<span class="sd">                await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
-<span class="sd">                data = await f</span>
-<span class="sd">                assert data</span>
-<span class="sd">                # test continueRequest</span>
-<span class="sd">                await f.continueRequest(data)</span>
-<span class="sd">                assert await tab.wait_includes(&#39;origin&#39;)</span>
+<span class="sd">Demo::</span>
 
-<span class="sd">                await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
-<span class="sd">                data = await f</span>
-<span class="sd">                assert data</span>
-<span class="sd">                # test modify response</span>
-<span class="sd">                await f.fulfillRequest(data,</span>
-<span class="sd">                                       200,</span>
-<span class="sd">                                       body=b&#39;hello world.&#39;)</span>
-<span class="sd">                assert await tab.wait_includes(&#39;hello world.&#39;)</span>
-<span class="sd">                await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
-<span class="sd">                data = await f</span>
-<span class="sd">                assert data</span>
-<span class="sd">                await f.failRequest(data, &#39;AccessDenied&#39;)</span>
-<span class="sd">                assert (await tab.url).startswith(&#39;chrome-error://&#39;)</span>
+<span class="sd">    async with tab.iter_fetch(patterns=[{</span>
+<span class="sd">            &#39;urlPattern&#39;: &#39;*httpbin.org/get?a=*&#39;</span>
+<span class="sd">    }]) as f:</span>
+<span class="sd">        await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
+<span class="sd">        data = await f</span>
+<span class="sd">        assert data</span>
+<span class="sd">        # test continueRequest</span>
+<span class="sd">        await f.continueRequest(data)</span>
+<span class="sd">        assert await tab.wait_includes(&#39;origin&#39;)</span>
 
-<span class="sd">            # use callback</span>
-<span class="sd">            async def cb(event, tab, buffer):</span>
-<span class="sd">                await buffer.continueRequest(event)</span>
+<span class="sd">        await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
+<span class="sd">        data = await f</span>
+<span class="sd">        assert data</span>
+<span class="sd">        # test modify response</span>
+<span class="sd">        await f.fulfillRequest(data,</span>
+<span class="sd">                                200,</span>
+<span class="sd">                                body=b&#39;hello world.&#39;)</span>
+<span class="sd">        assert await tab.wait_includes(&#39;hello world.&#39;)</span>
+<span class="sd">        await tab.goto(&#39;http://httpbin.org/get?a=1&#39;, timeout=0)</span>
+<span class="sd">        data = await f</span>
+<span class="sd">        assert data</span>
+<span class="sd">        await f.failRequest(data, &#39;AccessDenied&#39;)</span>
+<span class="sd">        assert (await tab.url).startswith(&#39;chrome-error://&#39;)</span>
 
-<span class="sd">            async with tab.iter_fetch(</span>
-<span class="sd">                    patterns=[{</span>
-<span class="sd">                        &#39;urlPattern&#39;: &#39;*httpbin.org/ip*&#39;</span>
-<span class="sd">                    }],</span>
-<span class="sd">                    callback=cb,</span>
-<span class="sd">            ) as f:</span>
-<span class="sd">                await tab.goto(&#39;http://httpbin.org/ip&#39;, timeout=0)</span>
-<span class="sd">                async for r in f:</span>
-<span class="sd">                    break</span>
+<span class="sd">    # use callback</span>
+<span class="sd">    async def cb(event, tab, buffer):</span>
+<span class="sd">        await buffer.continueRequest(event)</span>
+
+<span class="sd">    async with tab.iter_fetch(</span>
+<span class="sd">            patterns=[{</span>
+<span class="sd">                &#39;urlPattern&#39;: &#39;*httpbin.org/ip*&#39;</span>
+<span class="sd">            }],</span>
+<span class="sd">            callback=cb,</span>
+<span class="sd">    ) as f:</span>
+<span class="sd">        await tab.goto(&#39;http://httpbin.org/ip&#39;, timeout=0)</span>
+<span class="sd">        async for r in f:</span>
+<span class="sd">            break</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">FetchBuffer</span><span class="p">(</span><span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
@@ -9634,9 +9596,7 @@ kwargs is a dict for Runtime.evaluate's <code>timeout</code> is conflict with <c
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1228</span>
-<span class="normal">1229</span>
-<span class="normal">1230</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1230</span>
 <span class="normal">1231</span>
 <span class="normal">1232</span>
 <span class="normal">1233</span>
@@ -9653,7 +9613,9 @@ kwargs is a dict for Runtime.evaluate's <code>timeout</code> is conflict with <c
 <span class="normal">1244</span>
 <span class="normal">1245</span>
 <span class="normal">1246</span>
-<span class="normal">1247</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">js</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1247</span>
+<span class="normal">1248</span>
+<span class="normal">1249</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">js</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
              <span class="n">javascript</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
              <span class="n">value_path</span><span class="o">=</span><span class="s1">&#39;result.result&#39;</span><span class="p">,</span>
              <span class="n">kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -9695,17 +9657,15 @@ kwargs is a dict for Runtime.evaluate's <code>timeout</code> is conflict with <c
 
   <div class="doc doc-contents ">
   
-      <p>javascript will be filled into function template.
-Demo::
-    javascript = <code>return document.title</code>
-    will run js like, and get the return result
-    <code>(()=&gt;{return document.title})()</code></p>
+      <p>javascript will be filled into function template.</p>
+<p>Demo::</p>
+<pre><code>javascript = `return document.title`
+will run js like `(()=&gt;{return document.title})()`, and get the return result
+</code></pre>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1249</span>
-<span class="normal">1250</span>
-<span class="normal">1251</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1251</span>
 <span class="normal">1252</span>
 <span class="normal">1253</span>
 <span class="normal">1254</span>
@@ -9718,16 +9678,20 @@ Demo::
 <span class="normal">1261</span>
 <span class="normal">1262</span>
 <span class="normal">1263</span>
-<span class="normal">1264</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">js_code</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1264</span>
+<span class="normal">1265</span>
+<span class="normal">1266</span>
+<span class="normal">1267</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">js_code</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                       <span class="n">javascript</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                       <span class="n">value_path</span><span class="o">=</span><span class="s1">&#39;result.result.value&#39;</span><span class="p">,</span>
                       <span class="n">kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                       <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;javascript will be filled into function template.</span>
-<span class="sd">        Demo::</span>
-<span class="sd">            javascript = `return document.title`</span>
-<span class="sd">            will run js like, and get the return result</span>
-<span class="sd">            `(()=&gt;{return document.title})()`</span>
+
+<span class="sd">Demo::</span>
+
+<span class="sd">    javascript = `return document.title`</span>
+<span class="sd">    will run js like `(()=&gt;{return document.title})()`, and get the return result</span>
 <span class="sd">&quot;&quot;&quot;</span>
         <span class="n">javascript</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;(()=&gt;{</span><span class="si">%s</span><span class="s1">})()&#39;&#39;&#39;</span> <span class="o">%</span> <span class="n">javascript</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">js</span><span class="p">(</span><span class="n">javascript</span><span class="p">,</span>
@@ -9767,10 +9731,7 @@ string: will be split into chars.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1795</span>
-<span class="normal">1796</span>
-<span class="normal">1797</span>
-<span class="normal">1798</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1798</span>
 <span class="normal">1799</span>
 <span class="normal">1800</span>
 <span class="normal">1801</span>
@@ -9791,7 +9752,10 @@ string: will be split into chars.</p>
 <span class="normal">1816</span>
 <span class="normal">1817</span>
 <span class="normal">1818</span>
-<span class="normal">1819</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">keyboard_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1819</span>
+<span class="normal">1820</span>
+<span class="normal">1821</span>
+<span class="normal">1822</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">keyboard_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="o">*</span><span class="p">,</span>
                         <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;char&#39;</span><span class="p">,</span>
                         <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span>
@@ -9842,10 +9806,7 @@ string: will be split into chars.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1846</span>
-<span class="normal">1847</span>
-<span class="normal">1848</span>
-<span class="normal">1849</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1849</span>
 <span class="normal">1850</span>
 <span class="normal">1851</span>
 <span class="normal">1852</span>
@@ -9853,7 +9814,10 @@ string: will be split into chars.</p>
 <span class="normal">1854</span>
 <span class="normal">1855</span>
 <span class="normal">1856</span>
-<span class="normal">1857</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_click</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+<span class="normal">1857</span>
+<span class="normal">1858</span>
+<span class="normal">1859</span>
+<span class="normal">1860</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_click</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;click a position&quot;</span>
     <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">mouse_press</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span>
                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
@@ -9891,10 +9855,7 @@ string: will be split into chars.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1821</span>
-<span class="normal">1822</span>
-<span class="normal">1823</span>
-<span class="normal">1824</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1824</span>
 <span class="normal">1825</span>
 <span class="normal">1826</span>
 <span class="normal">1827</span>
@@ -9914,7 +9875,10 @@ string: will be split into chars.</p>
 <span class="normal">1841</span>
 <span class="normal">1842</span>
 <span class="normal">1843</span>
-<span class="normal">1844</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_click_element_rect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1844</span>
+<span class="normal">1845</span>
+<span class="normal">1846</span>
+<span class="normal">1847</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_click_element_rect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                                    <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                    <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
                                    <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
@@ -9964,10 +9928,7 @@ string: will be split into chars.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1995</span>
-<span class="normal">1996</span>
-<span class="normal">1997</span>
-<span class="normal">1998</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1998</span>
 <span class="normal">1999</span>
 <span class="normal">2000</span>
 <span class="normal">2001</span>
@@ -9979,7 +9940,10 @@ string: will be split into chars.</p>
 <span class="normal">2007</span>
 <span class="normal">2008</span>
 <span class="normal">2009</span>
-<span class="normal">2010</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_drag_rel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">2010</span>
+<span class="normal">2011</span>
+<span class="normal">2012</span>
+<span class="normal">2013</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_drag_rel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                          <span class="n">start_x</span><span class="p">,</span>
                          <span class="n">start_y</span><span class="p">,</span>
                          <span class="n">offset_x</span><span class="p">,</span>
@@ -10023,10 +9987,7 @@ string: will be split into chars.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2012</span>
-<span class="normal">2013</span>
-<span class="normal">2014</span>
-<span class="normal">2015</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2015</span>
 <span class="normal">2016</span>
 <span class="normal">2017</span>
 <span class="normal">2018</span>
@@ -10041,25 +10002,28 @@ string: will be split into chars.</p>
 <span class="normal">2027</span>
 <span class="normal">2028</span>
 <span class="normal">2029</span>
-<span class="normal">2030</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">mouse_drag_rel_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                         <span class="n">start_x</span><span class="p">,</span>
-                         <span class="n">start_y</span><span class="p">,</span>
-                         <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
-                         <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;Drag with offset continuously.</span>
+<span class="normal">2030</span>
+<span class="normal">2031</span>
+<span class="normal">2032</span>
+<span class="normal">2033</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">mouse_drag_rel_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                             <span class="n">start_x</span><span class="p">,</span>
+                             <span class="n">start_y</span><span class="p">,</span>
+                             <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span>
+                             <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Drag with offset continuously.</span>
 
-<span class="sd">    Demo::</span>
+<span class="sd">Demo::</span>
 
-<span class="sd">            await tab.set_url(&#39;https://draw.yunser.com/&#39;)</span>
-<span class="sd">            walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(</span>
-<span class="sd">                0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)</span>
-<span class="sd">            await walker.move(50 * 1.414, 50 * 1.414, 0.2)</span>
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">return</span> <span class="n">OffsetDragWalker</span><span class="p">(</span><span class="n">start_x</span><span class="p">,</span>
-                            <span class="n">start_y</span><span class="p">,</span>
-                            <span class="n">tab</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-                            <span class="n">button</span><span class="o">=</span><span class="n">button</span><span class="p">,</span>
-                            <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+<span class="sd">        await tab.set_url(&#39;https://draw.yunser.com/&#39;)</span>
+<span class="sd">        walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(</span>
+<span class="sd">            0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)</span>
+<span class="sd">        await walker.move(50 * 1.414, 50 * 1.414, 0.2)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">OffsetDragWalker</span><span class="p">(</span><span class="n">start_x</span><span class="p">,</span>
+                                <span class="n">start_y</span><span class="p">,</span>
+                                <span class="n">tab</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                <span class="n">button</span><span class="o">=</span><span class="n">button</span><span class="p">,</span>
+                                <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
       </details>
   </div>
@@ -10086,10 +10050,7 @@ string: will be split into chars.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1901</span>
-<span class="normal">1902</span>
-<span class="normal">1903</span>
-<span class="normal">1904</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1904</span>
 <span class="normal">1905</span>
 <span class="normal">1906</span>
 <span class="normal">1907</span>
@@ -10126,7 +10087,10 @@ string: will be split into chars.</p>
 <span class="normal">1938</span>
 <span class="normal">1939</span>
 <span class="normal">1940</span>
-<span class="normal">1941</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1941</span>
+<span class="normal">1942</span>
+<span class="normal">1943</span>
+<span class="normal">1944</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                      <span class="n">target_x</span><span class="p">,</span>
                      <span class="n">target_y</span><span class="p">,</span>
                      <span class="n">start_x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -10196,10 +10160,7 @@ string: will be split into chars.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1943</span>
-<span class="normal">1944</span>
-<span class="normal">1945</span>
-<span class="normal">1946</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1946</span>
 <span class="normal">1947</span>
 <span class="normal">1948</span>
 <span class="normal">1949</span>
@@ -10217,7 +10178,10 @@ string: will be split into chars.</p>
 <span class="normal">1961</span>
 <span class="normal">1962</span>
 <span class="normal">1963</span>
-<span class="normal">1964</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_move_rel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1964</span>
+<span class="normal">1965</span>
+<span class="normal">1966</span>
+<span class="normal">1967</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_move_rel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                              <span class="n">offset_x</span><span class="p">,</span>
                              <span class="n">offset_y</span><span class="p">,</span>
                              <span class="n">start_x</span><span class="p">,</span>
@@ -10265,15 +10229,15 @@ walker = await walker.move(-10, 0, 0.2).move(10, 0, 0.5)
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1966</span>
-<span class="normal">1967</span>
-<span class="normal">1968</span>
-<span class="normal">1969</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1969</span>
 <span class="normal">1970</span>
 <span class="normal">1971</span>
 <span class="normal">1972</span>
 <span class="normal">1973</span>
-<span class="normal">1974</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">mouse_move_rel_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_x</span><span class="p">,</span> <span class="n">start_y</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+<span class="normal">1974</span>
+<span class="normal">1975</span>
+<span class="normal">1976</span>
+<span class="normal">1977</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">mouse_move_rel_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_x</span><span class="p">,</span> <span class="n">start_y</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Move with offset continuously.</span>
 
 <span class="sd">        Example::</span>
@@ -10308,15 +10272,15 @@ walker = await walker.move(-10, 0, 0.2).move(10, 0, 0.5)
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1859</span>
-<span class="normal">1860</span>
-<span class="normal">1861</span>
-<span class="normal">1862</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1862</span>
 <span class="normal">1863</span>
 <span class="normal">1864</span>
 <span class="normal">1865</span>
 <span class="normal">1866</span>
-<span class="normal">1867</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+<span class="normal">1867</span>
+<span class="normal">1868</span>
+<span class="normal">1869</span>
+<span class="normal">1870</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;Input.dispatchMouseEvent + mousePressed&quot;</span>
     <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Input.dispatchMouseEvent&#39;</span><span class="p">,</span>
                            <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;mousePressed&quot;</span><span class="p">,</span>
@@ -10351,15 +10315,15 @@ walker = await walker.move(-10, 0, 0.2).move(10, 0, 0.5)
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1869</span>
-<span class="normal">1870</span>
-<span class="normal">1871</span>
-<span class="normal">1872</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1872</span>
 <span class="normal">1873</span>
 <span class="normal">1874</span>
 <span class="normal">1875</span>
 <span class="normal">1876</span>
-<span class="normal">1877</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+<span class="normal">1877</span>
+<span class="normal">1878</span>
+<span class="normal">1879</span>
+<span class="normal">1880</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">mouse_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">button</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="s2">&quot;Input.dispatchMouseEvent + mouseReleased&quot;</span>
     <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Input.dispatchMouseEvent&#39;</span><span class="p">,</span>
                            <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;mouseReleased&quot;</span><span class="p">,</span>
@@ -10401,10 +10365,7 @@ value: timeout.</p>
 </details>
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2057</span>
-<span class="normal">2058</span>
-<span class="normal">2059</span>
-<span class="normal">2060</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2060</span>
 <span class="normal">2061</span>
 <span class="normal">2062</span>
 <span class="normal">2063</span>
@@ -10412,7 +10373,10 @@ value: timeout.</p>
 <span class="normal">2065</span>
 <span class="normal">2066</span>
 <span class="normal">2067</span>
-<span class="normal">2068</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+<span class="normal">2068</span>
+<span class="normal">2069</span>
+<span class="normal">2070</span>
+<span class="normal">2071</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;run prompt(`{text}`, `value`) in console, the `text` and `value` should be escaped before passing.</span>
 <span class="sd">    Block until user click [OK] or click [Cancel] or timeout.</span>
 <span class="sd">    Returned as:</span>
@@ -10450,15 +10414,15 @@ value: timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1490</span>
-<span class="normal">1491</span>
-<span class="normal">1492</span>
-<span class="normal">1493</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1493</span>
 <span class="normal">1494</span>
 <span class="normal">1495</span>
 <span class="normal">1496</span>
 <span class="normal">1497</span>
-<span class="normal">1498</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">querySelector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1498</span>
+<span class="normal">1499</span>
+<span class="normal">1500</span>
+<span class="normal">1501</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">querySelector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                         <span class="n">action</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                         <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typing</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">Tag</span><span class="p">,</span> <span class="n">TagNotFound</span><span class="p">]:</span>
@@ -10506,10 +10470,7 @@ tags = (await tab.querySelectorAll("#sc_hdu&gt;li&gt;a", index=0)).to_dict()</p>
 </details>
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1500</span>
-<span class="normal">1501</span>
-<span class="normal">1502</span>
-<span class="normal">1503</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1503</span>
 <span class="normal">1504</span>
 <span class="normal">1505</span>
 <span class="normal">1506</span>
@@ -10605,7 +10566,10 @@ tags = (await tab.querySelectorAll("#sc_hdu&gt;li&gt;a", index=0)).to_dict()</p>
 <span class="normal">1596</span>
 <span class="normal">1597</span>
 <span class="normal">1598</span>
-<span class="normal">1599</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">querySelectorAll</span><span class="p">(</span>
+<span class="normal">1599</span>
+<span class="normal">1600</span>
+<span class="normal">1601</span>
+<span class="normal">1602</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">querySelectorAll</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
             <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -10920,9 +10884,7 @@ scriptToEvaluateOnLoad: If set, the script will be injected into all frames of t
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1065</span>
-<span class="normal">1066</span>
-<span class="normal">1067</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1067</span>
 <span class="normal">1068</span>
 <span class="normal">1069</span>
 <span class="normal">1070</span>
@@ -10939,7 +10901,9 @@ scriptToEvaluateOnLoad: If set, the script will be injected into all frames of t
 <span class="normal">1081</span>
 <span class="normal">1082</span>
 <span class="normal">1083</span>
-<span class="normal">1084</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">reload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1084</span>
+<span class="normal">1085</span>
+<span class="normal">1086</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">reload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">ignoreCache</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">scriptToEvaluateOnLoad</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
@@ -10985,14 +10949,14 @@ scriptToEvaluateOnLoad: If set, the script will be injected into all frames of t
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1775</span>
-<span class="normal">1776</span>
-<span class="normal">1777</span>
-<span class="normal">1778</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1778</span>
 <span class="normal">1779</span>
 <span class="normal">1780</span>
 <span class="normal">1781</span>
-<span class="normal">1782</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">remove_js_onload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">1782</span>
+<span class="normal">1783</span>
+<span class="normal">1784</span>
+<span class="normal">1785</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">remove_js_onload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;[Page.removeScriptToEvaluateOnNewDocument], return whether the identifier exist.&#39;&#39;&#39;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Page.removeScriptToEvaluateOnNewDocument&#39;</span><span class="p">,</span>
                              <span class="n">identifier</span><span class="o">=</span><span class="n">identifier</span><span class="p">,</span>
@@ -11027,10 +10991,7 @@ scriptToEvaluateOnLoad: If set, the script will be injected into all frames of t
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2070</span>
-<span class="normal">2071</span>
-<span class="normal">2072</span>
-<span class="normal">2073</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2073</span>
 <span class="normal">2074</span>
 <span class="normal">2075</span>
 <span class="normal">2076</span>
@@ -11147,7 +11108,10 @@ scriptToEvaluateOnLoad: If set, the script will be injected into all frames of t
 <span class="normal">2187</span>
 <span class="normal">2188</span>
 <span class="normal">2189</span>
-<span class="normal">2190</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="nd">@classmethod</span>
+<span class="normal">2190</span>
+<span class="normal">2191</span>
+<span class="normal">2192</span>
+<span class="normal">2193</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="nd">@classmethod</span>
     <span class="k">async</span> <span class="k">def</span> <span class="nf">repl</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">f_globals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">f_locals</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Give a simple way to debug your code with ichrome.&quot;&quot;&quot;</span>
         <span class="kn">import</span> <span class="nn">traceback</span>
@@ -11294,10 +11258,10 @@ scriptToEvaluateOnLoad: If set, the script will be injected into all frames of t
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1159</span>
-<span class="normal">1160</span>
-<span class="normal">1161</span>
-<span class="normal">1162</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">reset_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1163</span>
+<span class="normal">1164</span>
+<span class="normal">1165</span>
+<span class="normal">1166</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">reset_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="s2">&quot;[Page.resetNavigationHistory], clear up history immediately&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Page.resetNavigationHistory&#39;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_error</span><span class="p">(</span><span class="s1">&#39;reset_history&#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
@@ -11331,10 +11295,7 @@ fromSurface(bool, optional): Capture the screenshot from the surface, rather tha
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1734</span>
-<span class="normal">1735</span>
-<span class="normal">1736</span>
-<span class="normal">1737</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1737</span>
 <span class="normal">1738</span>
 <span class="normal">1739</span>
 <span class="normal">1740</span>
@@ -11363,7 +11324,10 @@ fromSurface(bool, optional): Capture the screenshot from the surface, rather tha
 <span class="normal">1763</span>
 <span class="normal">1764</span>
 <span class="normal">1765</span>
-<span class="normal">1766</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">screenshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1766</span>
+<span class="normal">1767</span>
+<span class="normal">1768</span>
+<span class="normal">1769</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">screenshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                          <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;png&#39;</span><span class="p">,</span>
                          <span class="n">quality</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
                          <span class="n">clip</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -11422,10 +11386,7 @@ fromSurface(bool, optional): Capture the screenshot from the surface, rather tha
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1706</span>
-<span class="normal">1707</span>
-<span class="normal">1708</span>
-<span class="normal">1709</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1709</span>
 <span class="normal">1710</span>
 <span class="normal">1711</span>
 <span class="normal">1712</span>
@@ -11448,7 +11409,10 @@ fromSurface(bool, optional): Capture the screenshot from the surface, rather tha
 <span class="normal">1729</span>
 <span class="normal">1730</span>
 <span class="normal">1731</span>
-<span class="normal">1732</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">screenshot_element</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1732</span>
+<span class="normal">1733</span>
+<span class="normal">1734</span>
+<span class="normal">1735</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">screenshot_element</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                              <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                              <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                              <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;png&#39;</span><span class="p">,</span>
@@ -11619,11 +11583,7 @@ https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1164</span>
-<span class="normal">1165</span>
-<span class="normal">1166</span>
-<span class="normal">1167</span>
-<span class="normal">1168</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1168</span>
 <span class="normal">1169</span>
 <span class="normal">1170</span>
 <span class="normal">1171</span>
@@ -11633,21 +11593,21 @@ https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable</p>
 <span class="normal">1175</span>
 <span class="normal">1176</span>
 <span class="normal">1177</span>
-<span class="normal">1178</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">setBlockedURLs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">urls</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;(Network.setBlockedURLs) Blocks URLs from loading. [EXPERIMENTAL].</span>
+<span class="normal">1178</span>
+<span class="normal">1179</span>
+<span class="normal">1180</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">async</span> <span class="k">def</span> <span class="nf">setBlockedURLs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">urls</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;(Network.setBlockedURLs) Blocks URLs from loading. [EXPERIMENTAL].</span>
 
-<span class="sd">    Demo::</span>
+<span class="sd">Demo::</span>
 
-<span class="sd">        await tab.setBlockedURLs(urls=[&#39;*.jpg&#39;, &#39;*.png&#39;])</span>
+<span class="sd">    await tab.setBlockedURLs(urls=[&#39;*.jpg&#39;, &#39;*.png&#39;])</span>
 
-<span class="sd">    WARNING: This method is EXPERIMENTAL, the official suggestion is using Fetch.enable, even Fetch is also EXPERIMENTAL, and wait events to control the requests (continue / abort / modify), especially block urls with resourceType: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Other.</span>
-<span class="sd">    https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable</span>
-
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Network.setBlockedURLs&#39;</span><span class="p">,</span>
-                           <span class="n">urls</span><span class="o">=</span><span class="n">urls</span><span class="p">,</span>
-                           <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+<span class="sd">WARNING: This method is EXPERIMENTAL, the official suggestion is using Fetch.enable, even Fetch is also EXPERIMENTAL, and wait events to control the requests (continue / abort / modify), especially block urls with resourceType: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Other.</span>
+<span class="sd">https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Network.setBlockedURLs&#39;</span><span class="p">,</span>
+                               <span class="n">urls</span><span class="o">=</span><span class="n">urls</span><span class="p">,</span>
+                               <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
       </details>
   </div>
@@ -11858,10 +11818,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2192</span>
-<span class="normal">2193</span>
-<span class="normal">2194</span>
-<span class="normal">2195</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2195</span>
 <span class="normal">2196</span>
 <span class="normal">2197</span>
 <span class="normal">2198</span>
@@ -11900,7 +11857,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 <span class="normal">2231</span>
 <span class="normal">2232</span>
 <span class="normal">2233</span>
-<span class="normal">2234</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">set_file_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">2234</span>
+<span class="normal">2235</span>
+<span class="normal">2236</span>
+<span class="normal">2237</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">set_file_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                          <span class="n">filepaths</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]],</span>
                          <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;input[type=&quot;file&quot;]&#39;</span><span class="p">,</span>
                          <span class="n">root_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -11965,10 +11925,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2236</span>
-<span class="normal">2237</span>
-<span class="normal">2238</span>
-<span class="normal">2239</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">2239</span>
 <span class="normal">2240</span>
 <span class="normal">2241</span>
 <span class="normal">2242</span>
@@ -11976,7 +11933,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 <span class="normal">2244</span>
 <span class="normal">2245</span>
 <span class="normal">2246</span>
-<span class="normal">2247</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">2247</span>
+<span class="normal">2248</span>
+<span class="normal">2249</span>
+<span class="normal">2250</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set_flatten</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="s2">&quot;use the flatten mode connection&quot;</span>
     <span class="c1"># /devtools/browser/</span>
     <span class="k">if</span> <span class="s1">&#39;/devtools/browser/&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">webSocketDebuggerUrl</span><span class="p">:</span>
@@ -12061,9 +12021,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1093</span>
-<span class="normal">1094</span>
-<span class="normal">1095</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1095</span>
 <span class="normal">1096</span>
 <span class="normal">1097</span>
 <span class="normal">1098</span>
@@ -12073,7 +12031,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 <span class="normal">1102</span>
 <span class="normal">1103</span>
 <span class="normal">1104</span>
-<span class="normal">1105</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">set_ua</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1105</span>
+<span class="normal">1106</span>
+<span class="normal">1107</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">set_ua</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">userAgent</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">acceptLanguage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
                  <span class="n">platform</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
@@ -12112,9 +12072,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1191</span>
-<span class="normal">1192</span>
-<span class="normal">1193</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1193</span>
 <span class="normal">1194</span>
 <span class="normal">1195</span>
 <span class="normal">1196</span>
@@ -12147,7 +12105,9 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 <span class="normal">1223</span>
 <span class="normal">1224</span>
 <span class="normal">1225</span>
-<span class="normal">1226</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">set_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1226</span>
+<span class="normal">1227</span>
+<span class="normal">1228</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">set_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                   <span class="n">url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                   <span class="n">referrer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                   <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span>
@@ -12209,10 +12169,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1686</span>
-<span class="normal">1687</span>
-<span class="normal">1688</span>
-<span class="normal">1689</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1689</span>
 <span class="normal">1690</span>
 <span class="normal">1691</span>
 <span class="normal">1692</span>
@@ -12227,7 +12184,10 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set</p>
 <span class="normal">1701</span>
 <span class="normal">1702</span>
 <span class="normal">1703</span>
-<span class="normal">1704</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">snapshot_mhtml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1704</span>
+<span class="normal">1705</span>
+<span class="normal">1706</span>
+<span class="normal">1707</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">snapshot_mhtml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                          <span class="n">save_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                          <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">,</span>
                          <span class="n">timeout</span><span class="o">=</span><span class="n">NotSet</span><span class="p">,</span>
@@ -12610,10 +12570,7 @@ WARNING: the <code>timeout</code> default to None when methods with prefix <code
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1348</span>
-<span class="normal">1349</span>
-<span class="normal">1350</span>
-<span class="normal">1351</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1351</span>
 <span class="normal">1352</span>
 <span class="normal">1353</span>
 <span class="normal">1354</span>
@@ -12630,7 +12587,10 @@ WARNING: the <code>timeout</code> default to None when methods with prefix <code
 <span class="normal">1365</span>
 <span class="normal">1366</span>
 <span class="normal">1367</span>
-<span class="normal">1368</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_findall</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1368</span>
+<span class="normal">1369</span>
+<span class="normal">1370</span>
+<span class="normal">1371</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_findall</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                        <span class="n">regex</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                        <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span>
                        <span class="n">attribute</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;outerHTML&#39;</span><span class="p">,</span>
@@ -12677,10 +12637,7 @@ WARNING: the <code>timeout</code> default to None when methods with prefix <code
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1470</span>
-<span class="normal">1471</span>
-<span class="normal">1472</span>
-<span class="normal">1473</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1473</span>
 <span class="normal">1474</span>
 <span class="normal">1475</span>
 <span class="normal">1476</span>
@@ -12695,7 +12652,10 @@ WARNING: the <code>timeout</code> default to None when methods with prefix <code
 <span class="normal">1485</span>
 <span class="normal">1486</span>
 <span class="normal">1487</span>
-<span class="normal">1488</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_includes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1488</span>
+<span class="normal">1489</span>
+<span class="normal">1490</span>
+<span class="normal">1491</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_includes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                         <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                         <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span>
                         <span class="n">attribute</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;outerHTML&#39;</span><span class="p">,</span>
@@ -13132,10 +13092,7 @@ WARNING: methods with prefix <code>wait_</code> the <code>timeout</code> default
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1296</span>
-<span class="normal">1297</span>
-<span class="normal">1298</span>
-<span class="normal">1299</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1299</span>
 <span class="normal">1300</span>
 <span class="normal">1301</span>
 <span class="normal">1302</span>
@@ -13156,7 +13113,10 @@ WARNING: methods with prefix <code>wait_</code> the <code>timeout</code> default
 <span class="normal">1317</span>
 <span class="normal">1318</span>
 <span class="normal">1319</span>
-<span class="normal">1320</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1320</span>
+<span class="normal">1321</span>
+<span class="normal">1322</span>
+<span class="normal">1323</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                    <span class="n">max_wait_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
@@ -13207,10 +13167,7 @@ WARNING: methods with prefix <code>wait_</code> the <code>timeout</code> default
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1280</span>
-<span class="normal">1281</span>
-<span class="normal">1282</span>
-<span class="normal">1283</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1283</span>
 <span class="normal">1284</span>
 <span class="normal">1285</span>
 <span class="normal">1286</span>
@@ -13221,7 +13178,10 @@ WARNING: methods with prefix <code>wait_</code> the <code>timeout</code> default
 <span class="normal">1291</span>
 <span class="normal">1292</span>
 <span class="normal">1293</span>
-<span class="normal">1294</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_tag_click</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1294</span>
+<span class="normal">1295</span>
+<span class="normal">1296</span>
+<span class="normal">1297</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_tag_click</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                          <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                          <span class="n">max_wait_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                          <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
@@ -13270,10 +13230,7 @@ WARNING: methods with prefix <code>wait_</code> the <code>timeout</code> default
 
       <details class="quote">
         <summary>Source code in <code>ichrome\async_utils.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1322</span>
-<span class="normal">1323</span>
-<span class="normal">1324</span>
-<span class="normal">1325</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1325</span>
 <span class="normal">1326</span>
 <span class="normal">1327</span>
 <span class="normal">1328</span>
@@ -13294,7 +13251,10 @@ WARNING: methods with prefix <code>wait_</code> the <code>timeout</code> default
 <span class="normal">1343</span>
 <span class="normal">1344</span>
 <span class="normal">1345</span>
-<span class="normal">1346</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+<span class="normal">1346</span>
+<span class="normal">1347</span>
+<span class="normal">1348</span>
+<span class="normal">1349</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">wait_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">cssselector</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                     <span class="n">max_wait_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                     <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
