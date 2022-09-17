@@ -1,16 +1,47 @@
 [ichrome](https://github.com/ClericPy/ichrome) [![PyPI](https://img.shields.io/pypi/v/ichrome?style=plastic)](https://pypi.org/project/ichrome/)![PyPI - Wheel](https://img.shields.io/pypi/wheel/ichrome?style=plastic)![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ichrome?style=plastic)![PyPI - Downloads](https://img.shields.io/pypi/dm/ichrome?style=plastic)![PyPI - License](https://img.shields.io/pypi/l/ichrome?style=plastic)
 
----------
+----------
 
-> [Read Docs](https://clericpy.github.io/ichrome/)
-
----------
-
-> Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.7+.
+> Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.7+. [Read Docs](https://clericpy.github.io/ichrome/)
 
 ![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
 
 > If you encounter any problems, please let me know through [issues](https://github.com/ClericPy/ichrome/issues), some of them will be a good opinion for the enhancement of `ichrome`.
+
+
+# Install
+
+    pip install ichrome -U
+
+> Uninstall & Clear the user data folder
+
+        $ python3 -m ichrome --clean
+        $ pip uninstall ichrome
+
+## Quick Start
+
+```python
+import asyncio
+from ichrome import AsyncChromeDaemon
+
+
+async def test():
+    async with AsyncChromeDaemon() as cd:
+        # create a new tab
+        async with cd.connect_tab(index=None) as tab:
+            await tab.goto('https://github.com/ClericPy/ichrome', timeout=5)
+            print(await tab.title)
+        # Privacy Mode, proxyServer arg maybe not work on Chrome, for `Target.createBrowserContext` is the EXPERIMENTAL feature(but chromium is ok).
+        # https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext
+        async with cd.incognito_tab(proxyServer='http://127.0.0.1:8080') as tab:
+            await tab.goto('https://httpbin.org/ip', timeout=5)
+            print(await tab.html)
+
+
+asyncio.run(test())
+```
+
+### [Read Docs](https://clericpy.github.io/ichrome/)
 
 # Why?
 
