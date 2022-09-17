@@ -952,6 +952,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                    callback: Callable = None) -> 'FetchBuffer':
         """
 Fetch.RequestPattern:
+
     urlPattern
         string(Wildcards)
     resourceType
@@ -959,45 +960,46 @@ Fetch.RequestPattern:
     requestStage
         Stage at which to begin intercepting requests. Default is Request.
         Allowed Values: Request, Response
-        ::
 
-            async with tab.iter_fetch(patterns=[{
-                    'urlPattern': '*httpbin.org/get?a=*'
-            }]) as f:
-                await tab.goto('http://httpbin.org/get?a=1', timeout=0)
-                data = await f
-                assert data
-                # test continueRequest
-                await f.continueRequest(data)
-                assert await tab.wait_includes('origin')
+Demo::
 
-                await tab.goto('http://httpbin.org/get?a=1', timeout=0)
-                data = await f
-                assert data
-                # test modify response
-                await f.fulfillRequest(data,
-                                       200,
-                                       body=b'hello world.')
-                assert await tab.wait_includes('hello world.')
-                await tab.goto('http://httpbin.org/get?a=1', timeout=0)
-                data = await f
-                assert data
-                await f.failRequest(data, 'AccessDenied')
-                assert (await tab.url).startswith('chrome-error://')
+    async with tab.iter_fetch(patterns=[{
+            'urlPattern': '*httpbin.org/get?a=*'
+    }]) as f:
+        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        data = await f
+        assert data
+        # test continueRequest
+        await f.continueRequest(data)
+        assert await tab.wait_includes('origin')
 
-            # use callback
-            async def cb(event, tab, buffer):
-                await buffer.continueRequest(event)
+        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        data = await f
+        assert data
+        # test modify response
+        await f.fulfillRequest(data,
+                                200,
+                                body=b'hello world.')
+        assert await tab.wait_includes('hello world.')
+        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        data = await f
+        assert data
+        await f.failRequest(data, 'AccessDenied')
+        assert (await tab.url).startswith('chrome-error://')
 
-            async with tab.iter_fetch(
-                    patterns=[{
-                        'urlPattern': '*httpbin.org/ip*'
-                    }],
-                    callback=cb,
-            ) as f:
-                await tab.goto('http://httpbin.org/ip', timeout=0)
-                async for r in f:
-                    break
+    # use callback
+    async def cb(event, tab, buffer):
+        await buffer.continueRequest(event)
+
+    async with tab.iter_fetch(
+            patterns=[{
+                'urlPattern': '*httpbin.org/ip*'
+            }],
+            callback=cb,
+    ) as f:
+        await tab.goto('http://httpbin.org/ip', timeout=0)
+        async for r in f:
+            break
 
         """
         return FetchBuffer(events=events,
@@ -1152,7 +1154,9 @@ Fetch.RequestPattern:
         return False
 
     async def get_history_list(self, timeout=NotSet) -> dict:
-        """return dict: {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}"""
+        """(Page.getNavigationHistory) Get the page history list.
+        return example:
+            {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}"""
         result = await self.send('Page.getNavigationHistory', timeout=timeout)
         return self.get_data_value(result, value_path='result', default={})
 
@@ -1164,14 +1168,12 @@ Fetch.RequestPattern:
     async def setBlockedURLs(self, urls: List[str], timeout=NotSet):
         """(Network.setBlockedURLs) Blocks URLs from loading. [EXPERIMENTAL].
 
-        Demo::
+Demo::
 
-            await tab.setBlockedURLs(urls=['*.jpg', '*.png'])
+    await tab.setBlockedURLs(urls=['*.jpg', '*.png'])
 
-        WARNING: This method is EXPERIMENTAL, the official suggestion is using Fetch.enable, even Fetch is also EXPERIMENTAL, and wait events to control the requests (continue / abort / modify), especially block urls with resourceType: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Other.
-        https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable
-
-
+WARNING: This method is EXPERIMENTAL, the official suggestion is using Fetch.enable, even Fetch is also EXPERIMENTAL, and wait events to control the requests (continue / abort / modify), especially block urls with resourceType: Document, Stylesheet, Image, Media, Font, Script, TextTrack, XHR, Fetch, EventSource, WebSocket, Manifest, SignedExchange, Ping, CSPViolationReport, Other.
+https://chromedevtools.github.io/devtools-protocol/tot/Fetch/#method-enable
         """
         return await self.send('Network.setBlockedURLs',
                                urls=urls,
@@ -1252,10 +1254,11 @@ Fetch.RequestPattern:
                       kwargs=None,
                       timeout=NotSet):
         """javascript will be filled into function template.
-        Demo::
-            javascript = `return document.title`
-            will run js like, and get the return result
-            `(()=>{return document.title})()`
+
+Demo::
+
+    javascript = `return document.title`
+    will run js like `(()=>{return document.title})()`, and get the return result
 """
         javascript = '''(()=>{%s})()''' % javascript
         return await self.js(javascript,
@@ -1396,19 +1399,19 @@ Fetch.RequestPattern:
             flags (str, optional): regex flags, defaults to 'g'.
             timeout (float): defaults to NotSet.
 
-        Demo::
+Demo::
 
-            # no group / (?:) / (?<=) / (?!)
-            print(await tab.findall('<title>.*?</title>'))
-            # ['<title>123456789</title>']
+    # no group / (?:) / (?<=) / (?!)
+    print(await tab.findall('<title>.*?</title>'))
+    # ['<title>123456789</title>']
 
-            # only 1 group
-            print(await tab.findall('<title>(.*?)</title>'))
-            # ['123456789']
+    # only 1 group
+    print(await tab.findall('<title>(.*?)</title>'))
+    # ['123456789']
 
-            # multi-groups
-            print(await tab.findall('<title>(1)(2).*?</title>'))
-            # [['1', '2']]
+    # multi-groups
+    print(await tab.findall('<title>(1)(2).*?</title>'))
+    # [['1', '2']]
         """
         if re.search(r'(?<!\\)/', regex):
             regex = re.sub(r'(?<!\\)/', r'\/', regex)
@@ -2016,12 +2019,12 @@ JSON.stringify(result)""" % (
                              timeout=NotSet):
         '''Drag with offset continuously.
 
-        Demo::
+Demo::
 
-                await tab.set_url('https://draw.yunser.com/')
-                walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(
-                    0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)
-                await walker.move(50 * 1.414, 50 * 1.414, 0.2)
+        await tab.set_url('https://draw.yunser.com/')
+        walker = await tab.mouse_drag_rel_chain(320, 145).move(50, 0, 0.2).move(
+            0, 50, 0.2).move(-50, 0, 0.2).move(0, -50, 0.2)
+        await walker.move(50 * 1.414, 50 * 1.414, 0.2)
         '''
         return OffsetDragWalker(start_x,
                                 start_y,
