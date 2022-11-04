@@ -161,7 +161,7 @@ class Tab(object):
         self.tab_id = tab_id
         self._title = title
         self._url = url
-        self.default_recv_callback = default_recv_callback,
+        self.default_recv_callback = default_recv_callback
         self.webSocketDebuggerUrl = webSocketDebuggerUrl
         self.chrome = chrome
         self.timeout = timeout
