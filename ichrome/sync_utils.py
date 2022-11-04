@@ -68,7 +68,7 @@ class Chrome(object):
     def tabs(self):
         return self._get_tabs()
 
-    def new_tab(self, url=""):
+    def new_tab(self, url="", default_recv_callback=None):
         r = self.req.get(
             f"{self.server}/json/new?{quote_plus(url)}",
             retry=self.retry,
@@ -82,7 +82,7 @@ class Chrome(object):
                 rjson["url"],
                 rjson["webSocketDebuggerUrl"],
             )
-            tab = Tab(tab_id, title, _url, webSocketDebuggerUrl, self)
+            tab = Tab(tab_id, title, _url, default_recv_callback, webSocketDebuggerUrl, self)
             tab._create_time = int(time.time())
             logger.info(f"new tab {tab}")
             return tab
@@ -154,12 +154,14 @@ class Tab(object):
                  tab_id,
                  title,
                  url,
+                 default_recv_callback,
                  webSocketDebuggerUrl,
                  chrome,
                  timeout=5):
         self.tab_id = tab_id
         self._title = title
         self._url = url
+        self.default_recv_callback = default_recv_callback,
         self.webSocketDebuggerUrl = webSocketDebuggerUrl
         self.chrome = chrome
         self.timeout = timeout
@@ -224,6 +226,10 @@ class Tab(object):
                 except (TypeError, json.decoder.JSONDecodeError):
                     continue
                 f = self._listener.find_future(data_dict)
+
+                if self.default_recv_callback:
+                    self.default_recv_callback(data_dict)
+
                 if f:
                     f.set_result(data_str)
             except (
