@@ -164,6 +164,8 @@ class Tab(object):
         self.chrome = chrome
         self.timeout = timeout
 
+        self._default_recv_callback = []
+
         self.req = tPool()
         self._create_time = time.time()
         self._message_id = 0
@@ -226,6 +228,14 @@ class Tab(object):
                 f = self._listener.find_future(data_dict)
                 if f:
                     f.set_result(data_str)
+                for callback in self._default_recv_callback:
+                    try:
+                        callback(self, data_dict)
+                    except Exception as e:
+                        logger.error(
+                            f"<{self}> callback failed: {getattr(callback, '__name__', callback)} {e!r}. data_str={data_str}"
+                        )
+                        raise
             except (
                     websocket._exceptions.WebSocketConnectionClosedException,
                     websocket._exceptions.WebSocketTimeoutException,
