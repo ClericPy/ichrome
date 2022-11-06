@@ -46,12 +46,19 @@ def test_example():
         chrome = Chrome(host="127.0.0.1", port=9222, timeout=3, retry=1)
         # now create a new tab without url
         tab = chrome.new_tab()
+        # add a default callback
+        test_cache = []
+        tab._default_recv_callback.append(
+            lambda tab, data: test_cache.append(data))
         # reset the url to bing.com, if loading time more than 5 seconds, will stop loading.
         # if inject js success, will alert Vue
         tab.set_url("https://www.bing.com/",
                     referrer="https://www.github.com/",
                     timeout=5)
         assert 'bing' in tab.url, tab.url
+        assert test_cache, test_cache
+        test_cache.clear()
+        tab._default_recv_callback.clear()
         logger.info(tab.title)
         # get_cookies from url
         logger.info(tab.get_cookies("http://cn.bing.com"))
@@ -61,6 +68,7 @@ def test_example():
                 "https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js"))
         logger.info(
             tab.js("alert('jQuery inject success:' + jQuery.fn.jquery)"))
+        assert not test_cache, test_cache
         tab.js(
             'alert("Check the links above disabled, and then input `test` to the input position.")'
         )
