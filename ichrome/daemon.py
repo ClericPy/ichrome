@@ -505,11 +505,13 @@ class ChromeDaemon(object):
             if current_platform == 'Linux':
                 paths = [
                     "google-chrome", "google-chrome-stable",
-                    "google-chrome-beta", "google-chrome-dev"
+                    "google-chrome-beta", "google-chrome-dev",
+                    "microsoft-edge-stable"
                 ]
             elif current_platform == 'Darwin':
                 paths = [
-                    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+                    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
                 ]
             else:
                 raise ChromeRuntimeError(
@@ -520,7 +522,7 @@ class ChromeDaemon(object):
                                                   timeout=2)
                     if not out:
                         continue
-                    if out.startswith(b"Google Chrome "):
+                    if out.startswith((b"Google Chrome ", b"Microsoft Edge")):
                         yield path
                 except (FileNotFoundError, subprocess.TimeoutExpired):
                     continue
