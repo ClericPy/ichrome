@@ -878,7 +878,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         )
         task = self._daemon_thread or asyncio.ensure_future(
             self._daemon(interval=interval))
-        if self._block:
+        if block:
             await task
         return task
 
