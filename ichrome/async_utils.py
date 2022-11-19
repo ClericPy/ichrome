@@ -1809,7 +1809,16 @@ JSON.stringify(result)""" % (
         kwargs:
             text, unmodifiedText, keyIdentifier, code, key...
 
-        https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchKeyEvent'''
+        https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchKeyEvent
+
+        Keyboard Events:
+            code:
+                https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code
+            key:
+                https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key
+            keyIdentifier(Deprecated):
+                https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/keyIdentifier
+        '''
         if string:
             result = None
             for char in string:
