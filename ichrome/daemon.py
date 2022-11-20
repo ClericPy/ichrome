@@ -765,7 +765,7 @@ class AsyncChromeDaemon(ChromeDaemon):
     def init(self):
         # Please init AsyncChromeDaemon in a running loop with `async with`
         self._req = None
-        # please use AsyncChromeDaemon in `async with`
+        self._chrome = AsyncChrome(self.host, self.port, timeout=self._timeout)
         self._init_coro = self._init_chrome_daemon()
 
     @property
@@ -851,6 +851,10 @@ class AsyncChromeDaemon(ChromeDaemon):
                                start=start,
                                max_tries=max_tries,
                                timeout=timeout)
+
+    async def check_ws_ready(self):
+        async with self._chrome as chrome:
+            return await chrome.check_ws_ready()
 
     async def check_chrome_ready(self):
         "check if the chrome api is available"

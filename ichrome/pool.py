@@ -279,6 +279,8 @@ class ChromeWorker:
                 logger.error(f'{self} restarting for error {error!r}')
                 self.set_need_restart()
         finally:
+            if not future.done():
+                future.cancel()
             logger.info(f'[finished]({self.todos}) {future}')
             del future
 
@@ -315,6 +317,7 @@ class ChromeWorker:
         await self.daemon_task
         for task in self.consumers:
             task.cancel()
+        await asyncio.sleep(0.01)
 
     def get_random_secs(self, start=0, end=5):
         return random.choice(range(start * 1000, end * 1000)) / 1000

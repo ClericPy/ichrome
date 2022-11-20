@@ -2487,6 +2487,10 @@ True
                                  timeout=timeout,
                                  value_path='result.result.value')
 
+    async def browser_version(self, timeout=NotSet):
+        "[Browser.getVersion]"
+        return await self.send('Browser.getVersion', timeout=timeout)
+
 
 class OffsetMoveWalker:
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
@@ -2671,8 +2675,8 @@ class AsyncChrome(GetValueMixin):
 
     async def close(self):
         self.status = 'disconnected'
-        if self.req:
-            await self.req.close()
+        if self._req:
+            await self._req.close()
         if self.status == 'connected':
             await self._browser.ws_connection.__aexit__(None, None, None)
             self._browser = None
@@ -2722,7 +2726,7 @@ class AsyncChrome(GetValueMixin):
     async def connect(self) -> bool:
         """await self.connect()"""
         self._req = Requests()
-        if await self.check():
+        if await self.check_http_ready():
             return True
         else:
             return False
@@ -2737,10 +2741,21 @@ class AsyncChrome(GetValueMixin):
     async def check(self) -> bool:
         """Test http connection to cdp. `await self.check()`
         """
-        r = await self.get_server()
-        if r:
-            return True
-        else:
+        return bool(await self.check_http_ready()) and (await self.check_ws_ready())
+
+    async def check_http_ready(self):
+        resp = await self.req.head(self.server,
+                                   timeout=self.timeout,
+                                   retry=self.retry)
+        if not resp:
+            self.status = resp.text
+        return bool(resp)
+
+    async def check_ws_ready(self):
+        try:
+            data = await self.browser.browser_version()
+            return bool(isinstance(data, dict) and data.get('result'))
+        except Exception:
             return False
 
     @property
