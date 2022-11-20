@@ -512,9 +512,10 @@ async def test_examples():
     _user_dir_path = AsyncChromeDaemon.DEFAULT_USER_DIR_PATH / 'chrome_9222'
     dir_cleared = not _user_dir_path.is_dir()
     assert dir_cleared
+    await asyncio.sleep(1)
 
 
-def test_chrome_engine():
+async def test_chrome_engine():
 
     async def _test_chrome_engine():
 
@@ -572,28 +573,23 @@ def test_chrome_engine():
         dir_cleared = not _user_dir_path.is_dir()
         assert dir_cleared
 
-    # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
-    loop = asyncio.new_event_loop()
-    try:
-        loop.run_until_complete(_test_chrome_engine())
-    finally:
-        loop.close()
+    await _test_chrome_engine()
 
 
 def test_all():
     import time
     AsyncChromeDaemon.DEFAULT_USER_DIR_PATH = Path('./ichrome_user_data')
-    for flatten in [True, False, True]:
-        logger.critical('Start testing flatten=%s.' % flatten)
-        AsyncTab._DEFAULT_FLATTEN = flatten
-        test_chrome_engine()
-        time.sleep(1)
-        loop = asyncio.new_event_loop()
-        try:
+    loop = asyncio.new_event_loop()
+    try:
+        for flatten in [True, False, True]:
+            logger.critical('Start testing flatten=%s.' % flatten)
+            AsyncTab._DEFAULT_FLATTEN = flatten
+            loop.run_until_complete(test_chrome_engine())
+            time.sleep(1)
             loop.run_until_complete(test_examples())
-        finally:
-            loop.close()
-        time.sleep(1)
+            time.sleep(1)
+    finally:
+        loop.close()
     AsyncChromeDaemon.clear_dir(AsyncChromeDaemon.DEFAULT_USER_DIR_PATH)
 
 
