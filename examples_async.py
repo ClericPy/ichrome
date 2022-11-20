@@ -19,9 +19,9 @@ async def test_chrome(chrome: AsyncChrome):
     version = await chrome.version
     assert isinstance(version, dict) and 'Browser' in version
     ok = await chrome.check()
-    assert ok is True
+    assert ok is True, ok
     ok = await chrome.ok
-    assert ok is True
+    assert ok is True, ok
     resp = await chrome.get_server('json')
     assert isinstance(resp.json(), list)
     tabs1: List[AsyncTab] = await chrome.get_tabs()
@@ -573,7 +573,11 @@ def test_chrome_engine():
         assert dir_cleared
 
     # asyncio.run will raise aiohttp issue: https://github.com/aio-libs/aiohttp/issues/4324
-    asyncio.get_event_loop().run_until_complete(_test_chrome_engine())
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(_test_chrome_engine())
+    finally:
+        loop.close()
 
 
 def test_all():
@@ -584,7 +588,11 @@ def test_all():
         AsyncTab._DEFAULT_FLATTEN = flatten
         test_chrome_engine()
         time.sleep(1)
-        asyncio.get_event_loop().run_until_complete(test_examples())
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(test_examples())
+        finally:
+            loop.close()
         time.sleep(1)
     AsyncChromeDaemon.clear_dir(AsyncChromeDaemon.DEFAULT_USER_DIR_PATH)
 
