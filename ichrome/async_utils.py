@@ -1300,7 +1300,7 @@ Demo::
                        cssselector: str,
                        max_wait_time: Optional[float] = None,
                        interval: float = 1,
-                       timeout=NotSet) -> Union[None, Tag]:
+                       timeout=NotSet) -> Union[None, Tag, TagNotFound]:
         '''Wait until the tag is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tag.
         interval: checking interval for while loop.
@@ -1322,11 +1322,12 @@ Demo::
             await asyncio.sleep(interval)
         return tag or None
 
-    async def wait_tags(self,
-                        cssselector: str,
-                        max_wait_time: Optional[float] = None,
-                        interval: float = 1,
-                        timeout=NotSet) -> List[Tag]:
+    async def wait_tags(
+            self,
+            cssselector: str,
+            max_wait_time: Optional[float] = None,
+            interval: float = 1,
+            timeout=NotSet) -> typing.Union[typing.List[Tag], Tag, TagNotFound]:
         '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
         interval: checking interval for while loop.
@@ -1338,15 +1339,14 @@ Demo::
         else: return List[Tag]
         WARNING: methods with prefix `wait_` the `timeout` default to None.
         '''
-        tags = []
         TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
         while TIMEOUT_AT > time.time():
             tags = await self.querySelectorAll(cssselector=cssselector,
                                                timeout=timeout)
             if tags:
-                break
+                return tags
             await asyncio.sleep(interval)
-        return tags
+        return []
 
     async def wait_findall(self,
                            regex: str,
@@ -1494,7 +1494,7 @@ JSON.stringify(result)
                             cssselector: str,
                             action: Union[None, str] = None,
                             timeout=NotSet) -> typing.Union[Tag, TagNotFound]:
-        "query a tag with css"
+        "deprecated. query a tag with css"
         return await self.querySelectorAll(cssselector=cssselector,
                                            index=0,
                                            action=action,
@@ -1506,7 +1506,7 @@ JSON.stringify(result)
             index: Union[None, int, str] = None,
             action: Union[None, str] = None,
             timeout=NotSet) -> typing.Union[typing.List[Tag], Tag, TagNotFound]:
-        """CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, TagNotFound.
+        """deprecated. CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, TagNotFound.
         Tag hasattr: tagName, innerHTML, outerHTML, textContent, attributes, result
 
         If index is not None, will return the tag_list[index], else return the whole tag list.
@@ -2741,7 +2741,8 @@ class AsyncChrome(GetValueMixin):
     async def check(self) -> bool:
         """Test http connection to cdp. `await self.check()`
         """
-        return bool(await self.check_http_ready()) and (await self.check_ws_ready())
+        return bool(await self.check_http_ready()) and (await
+                                                        self.check_ws_ready())
 
     async def check_http_ready(self):
         resp = await self.req.head(self.server,
@@ -3389,7 +3390,7 @@ class IncognitoTabContext:
         proxyBypassList: str = None,
         originsWithUniversalNetworkAccess: List[str] = None,
     ):
-        self.target_kwargs = {
+        self.target_kwargs: dict = {
             'url': url,
             'width': width,
             'height': height,
@@ -3409,7 +3410,16 @@ class IncognitoTabContext:
 
     async def __aenter__(self) -> AsyncTab:
         await self.browser_context.__aenter__()
-        self.connection = self.browser_context.new_tab(**self.target_kwargs)
+        self.connection = self.browser_context.new_tab(
+            url=self.target_kwargs['url'],
+            width=self.target_kwargs['width'],
+            height=self.target_kwargs['height'],
+            enableBeginFrameControl=self.
+            target_kwargs['enableBeginFrameControl'],
+            newWindow=self.target_kwargs['newWindow'],
+            background=self.target_kwargs['background'],
+            flatten=self.target_kwargs['flatten'],
+        )
         return await self.connection.__aenter__()
 
     async def __aexit__(self, *_):

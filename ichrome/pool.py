@@ -24,8 +24,8 @@ class ChromeTask(asyncio.Future):
                  tab_callback: typing.Callable = None,
                  timeout=None,
                  tab_index=None,
-                 port=None,
-                 incognito_args=None):
+                 port: int = None,
+                 incognito_args: dict = None):
         super().__init__()
         self.id = self.get_id()
         self.data = data
@@ -37,7 +37,7 @@ class ChromeTask(asyncio.Future):
         if incognito_args is None:
             self.incognito_args: dict = ChromeEngine.DEFAULT_INCOGNITO_ARGS
         else:
-            self.incognito_args: dict = incognito_args
+            self.incognito_args = incognito_args
         self._running_task: asyncio.Task = None
         self._tries = 0
 
@@ -336,7 +336,7 @@ class ChromeEngine:
     SHORTEN_DATA_LENGTH = 150
     FLATTEN = True
     # Use incognico mode by default, or you can se ChromeEngine.DEFAULT_INCOGNITO_ARGS = None to use normal mode
-    DEFAULT_INCOGNITO_ARGS = {}
+    DEFAULT_INCOGNITO_ARGS: dict = {}
 
     def __init__(self,
                  workers_amount: int = None,
@@ -563,7 +563,7 @@ class CommonUtils:
                 await tab.wait_tag(data['wait_tag'], max_wait_time=timeout)
         if data['cssselector']:
             result['html'] = None
-            tags = await tab.querySelectorAll(data['cssselector'])
+            tags: typing.Any = await tab.querySelectorAll(data['cssselector'])
             result['tags'] = [tag.outerHTML for tag in tags]
         else:
             result['html'] = await tab.current_html
