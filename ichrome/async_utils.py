@@ -1016,6 +1016,27 @@ Demo::
                               test_url='https://api.github.com/',
                               callback: Callable = None,
                               iter_count=2):
+        """pass user/password for auth proxy.
+
+        Demo::
+
+            import asyncio
+
+            from ichrome import AsyncChromeDaemon
+
+
+            async def main():
+                async with AsyncChromeDaemon(proxy='http://127.0.0.1:10800',
+                                            clear_after_shutdown=True,
+                                            headless=1) as cd:
+                    async with cd.connect_tab() as tab:
+                        await tab.pass_auth_proxy('user', 'pwd')
+                        await tab.goto('http://httpbin.org/ip', timeout=2)
+                        print(await tab.html)
+
+
+            asyncio.run(main())
+"""
         ok = False
         async with self.iter_fetch(handleAuthRequests=True) as f:
             try:
