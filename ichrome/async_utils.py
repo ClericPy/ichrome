@@ -13,7 +13,6 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import (Any, Awaitable, Callable, Coroutine, Dict, List, Optional,
                     Set, Union)
-import typing
 from weakref import WeakValueDictionary
 
 from aiohttp.client_exceptions import ClientError
@@ -1011,6 +1010,37 @@ Demo::
                            kwargs=kwargs,
                            callback=callback)
 
+    async def pass_auth_proxy(self,
+                              user='',
+                              password='',
+                              test_url='https://api.github.com/',
+                              callback: Callable = None,
+                              iter_count=2):
+        ok = False
+        async with self.iter_fetch(handleAuthRequests=True) as f:
+            try:
+                task = asyncio.create_task(self.goto(test_url, timeout=1))
+                for _ in range(iter_count):
+                    if ok:
+                        break
+                    event: dict = await f
+                    if event['method'] == 'Fetch.requestPaused':
+                        await f.continueRequest(event)
+                    elif event['method'] == 'Fetch.authRequired':
+                        if callback:
+                            ok = await ensure_awaitable(callback(event))
+                        else:
+                            await f.continueWithAuth(
+                                event,
+                                'ProvideCredentials',
+                                user,
+                                password,
+                            )
+                            ok = True
+            finally:
+                await task
+                return ok
+
     async def get_response(
         self,
         request_dict: Union[None, dict, str],
@@ -1322,12 +1352,11 @@ Demo::
             await asyncio.sleep(interval)
         return tag or None
 
-    async def wait_tags(
-            self,
-            cssselector: str,
-            max_wait_time: Optional[float] = None,
-            interval: float = 1,
-            timeout=NotSet) -> typing.Union[typing.List[Tag], Tag, TagNotFound]:
+    async def wait_tags(self,
+                        cssselector: str,
+                        max_wait_time: Optional[float] = None,
+                        interval: float = 1,
+                        timeout=NotSet) -> Union[List[Tag], Tag, TagNotFound]:
         '''Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
         interval: checking interval for while loop.
@@ -1493,7 +1522,7 @@ JSON.stringify(result)
     async def querySelector(self,
                             cssselector: str,
                             action: Union[None, str] = None,
-                            timeout=NotSet) -> typing.Union[Tag, TagNotFound]:
+                            timeout=NotSet) -> Union[Tag, TagNotFound]:
         "deprecated. query a tag with css"
         return await self.querySelectorAll(cssselector=cssselector,
                                            index=0,
@@ -1505,7 +1534,7 @@ JSON.stringify(result)
             cssselector: str,
             index: Union[None, int, str] = None,
             action: Union[None, str] = None,
-            timeout=NotSet) -> typing.Union[typing.List[Tag], Tag, TagNotFound]:
+            timeout=NotSet) -> Union[List[Tag], Tag, TagNotFound]:
         """deprecated. CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, TagNotFound.
         Tag hasattr: tagName, innerHTML, outerHTML, textContent, attributes, result
 
@@ -3033,7 +3062,20 @@ class EventBuffer(asyncio.Queue):
         maxsize: int = 0,
         kwargs: Any = None,
         callback: Callable = None,
+        context_callbacks: List[Callable] = None,
     ):
+        """Event buffer with callback function.
+
+        Args:
+            events (List[str]): the list of event names
+            tab (AsyncTab): the connected AsyncTab
+            timeout (Union[float, int], optional): total timeout for the whole context. Defaults to None.
+            maxsize (int, optional): buffer size. Defaults to 0.
+            kwargs (Any, optional): some kwargs saved by self. Defaults to None.
+            callback (Callable, optional): default callback function for each event. Defaults to None.
+            context_callbacks (List[Callable], optional): callback functions [before_startup, after_startup, before_shutdown, after_shutdown]. Defaults to None.
+
+        """
         if isinstance(events, (list, set, tuple)):
             self.events = list(events)
         else:
@@ -3042,6 +3084,10 @@ class EventBuffer(asyncio.Queue):
         self.timeout = timeout
         self.kwargs = kwargs
         self.callback = callback
+        if context_callbacks is None:
+            self.context_callbacks = []
+        else:
+            self.context_callbacks = context_callbacks
         self._shutdown = False
         super().__init__(maxsize=maxsize)
 
@@ -3051,7 +3097,28 @@ class EventBuffer(asyncio.Queue):
         else:
             return None
 
+    async def run_context_callback(self, index):
+        if self.context_callbacks:
+            try:
+                func = self.context_callbacks[index]
+                if func:
+                    event = [
+                        'before_startup', 'after_startup', 'before_shutdown',
+                        'after_shutdown'
+                    ][index]
+                    if asyncio.iscoroutinefunction(func):
+                        result = await func(event=event,
+                                            tab=self.tab,
+                                            buffer=self)
+                    else:
+                        result = await async_run(
+                            func, dict(event=event, tab=self.tab, buffer=self))
+                    return result
+            except IndexError:
+                return
+
     async def __aenter__(self):
+        await self.run_context_callback(0)
         self.start_time = time.time()
         for event_name in self.events:
             if event_name in self.tab._buffers:
@@ -3061,11 +3128,14 @@ class EventBuffer(asyncio.Queue):
                     raise ChromeValueError(msg)
             await self.tab.auto_enable(event_name)
             self.tab._buffers[event_name] = self
+        await self.run_context_callback(1)
         return self
 
     async def __aexit__(self, *_):
+        await self.run_context_callback(2)
         for event_name in self.events:
             self.tab._buffers.pop(event_name, None)
+        await self.run_context_callback(3)
 
     def __await__(self):
         return self.wait_event().__await__()
@@ -3099,7 +3169,7 @@ class EventBuffer(asyncio.Queue):
                         else:
                             result = await async_run(
                                 self.callback,
-                                dict(event=event, tab=self.tab, buffer=self))
+                                **dict(event=event, tab=self.tab, buffer=self))
                         return result
                     else:
                         return event
@@ -3131,6 +3201,7 @@ class FetchBuffer(EventBuffer):
         maxsize: int = 0,
         kwargs: Any = None,
         callback: Callable = None,
+        context_callbacks: List[Callable] = None,
     ):
         self.patterns = patterns or [{'urlPattern': '*'}]
         self.handleAuthRequests = handleAuthRequests
@@ -3139,12 +3210,15 @@ class FetchBuffer(EventBuffer):
                 events = ['Fetch.requestPaused', 'Fetch.authRequired']
             else:
                 events = ['Fetch.requestPaused']
-        super().__init__(events=events,
-                         tab=tab,
-                         timeout=timeout,
-                         maxsize=maxsize,
-                         kwargs=kwargs,
-                         callback=callback)
+        super().__init__(
+            events=events,
+            tab=tab,
+            timeout=timeout,
+            maxsize=maxsize,
+            kwargs=kwargs,
+            callback=callback,
+            context_callbacks=context_callbacks,
+        )
 
     async def __aenter__(self):
         await super().__aenter__()
