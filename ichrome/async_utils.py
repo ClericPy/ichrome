@@ -1591,7 +1591,7 @@ JSON.stringify(result)""" % (
             result = [Tag(**kws) for kws in items]
             if isinstance(index, int):
                 if result:
-                    return result[index]
+                    return result[0]
                 else:
                     return TagNotFound()
             else:
