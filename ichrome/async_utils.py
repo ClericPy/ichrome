@@ -2541,6 +2541,21 @@ True
         "[Browser.getVersion]"
         return await self.send('Browser.getVersion', timeout=timeout)
 
+    async def set_geolocation_override(self, 
+                                       latitude: Optional[int] = None,
+                                       longitude: Optional[int] = None,
+                                       accuracy: Optional[int] = None,
+                                       timeout=NotSet):
+        logger.debug(f'[set_geolocation_override] {self!r} latitude => {latitude}')
+        logger.debug(f'[set_geolocation_override] {self!r} longitude => {longitude}')
+        logger.debug(f'[set_geolocation_override] {self!r} accuracy => {accuracy}')
+        data = await self.send('Emulation.setGeolocationOverride',
+                               latitude=latitude,
+                               longitude=longitude,
+                               accuracy=accuracy,
+                               timeout=timeout)
+        return data
+      
 
 class OffsetMoveWalker:
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
