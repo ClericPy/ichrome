@@ -2541,6 +2541,14 @@ True
         "[Browser.getVersion]"
         return await self.send('Browser.getVersion', timeout=timeout)
 
+    async def scrollIntoView(self,
+                             cssselector: str,
+                             action='scrollIntoView()',
+                             timeout=NotSet) -> Union[Tag, TagNotFound]:
+        return await self.querySelector(cssselector=cssselector,
+                                        action=action,
+                                        timeout=timeout)
+
 
 class OffsetMoveWalker:
     __slots__ = ('path', 'start_x', 'start_y', 'tab', 'timeout')
