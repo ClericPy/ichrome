@@ -911,7 +911,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
                                                timeout=timeout)
 
     def iter_events(self,
-                    events: List[str],
+                    events: Union[List[str], Dict[str, Callable]],
                     timeout: Union[float, int] = None,
                     maxsize=0,
                     kwargs: Any = None,
@@ -919,20 +919,46 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
         """Iter events with a async context.
         ::
 
-            async with AsyncChromeDaemon() as cd:
-                async with cd.connect_tab() as tab:
-                    async with tab.iter_events(['Page.loadEventFired'],
-                                            timeout=60) as e:
-                        await tab.goto('http://httpbin.org/get')
-                        print(await e)
-                        # {'method': 'Page.loadEventFired', 'params': {'timestamp': 1380679.967344}}
-                        # await tab.goto('http://httpbin.org/get')
-                        # print(await e.get())
-                        # # {'method': 'Page.loadEventFired', 'params': {'timestamp': 1380679.967344}}
-                        await tab.goto('http://httpbin.org/get')
-                        async for data in e:
-                            print(data)
-                            break
+            import asyncio
+
+            from ichrome import AsyncChromeDaemon
+
+
+            async def main():
+                async with AsyncChromeDaemon() as cd:
+                    async with cd.connect_tab() as tab:
+                        # demo1: events type is List[str]
+                        async with tab.iter_events(['Page.loadEventFired'],
+                                                timeout=60) as event_buffer:
+                            await tab.goto('http://httpbin.org/get')
+                            print(await event_buffer)
+                            # {'method': 'Page.loadEventFired', 'params': {'timestamp': 357760.225243}, 'sessionId': '99AFCDF842DA6C9C000C5F86A904FCE6'}
+                            await tab.goto('http://httpbin.org/get')
+                            print(await event_buffer.get())
+                            # {'method': 'Page.loadEventFired', 'params': {'timestamp': 357761.188782}, 'sessionId': '99AFCDF842DA6C9C000C5F86A904FCE6'}
+                            await tab.goto('http://httpbin.org/get')
+                            async for data in event_buffer:
+                                print(data)
+                                # {'method': 'Page.loadEventFired', 'params': {'timestamp': 357761.811724}, 'sessionId': '99AFCDF842DA6C9C000C5F86A904FCE6'}
+                                break
+                        # demo2: events type is Dict[str, Callable]
+                        def cb(event, tab, buffer):
+                            return ('event_cb', event, tab, buffer)
+
+                        async with tab.iter_events({'Page.loadEventFired': cb},
+                                                timeout=60) as event_buffer:
+                            await tab.goto('http://httpbin.org/get')
+                            print(await event_buffer)
+                            # ('event_cb', {'method': 'Page.loadEventFired', 'params': {'timestamp': 358088.744186}, 'sessionId': 'E89B2C20E601DB92D37B55D09D7A9531'}, <Tab(connected): AAC58F5AD46D711A4F22687A4CFF40AF>, <EventBuffer at 0x23586517b90 maxsize=0 tasks=1>)
+                            await tab.goto('http://httpbin.org/get')
+                            async for data in event_buffer:
+                                print(data)
+                                # ('event_cb', {'method': 'Page.loadEventFired', 'params': {'timestamp': 358089.399112}, 'sessionId': 'E89B2C20E601DB92D37B55D09D7A9531'}, <Tab(connected): AAC58F5AD46D711A4F22687A4CFF40AF>, <EventBuffer at 0x23586517b90 maxsize=0 tasks=2>)
+                                break
+
+
+            asyncio.run(main())
+
         """
         return EventBuffer(events,
                            tab=self,
@@ -944,7 +970,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
     def iter_fetch(self,
                    patterns: List[dict] = None,
                    handleAuthRequests=False,
-                   events: List[str] = None,
+                   events: Union[List[str], Dict[str, Callable]] = None,
                    timeout: Union[float, int] = None,
                    maxsize=0,
                    kwargs: Any = None,
@@ -2541,21 +2567,21 @@ True
         "[Browser.getVersion]"
         return await self.send('Browser.getVersion', timeout=timeout)
 
-    async def set_geolocation_override(self, 
+    async def set_geolocation_override(self,
                                        latitude: Optional[int] = None,
                                        longitude: Optional[int] = None,
                                        accuracy: Optional[int] = None,
                                        timeout=NotSet):
-        logger.debug(f'[set_geolocation_override] {self!r} latitude => {latitude}')
-        logger.debug(f'[set_geolocation_override] {self!r} longitude => {longitude}')
-        logger.debug(f'[set_geolocation_override] {self!r} accuracy => {accuracy}')
+        logger.debug(
+            f'[set_geolocation_override] {self!r} latitude => {latitude}, longitude => {longitude}, accuracy => {accuracy}'
+        )
         data = await self.send('Emulation.setGeolocationOverride',
                                latitude=latitude,
                                longitude=longitude,
                                accuracy=accuracy,
                                timeout=timeout)
         return data
-      
+
     async def scrollIntoView(self,
                              cssselector: str,
                              action='scrollIntoView()',
@@ -3100,7 +3126,7 @@ class EventBuffer(asyncio.Queue):
 
     def __init__(
         self,
-        events: List[str],
+        events: Union[List[str], Dict[str, Callable]],
         tab: AsyncTab,
         timeout: Union[float, int] = None,
         maxsize: int = 0,
@@ -3111,7 +3137,7 @@ class EventBuffer(asyncio.Queue):
         """Event buffer with callback function.
 
         Args:
-            events (List[str]): the list of event names
+            events (List[str], Dict[str, Callable]): the list of event names; or event callbacks: {event_name: function[(event=event, tab=self.tab, buffer=self)]}, this callback function will have priority over self.callback
             tab (AsyncTab): the connected AsyncTab
             timeout (Union[float, int], optional): total timeout for the whole context. Defaults to None.
             maxsize (int, optional): buffer size. Defaults to 0.
@@ -3120,8 +3146,12 @@ class EventBuffer(asyncio.Queue):
             context_callbacks (List[Callable], optional): callback functions [before_startup, after_startup, before_shutdown, after_shutdown]. Defaults to None.
 
         """
+        self.event_callbacks: Dict[str, Callable] = {}
         if isinstance(events, (list, set, tuple)):
             self.events = list(events)
+        elif isinstance(events, dict):
+            self.events = list(events)
+            self.event_callbacks.update(events)
         else:
             raise TypeError
         self.tab = tab
@@ -3205,15 +3235,15 @@ class EventBuffer(asyncio.Queue):
                     event = await asyncio.wait_for(self.get(), timeout=timeout)
                     if event is None:
                         return
-                    if self.callback:
-                        if asyncio.iscoroutinefunction(self.callback):
-                            result = await self.callback(event=event,
-                                                         tab=self.tab,
-                                                         buffer=self)
+                    event_name = event.get('method')
+                    callback = self.event_callbacks.get(event_name,
+                                                        self.callback)
+                    if callback:
+                        kwargs = dict(event=event, tab=self.tab, buffer=self)
+                        if asyncio.iscoroutinefunction(callback):
+                            result = await callback(**kwargs)
                         else:
-                            result = await async_run(
-                                self.callback,
-                                **dict(event=event, tab=self.tab, buffer=self))
+                            result = await async_run(callback, **kwargs)
                         return result
                     else:
                         return event
@@ -3237,7 +3267,7 @@ class FetchBuffer(EventBuffer):
 
     def __init__(
         self,
-        events: List[str],
+        events: Union[List[str], Dict[str, Callable]],
         tab: AsyncTab,
         patterns: List[dict] = None,
         handleAuthRequests=False,
