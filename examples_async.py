@@ -24,6 +24,7 @@ async def test_chrome(chrome: AsyncChrome):
     assert ok is True, ok
     resp = await chrome.get_server('json')
     assert isinstance(resp.json(), list)
+    await chrome.new_tab()
     tabs1: List[AsyncTab] = await chrome.get_tabs()
     tabs2: List[AsyncTab] = await chrome.tabs
     assert tabs1 == tabs2 and tabs1 and tabs2, (tabs1, tabs2)
@@ -313,18 +314,24 @@ async def test_iter_events(tab: AsyncTab):
         await tab.goto('http://httpbin.org/get', timeout=0)
         data = await events_iter
         assert data, data
-    async with tab.iter_events(['Page.loadEventFired'],
-                               timeout=8) as events_iter:
+
         await tab.goto('http://httpbin.org/get', timeout=0)
         data = await events_iter.get()
         assert data, data
-    async with tab.iter_events(['Page.loadEventFired'],
-                               timeout=8) as events_iter:
+
         await tab.goto('http://httpbin.org/get', timeout=0)
         async for data in events_iter:
             assert data
             break
 
+    def cb(event, tab, buffer):
+        return tab
+
+    async with tab.iter_events({'Page.loadEventFired': cb},
+                               timeout=8) as events_iter:
+        await tab.goto('http://httpbin.org/get', timeout=0)
+        data = await events_iter
+        assert type(data) == type(tab), data
     # test iter_fetch
     async with tab.iter_fetch(patterns=[{
             'urlPattern': '*httpbin.org/get?a=*'
@@ -393,12 +400,14 @@ async def test_fetch_context(tab: AsyncTab):
 async def test_port_forwarding(host, port):
     from ichrome.utils import PortForwarder
 
-    dst_port = port + 1000
+    dst_port = port + 100
     async with PortForwarder((host, port), (host, dst_port)):
-        r = await Requests().get(f'http://{host}:{dst_port}/json', timeout=2)
-        assert 'webSocketDebuggerUrl' in r.text
-    r = await Requests().get(f'http://{host}:{dst_port}/json', timeout=2)
-    assert 'webSocketDebuggerUrl' not in r.text
+        r = await Requests().get(f'http://{host}:{dst_port}/json/version',
+                                 timeout=5)
+        assert 'webSocketDebuggerUrl' in r.text, r.text
+    r = await Requests().get(f'http://{host}:{dst_port}/json/version',
+                             timeout=5)
+    assert 'webSocketDebuggerUrl' not in r.text, r.text
 
 
 async def test_duplicated_key_error(tab: AsyncTab):
