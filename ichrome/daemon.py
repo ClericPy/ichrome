@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import atexit
 import os
 import platform
 import re
@@ -11,17 +12,24 @@ from getpass import getuser
 from inspect import isawaitable
 from json import loads as _json_loads
 from pathlib import Path
-from typing import List, Union
+from typing import List, Set, Union
 
+import psutil
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
 
-from .async_utils import (AsyncChrome, BrowserContext,
-                          _SingleTabConnectionManagerDaemon)
-from .base import (CHROME_PROCESS_NAMES, async_run, clear_chrome_process,
-                   ensure_awaitable, get_dir_size, get_memory_by_port, get_proc,
-                   get_readable_dir_size)
+from .async_utils import AsyncChrome, BrowserContext, _SingleTabConnectionManagerDaemon
+from .base import (
+    CHROME_PROCESS_NAMES,
+    async_run,
+    clear_chrome_process,
+    ensure_awaitable,
+    get_dir_size,
+    get_memory_by_port,
+    get_proc,
+    get_readable_dir_size,
+)
 from .exceptions import ChromeException, ChromeRuntimeError, ChromeTypeError
 from .logs import logger
 
@@ -120,6 +128,7 @@ class ChromeDaemon(object):
     DEFAULT_USER_DIR_PATH = Path.home() / 'ichrome_user_data'
     DEFAULT_EXTRA_CONFIG = ["--disable-gpu", "--no-first-run"]
     DEFAULT_POPEN_ARGS = {'start_new_session': True}
+    LAUNCHED_PIDS: Set[int] = set()
 
     def __init__(self,
                  chrome_path=None,
@@ -174,6 +183,20 @@ class ChromeDaemon(object):
         self.clear_after_shutdown = clear_after_shutdown
         self.popen_kwargs = self.DEFAULT_POPEN_ARGS if popen_kwargs is None else popen_kwargs
         self.init()
+
+    @classmethod
+    def cleanup_launched_pids(cls):
+        for pid in cls.LAUNCHED_PIDS:
+            proc = psutil.Process(pid)
+            try:
+                proc.kill()
+                try:
+                    proc.wait(0.1)
+                except psutil.TimeoutExpired:
+                    pass
+            except (psutil.NoSuchProcess, ProcessLookupError):
+                continue
+        cls.LAUNCHED_PIDS.clear()
 
     def init(self):
         self._init_chrome_daemon()
@@ -411,6 +434,7 @@ class ChromeDaemon(object):
     def _start_chrome_process(self):
         self.chrome_proc_start_time = time.time()
         self.proc = subprocess.Popen(**self.get_cmd_args())
+        self.LAUNCHED_PIDS.add(self.proc.pid)
 
     def launch_chrome(self):
         self._start_chrome_process()
@@ -591,6 +615,7 @@ class ChromeDaemon(object):
         if self.proc:
             self.proc.kill()
             self.proc.__exit__(None, None, None)
+            self.LAUNCHED_PIDS.discard(self.proc.pid)
         if force:
             max_deaths = self.max_deaths
         else:
@@ -1086,3 +1111,6 @@ class ChromeWorkers:
     async def run_chrome_workers(cls, start_port, workers, kwargs):
         async with cls(start_port, workers, kwargs) as cd:
             await cd.wait()
+
+
+atexit.register(ChromeDaemon.cleanup_launched_pids)

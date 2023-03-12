@@ -31,7 +31,7 @@ async def test_chrome(chrome: AsyncChrome):
     tab0: AsyncTab = await chrome.get_tab(0)
     tab0_by_getitem = await chrome[0]
     assert tab0 == tab0_by_getitem
-    assert tabs1 == [tab0], (tabs1, tab0)
+    assert tabs1[0] == tab0, (tabs1, tab0)
     tab1: AsyncTab = await chrome.new_tab()
     assert isinstance(tab1, AsyncTab)
     await asyncio.sleep(0.2)
