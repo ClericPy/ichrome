@@ -11,8 +11,7 @@ from asyncio.futures import Future
 from base64 import b64decode, b64encode
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import (Any, Awaitable, Callable, Coroutine, Dict, List, Optional,
-                    Set, Union)
+from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Set, Union
 from weakref import WeakValueDictionary
 
 from aiohttp.client_exceptions import ClientError
@@ -21,10 +20,22 @@ from torequests.aiohttp_dummy import Requests
 from torequests.dummy import NewResponse, _exhaust_simple_coro
 from torequests.utils import UA, quote_plus, urljoin
 
-from .base import (INF, NotSet, Tag, TagNotFound, async_run,
-                   clear_chrome_process, ensure_awaitable, get_memory_by_port)
-from .exceptions import (ChromeRuntimeError, ChromeTypeError, ChromeValueError,
-                         TabConnectionError)
+from .base import (
+    INF,
+    NotSet,
+    Tag,
+    TagNotFound,
+    async_run,
+    clear_chrome_process,
+    ensure_awaitable,
+    get_memory_by_port,
+)
+from .exceptions import (
+    ChromeRuntimeError,
+    ChromeTypeError,
+    ChromeValueError,
+    TabConnectionError,
+)
 from .logs import logger
 
 
@@ -471,12 +482,12 @@ class AsyncTab(GetValueMixin):
             logger.error(err_msg)
             raise ChromeRuntimeError(err_msg)
 
-    def recv(
+    async def recv(
         self,
         event_dict: dict,
         timeout=NotSet,
         callback_function: Callable = None,
-    ) -> Awaitable[Union[dict, None]]:
+    ) -> Union[dict, None]:
         """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
 
         Args:
@@ -494,9 +505,9 @@ class AsyncTab(GetValueMixin):
             return None
         if self._session_id:
             event_dict['sessionId'] = self._session_id
-        return self._recv(event_dict=event_dict,
-                          timeout=timeout,
-                          callback_function=callback_function)
+        return await self._recv(event_dict=event_dict,
+                                timeout=timeout,
+                                callback_function=callback_function)
 
     async def enable(self,
                      domain: str,
@@ -986,7 +997,7 @@ Fetch.RequestPattern:
         Stage at which to begin intercepting requests. Default is Request.
         Allowed Values: Request, Response
 
-Demo::
+Demo1::
 
     async with tab.iter_fetch(patterns=[{
             'urlPattern': '*httpbin.org/get?a=*'
@@ -1025,6 +1036,76 @@ Demo::
         await tab.goto('http://httpbin.org/ip', timeout=0)
         async for r in f:
             break
+
+Demo2::
+
+        import asyncio
+        import json
+
+        from ichrome import AsyncChromeDaemon
+
+
+        async def main():
+            async with AsyncChromeDaemon() as cd:
+                async with cd.connect_tab() as tab:
+                    url = 'http://httpbin.org/ip'
+                    # 1. listen request/response network
+                    RequestPatternList = [{
+                        'urlPattern': '*httpbin.org/ip*',
+                        'requestStage': 'Response'
+                    }]
+                    async with tab.iter_fetch(RequestPatternList) as f:
+                        await tab.goto(url, timeout=0)
+                        # only one request could be catched
+                        event = await f
+                        print('request event:', json.dumps(event), flush=True)
+                        response = await f.get_response(event, timeout=5)
+                        print('response body:', response['data'])
+
+                    # 2. disable image requests
+                    url = 'https://www.bing.com'
+                    RequestPatternList = [
+                        {
+                            'urlPattern': '*',
+                            'resourceType': 'Image',  # could be other types
+                            'requestStage': 'Request'
+                        },
+                        {
+                            'urlPattern': '*',
+                            'resourceType': 'Stylesheet',
+                            'requestStage': 'Request'
+                        },
+                        {
+                            'urlPattern': '*',
+                            'resourceType': 'Script',
+                            'requestStage': 'Request'
+                        },
+                    ]
+                    # listen 5 seconds
+                    async with tab.iter_fetch(RequestPatternList, timeout=5) as f:
+                        await tab.goto(url, timeout=0)
+                        # handle all the matched requests
+                        async for event in f:
+                            if f.match_event(event, RequestPatternList[0]):
+                                print('abort request image:',
+                                    tab.get_data_value(event, 'params.request.url'),
+                                    flush=True)
+                                await f.failRequest(event, 'Aborted')
+                            elif f.match_event(event, RequestPatternList[1]):
+                                print('abort request css:',
+                                    tab.get_data_value(event, 'params.request.url'),
+                                    flush=True)
+                                await f.failRequest(event, 'ConnectionRefused')
+                            elif f.match_event(event, RequestPatternList[2]):
+                                print('abort request js:',
+                                    tab.get_data_value(event, 'params.request.url'),
+                                    flush=True)
+                                await f.failRequest(event, 'AccessDenied')
+                        await asyncio.sleep(5)
+
+
+        if __name__ == "__main__":
+            asyncio.run(main())
 
         """
         return FetchBuffer(events=events,
@@ -3304,6 +3385,10 @@ class FetchBuffer(EventBuffer):
         await super().__aexit__(*_)
 
     async def enable(self):
+        for request_pattern in self.patterns:
+            if request_pattern.get('requestStage') == 'Response':
+                await self.tab.enable('Network')
+                break
         return await self.tab.send('Fetch.enable',
                                    patterns=self.patterns,
                                    handleAuthRequests=self.handleAuthRequests)
@@ -3311,31 +3396,37 @@ class FetchBuffer(EventBuffer):
     async def disable(self):
         return await self.tab.send('Fetch.disable')
 
-    async def wait_event(self):
-        while 1:
-            data = await super().wait_event()
-            if data:
-                try:
-                    url = data['params']['request']['url']
-                    requestId = self.ensure_request_id(data)
-                    for pattern in self.patterns:
-                        if fnmatchcase(url, pattern['urlPattern']):
-                            break
-                    else:
-                        await self.continueRequest(requestId)
-                        continue
-                except KeyError:
-                    pass
-                return data
-            else:
-                break
-
     def ensure_request_id(self, data: Union[dict, str]):
         if isinstance(data, str):
             return data
         elif isinstance(data, dict):
             return data['params']['requestId']
         raise TypeError
+
+    async def get_response(self, event: dict, timeout=None):
+        networkId = self.tab.get_data_value(event, 'params.networkId')
+        if networkId:
+            async with self.tab.wait_response_context(
+                    filter_function=lambda e:
+                (self.tab.get_data_value(e, 'params.requestId') == networkId),
+                    timeout=timeout) as r:
+                await self.continueRequest(event)
+                return await r
+
+    def match_event(self, event: dict, RequestPattern: dict):
+        url = self.tab.get_data_value(event, 'params.request.url', '')
+        urlPattern = RequestPattern.get('urlPattern') or '*'
+        if not url or fnmatchcase(url, urlPattern):
+            resourceType = RequestPattern.get('resourceType')
+            if resourceType:
+                resource_type = self.tab.get_data_value(event,
+                                                        'params.resourceType',
+                                                        '')
+                if resource_type == resourceType:
+                    return True
+            else:
+                return True
+        return False
 
     async def fulfillRequest(self,
                              requestId: Union[str, dict],

@@ -391,3 +391,15 @@ async def ensure_awaitable(result):
         return await result
     else:
         return result
+
+
+def kill_pid(pid: int):
+    proc = psutil.Process(pid)
+    try:
+        proc.kill()
+        try:
+            return proc.wait(0.1)
+        except psutil.TimeoutExpired:
+            pass
+    except (psutil.NoSuchProcess, ProcessLookupError):
+        pass
