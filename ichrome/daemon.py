@@ -14,7 +14,6 @@ from json import loads as _json_loads
 from pathlib import Path
 from typing import List, Set, Union
 
-import psutil
 from torequests import tPool
 from torequests.aiohttp_dummy import Requests
 from torequests.utils import timepass, ttime
@@ -29,6 +28,7 @@ from .base import (
     get_memory_by_port,
     get_proc,
     get_readable_dir_size,
+    kill_pid,
 )
 from .exceptions import ChromeException, ChromeRuntimeError, ChromeTypeError
 from .logs import logger
@@ -187,15 +187,7 @@ class ChromeDaemon(object):
     @classmethod
     def cleanup_launched_pids(cls):
         for pid in cls.LAUNCHED_PIDS:
-            proc = psutil.Process(pid)
-            try:
-                proc.kill()
-                try:
-                    proc.wait(0.1)
-                except psutil.TimeoutExpired:
-                    pass
-            except (psutil.NoSuchProcess, ProcessLookupError):
-                continue
+            kill_pid(pid)
         cls.LAUNCHED_PIDS.clear()
 
     def init(self):
@@ -643,7 +635,7 @@ class ChromeDaemon(object):
         )
         if self.on_shutdown:
             self.on_shutdown(self)
-        self.kill()
+        self.kill(True)
         if self.after_shutdown:
             self.after_shutdown(self)
         if self.clear_after_shutdown:

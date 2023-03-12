@@ -1,6 +1,7 @@
 import asyncio
 from pathlib import Path
 from typing import List
+import json
 
 from torequests.dummy import Requests
 
@@ -354,6 +355,22 @@ async def test_iter_events(tab: AsyncTab):
         assert data
         await f.failRequest(data, 'AccessDenied')
         assert (await tab.url).startswith('chrome-error://')
+
+    # response fetch
+    url = 'http://httpbin.org/ip'
+    RequestPatternList = [{
+        'urlPattern': '*httpbin.org/ip*',
+        'requestStage': 'Response'
+    }]
+    async with tab.iter_fetch(RequestPatternList) as f:
+        await tab.goto(url, timeout=0)
+        # only one request could be catched
+        event = await f
+        assert f.match_event(event, RequestPatternList[0]), event
+        # print('request event:', json.dumps(event), flush=True)
+        response = await f.get_response(event, timeout=5)
+        # print('response body:', response['data'])
+        assert '"origin":' in response['data'], response
 
 
 async def test_init_tab(chromed: AsyncChromeDaemon):
