@@ -2944,10 +2944,13 @@ class AsyncChrome(GetValueMixin):
         """await self.ok"""
         return self.check()
 
-    async def get_server(self, api: str = '') -> NewResponse:
+    async def get_server(self, api: str = '', method='get') -> NewResponse:
         # maybe return failure request
         url = urljoin(self.server, api)
-        resp = await self.req.get(url, timeout=self.timeout, retry=self.retry)
+        resp = await self.req.request(method=method,
+                                      url=url,
+                                      timeout=self.timeout,
+                                      retry=self.retry)
         if not resp:
             self.status = resp.text
         return resp
@@ -3004,7 +3007,7 @@ class AsyncChrome(GetValueMixin):
 
     async def new_tab(self, url: str = "") -> Union[AsyncTab, None]:
         api = f'/json/new?{quote_plus(url)}'
-        r = await self.get_server(api)
+        r = await self.get_server(api, method='put')
         if r:
             rjson = r.json()
             tab = AsyncTab(chrome=self, **rjson)
