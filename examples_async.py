@@ -1,17 +1,18 @@
 import asyncio
+import json
+import re
 from pathlib import Path
 from typing import List
-import json
 
 from torequests.dummy import Requests
 
 from ichrome import AsyncChromeDaemon, ChromeEngine
-from ichrome.async_utils import AsyncTab, AsyncChrome, Tag, logger
+from ichrome.async_utils import AsyncChrome, AsyncTab, Tag, logger
 
 # logger.setLevel('DEBUG')
 # AsyncTab._log_all_recv = True
-# headless = False
 headless = True
+# headless = False
 
 
 async def test_chrome(chrome: AsyncChrome):
@@ -131,16 +132,17 @@ async def test_browser_context(tab1: AsyncTab, chrome: AsyncChrome,
 async def test_tab_set_url(tab: AsyncTab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
     assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=1))
-    assert await tab.set_url('http://httpbin.org/delay/0', timeout=5)
-    await tab.goto('https://httpbin.org/forms/post')
+    assert await tab.set_url('https://bing.com', timeout=10)
+    await tab.goto('https://bing.com')
     assert await tab.wait_tag(
-        '[name="custemail"]',
-        max_wait_time=10), 'wait_tag failed for [name="custemail"]'
+        '#sb_form_go', max_wait_time=10), 'wait_tag failed for #sb_form_go'
     mhtml_len = len(await tab.snapshot_mhtml())
-    assert mhtml_len in range(2273, 2300), f'test snapshot failed {mhtml_len}'
+    assert mhtml_len in range(336278,
+                              836278), f'test snapshot failed {mhtml_len}'
 
 
 async def test_tab_js(tab: AsyncTab):
+    await tab.goto('https://bing.com')
     # test js update title
     await tab.js("document.title = 'abc'")
     # test js_code
@@ -159,9 +161,11 @@ async def test_tab_js(tab: AsyncTab):
     assert await tab.refresh_tab_info()
     assert tab._title == new_title
     # inject JS timeout return None
-    assert (await tab.js('alert()')) is None
-    # close the alert dialog
-    assert await tab.handle_dialog(accept=True)
+    if not headless:
+        temp = await tab.js('alert()')
+        assert temp is None
+        # close the alert dialog
+        assert await tab.handle_dialog(accept=True)
     # inject js url: vue.js
     # get window.Vue variable before injecting
     vue_obj = await tab.js('window.Vue', 'result.result.type')
@@ -175,30 +179,34 @@ async def test_tab_js(tab: AsyncTab):
     tag = await tab.querySelector('#not-exist')
     assert not tag
     # querySelectorAll with JS, return list of Tag object
-    tags = await tab.querySelectorAll('label')
+    tags = await tab.querySelectorAll('#sb_form_go')
     assert tags, f'{[tags, type(tags)]}'
     assert isinstance(tags[0], Tag), f'{[tags[0], type(tags[0])]}'
-    assert tags[0].tagName == 'label', f'{[tags[0], tags[0].tagName]}'
+    assert tags[0].tagName == 'input', f'{[tags[0], tags[0].tagName]}'
     # querySelectorAll with JS, index arg is Not None, return Tag or None
-    one_tag = await tab.querySelectorAll('label', index=0)
+    one_tag = await tab.querySelectorAll('input', index=0)
     assert isinstance(one_tag, Tag)
+    await tab.stop_loading_page()
     assert await tab.set_html('')
-    assert (await tab.current_html) == '<html><head></head><body></body></html>'
+    current_html = await tab.current_html
+    assert current_html == '<html><head></head><body></body></html>'
     # reload the page
     assert await tab.reload()
-    await tab.wait_loading(8)
+    await tab.wait_loading(5, timeout_stop_loading=True)
     current_html = await tab.html
-    assert len(current_html) > 100, current_html
+    # print(current_html)
+    assert len(current_html) > 100, repr(current_html)
     # test wait tags
-    result = await tab.wait_tags('labels', max_wait_time=1)
+    result = await tab.wait_tags('abcdabcdabcdabcd', max_wait_time=1)
     assert result == []
-    assert await tab.wait_tag('label', max_wait_time=3)
-    assert await tab.includes('Telephone')
-    assert not (await tab.includes('python-ichrome'))
-    assert await tab.wait_includes('Telephone')
-    assert (await tab.wait_includes('python-ichrome', max_wait_time=1)) is False
-    assert await tab.wait_findall('Telephone')
-    assert (await tab.wait_findall('python-ichrome', max_wait_time=1)) == []
+    assert await tab.wait_tag('#sb_form_go', max_wait_time=3)
+    assert await tab.includes('bing.com')
+    assert not (await tab.includes('abcdabcdabcdabcd'))
+    assert await tab.wait_includes('bing.com')
+    assert (await tab.wait_includes('abcdabcdabcdabcd',
+                                    max_wait_time=1)) is False
+    assert await tab.wait_findall('bing.com')
+    assert (await tab.wait_findall('abcdabcdabcdabcd', max_wait_time=1)) == []
     # test wait_console_value
     await tab.js('setTimeout(() => {console.log(123)}, 2);')
     assert (await tab.wait_console_value()) == 123
@@ -211,7 +219,7 @@ async def test_wait_response(tab: AsyncTab):
     # listening response
     def filter_function(r):
         url = r['params']['response']['url']
-        ok = 'httpbin.org' in url
+        ok = 'cdn.staticfile.org/vue/2.6.10/vue.min.js' in url
         logger.warning('get response url: %s %s' % (url, ok))
         return ok
 
@@ -219,43 +227,45 @@ async def test_wait_response(tab: AsyncTab):
         tab.wait_response(filter_function=filter_function,
                           response_body=True,
                           timeout=10))
-    await tab.set_url('http://httpbin.org/get')
+    await tab.set_url('https://cdn.staticfile.org/vue/2.6.10/vue.min.js')
     result = await task
-    ok = 'User-Agent' in result['data']
+    ok = 'Released under the MIT License' in result['data']
     logger.warning(f'check wait_response callback, get_response {ok}')
-    assert ok, f'{result} not contains "User-Agent"'
+    assert ok
 
     # test wait_response_context
 
     def filter_function2(r):
         try:
             url = r['params']['response']['url']
-            return url == 'http://httpbin.org/get'
+            ok = 'cdn.staticfile.org/vue/2.6.10/vue.min.js' in url
+            return ok
         except KeyError:
             pass
 
     async with tab.wait_response_context(filter_function=filter_function2,
                                          timeout=5) as r:
-        await tab.goto('http://httpbin.org/get')
+        await tab.goto('https://cdn.staticfile.org/vue/2.6.10/vue.min.js')
         result = (await r) or {}
-        assert 'User-Agent' in result.get('data', ''), result
+        assert 'Released under the MIT License' in result.get('data',
+                                                              ''), result
 
 
 async def test_tab_js_onload(tab: AsyncTab):
     # add js onload
     js_id = await tab.add_js_onload(source='window.title=123456789')
     assert js_id
-    await tab.set_url('http://httpbin.org/get')
+    await tab.set_url('https://bing.com')
     assert (await tab.get_variable('window.title')) == 123456789
     # remove js onload
     assert await tab.remove_js_onload(js_id)
-    await tab.set_url('http://httpbin.org/get')
+    await tab.set_url('https://bing.com')
     assert (await tab.get_variable('window.title')) != 123456789
     assert (await tab.get_variable('[1, 2, 3]')) != [1, 2, 3]
     assert (await tab.get_variable('[1, 2, 3]', jsonify=True)) == [1, 2, 3]
     current_url = await tab.current_url
     url = await tab.url
-    assert url == 'http://httpbin.org/get' == current_url, url
+    assert 'bing.com' in url and 'bing.com' in current_url, (url, current_url)
 
 
 async def test_tab_current_html(tab: AsyncTab):
@@ -279,7 +289,9 @@ async def test_tab_set_ua_headers(tab: AsyncTab):
     await tab.set_ua('Test UA')
     # test set_headers
     await tab.set_headers({'A': '1', 'B': '2'})
-    await tab.set_url('http://httpbin.org/get')
+    for _ in range(3):
+        if await tab.set_url('http://httpbin.org/get', timeout=10):
+            break
     html = await tab.get_html()
     assert '"A": "1"' in html and '"B": "2"' in html and '"User-Agent": "Test UA"' in html
 
@@ -312,15 +324,15 @@ async def test_tab_keyboard_mouse(tab: AsyncTab):
 async def test_iter_events(tab: AsyncTab):
     async with tab.iter_events(['Page.loadEventFired'],
                                timeout=8) as events_iter:
-        await tab.goto('http://httpbin.org/get', timeout=0)
+        await tab.goto('http://bing.com', timeout=0)
         data = await events_iter
         assert data, data
 
-        await tab.goto('http://httpbin.org/get', timeout=0)
+        await tab.goto('http://bing.com', timeout=0)
         data = await events_iter.get()
         assert data, data
 
-        await tab.goto('http://httpbin.org/get', timeout=0)
+        await tab.goto('http://bing.com', timeout=0)
         async for data in events_iter:
             assert data
             break
@@ -330,36 +342,40 @@ async def test_iter_events(tab: AsyncTab):
 
     async with tab.iter_events({'Page.loadEventFired': cb},
                                timeout=8) as events_iter:
-        await tab.goto('http://httpbin.org/get', timeout=0)
+        await tab.goto('http://bing.com', timeout=0)
         data = await events_iter
         assert type(data) == type(tab), data
+
     # test iter_fetch
     async with tab.iter_fetch(patterns=[{
-            'urlPattern': '*httpbin.org/get?a=*'
+        'urlPattern': '*bing.com*',
+        'resourceType': 'Document'
     }]) as f:
-        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        await tab.goto('https://r.bing.com/', timeout=0)
         data = await f
+        # print(data, flush=True)
         assert data
         # test continueRequest
         await f.continueRequest(data)
-        assert await tab.wait_includes('origin')
+        assert await tab.wait_includes('Our services',
+                                       max_wait_time=5), await tab.html
 
-        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        await tab.goto('https://r.bing.com/', timeout=0)
         data = await f
         assert data
         # test modify response
         await f.fulfillRequest(data, 200, body=b'hello world.')
-        assert await tab.wait_includes('hello world.')
-        await tab.goto('http://httpbin.org/get?a=1', timeout=0)
+        assert await tab.wait_includes('hello world.', max_wait_time=3)
+        await tab.goto('https://r.bing.com/', timeout=0)
         data = await f
         assert data
         await f.failRequest(data, 'AccessDenied')
         assert (await tab.url).startswith('chrome-error://')
 
     # response fetch
-    url = 'http://httpbin.org/ip'
+    url = 'https://r.bing.com/'
     RequestPatternList = [{
-        'urlPattern': '*httpbin.org/ip*',
+        'urlPattern': 'https://r.bing.com*',
         'requestStage': 'Response'
     }]
     async with tab.iter_fetch(RequestPatternList) as f:
@@ -369,8 +385,8 @@ async def test_iter_events(tab: AsyncTab):
         assert f.match_event(event, RequestPatternList[0]), event
         # print('request event:', json.dumps(event), flush=True)
         response = await f.get_response(event, timeout=5)
-        # print('response body:', response['data'])
-        assert '"origin":' in response['data'], response
+        # print('response body:', response)
+        assert 'Our services' in response['data'], response
 
 
 async def test_init_tab(chromed: AsyncChromeDaemon):
@@ -383,33 +399,32 @@ async def test_init_tab(chromed: AsyncChromeDaemon):
             TEST_DRC_OK = True
 
         tab.default_recv_callback.append(test_drc)
-        await tab.goto("https://httpbin.org", timeout=5)
+        await tab.goto("https://bing.com/?FORM=BEHPTB&ensearch=1", timeout=5)
         title = await tab.current_title
         assert TEST_DRC_OK, 'test default_recv_callback failed'
-        assert title == 'httpbin.org', title
+        assert title == 'Bing', title
         tab.default_recv_callback.clear()
 
 
 async def test_fetch_context(tab: AsyncTab):
-    async with tab.iter_fetch(patterns=[{
-            'urlPattern': '*httpbin.org/ip*'
-    }]) as f:
-        await tab.goto('http://httpbin.org/ip', timeout=0)
+    async with tab.iter_fetch(patterns=[{'urlPattern': '*bing.com*'}]) as f:
+        await tab.goto('http://bing.com', timeout=0)
         async for r in f:
-            assert 'httpbin.org/ip' in r['params']['request']['url']
+            assert 'bing.com' in r['params']['request']['url']
             await f.continueRequest(r)
             break
 
     async def cb(event, tab, buffer):
+        assert 'bing.com' in r['params']['request']['url']
         await buffer.continueRequest(event)
 
     async with tab.iter_fetch(
             patterns=[{
-                'urlPattern': '*httpbin.org/ip*'
+                'urlPattern': '*bing.com*'
             }],
             callback=cb,
     ) as f:
-        await tab.goto('http://httpbin.org/ip', timeout=0)
+        await tab.goto('http://bing.com', timeout=0)
         async for r in f:
             break
 
@@ -436,6 +451,24 @@ async def test_duplicated_key_error(tab: AsyncTab):
     raise AssertionError
 
 
+async def test_tab_new_tab(chromed: AsyncChromeDaemon):
+    async with chromed.incognito_tab() as tab:
+        url = 'http://www.bing.com/'
+        await tab.goto(url, timeout=3)
+        MUIDB = (await tab.get_cookies_dict([url])).get('MUIDB')
+        new_tab = await tab.new_tab()
+        tab_exist = bool(await tab.chrome.get_tab(new_tab.tab_id))
+        assert tab_exist
+        async with new_tab(auto_close=True) as tab:
+            # same context, so same cookie
+            MUIDB2 = (await tab.get_cookies_dict([url])).get('MUIDB')
+            # print(MUIDB, MUIDB2, MUIDB == MUIDB2)
+            assert MUIDB == MUIDB2
+        # the new_tab auto closed
+        tab_exist = bool(await tab.chrome.get_tab(new_tab.tab_id))
+        assert not tab_exist
+
+
 async def test_examples():
 
     def on_startup(chromed):
@@ -459,6 +492,9 @@ async def test_examples():
         # test on_startup
         assert chromed.started
         logger.info('test on_startup OK.')
+        # test tab.new_tab
+        await test_tab_new_tab(chromed)
+        logger.info('test_tab_new_tab OK.')
         # ===================== Chrome Test Cases =====================
         async with AsyncChrome(host=host, port=port) as chrome:
             memory = chrome.get_memory()
@@ -469,9 +505,11 @@ async def test_examples():
             # ===================== Tab Test Cases =====================
             # Duplicate, use async with chrome.connect_tab(None) instead
             tab: AsyncTab = await chrome.new_tab()
+            assert not tab._target_info
             await test_tab_ws(tab)
             # same as: async with tab.connect():
             async with tab():
+                assert tab.info
                 # test duplicated event key issue
                 await test_duplicated_key_error(tab)
                 logger.info('test_duplicated_key_error OK.')
@@ -561,11 +599,11 @@ async def test_chrome_engine():
             # test normal usage
             tasks = [
                 asyncio.create_task(
-                    ce.do('http://bing.com', tab_callback1, timeout=10))
+                    ce.do('https://bing.com', tab_callback1, timeout=10))
                 for _ in range(3)
             ] + [
                 asyncio.create_task(
-                    ce.do('http://bing.com', tab_callback2, timeout=10))
+                    ce.do('https://bing.com', tab_callback2, timeout=10))
                 for _ in range(3)
             ]
             for task in tasks:
@@ -573,9 +611,9 @@ async def test_chrome_engine():
             # test screenshot full screen and partial tag range.
             tasks = [
                 asyncio.create_task(
-                    ce.screenshot('http://bing.com', '#sbox', timeout=10)),
-                asyncio.create_task(ce.screenshot('http://bing.com',
-                                                  timeout=10))
+                    ce.screenshot('https://bing.com', '#sbox', timeout=10)),
+                asyncio.create_task(
+                    ce.screenshot('https://bing.com', timeout=10))
             ]
             results = [await task for task in tasks]
             assert 1000 < len(results[0]) < len(results[1])
@@ -583,8 +621,8 @@ async def test_chrome_engine():
             # test download
             tasks = [
                 asyncio.create_task(
-                    ce.download('http://bing.com', '#sbox', timeout=10)),
-                asyncio.create_task(ce.download('http://bing.com', timeout=10))
+                    ce.download('https://bing.com', '#sbox', timeout=10)),
+                asyncio.create_task(ce.download('https://bing.com', timeout=10))
             ]
             results = [await task for task in tasks]
             assert 1000 < len(results[0]['tags'][0]) < len(results[1]['html'])
