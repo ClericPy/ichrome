@@ -11,9 +11,21 @@ from asyncio.futures import Future
 from base64 import b64decode, b64encode
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Set, Union
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Union,
+)
 from weakref import WeakValueDictionary
 
+from aiohttp.client import _WSRequestContextManager
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.aiohttp_dummy import Requests
@@ -137,10 +149,11 @@ class _SingleTabConnectionManagerDaemon(_SingleTabConnectionManager):
 
 class _WSConnection:
 
-    def __init__(self, tab):
+    def __init__(self, tab: 'AsyncTab'):
         self.tab = tab
         self._closed = None
         self._recv_task: Future = None
+        self._auto_close = False
 
     def __str__(self):
         return f'<{self.__class__.__name__}: {None if self._closed is None else not self._closed}>'
@@ -180,6 +193,8 @@ class _WSConnection:
                 raise TabConnectionError(f'Connect to tab failed, {self.tab}')
             # start the daemon background.
             await self._start_tasks()
+        # 初始化 tab.meta
+        await self.tab.get_info()
         return self.tab
 
     async def _heartbeat_daemon(self):
@@ -203,27 +218,31 @@ class _WSConnection:
         if self._closed:
             return
         # stop daemon if shutdown
-        if self.tab.flatten:
-            self._closed = True
-            if self.tab._session_id:
-                self.tab._session_id = None
-                try:
-                    await self.browser.send('Target.detachFromTarget',
-                                            sessionId=self.tab._session_id)
-                except ChromeRuntimeError as error:
-                    if 'ws has been closed' not in str(error):
-                        raise error
-                finally:
-                    self.browser._sessions.pop(self.tab._session_id, None)
-        else:
-            await self._stop_tasks()
-            if self.tab.ws:
-                if not self.tab.ws.closed:
-                    await self.tab.ws.close()
-                self._closed = self.tab.ws.closed
-                self.tab.ws = None
-            else:
+        try:
+            if self.tab.flatten:
                 self._closed = True
+                if self.tab._session_id:
+                    self.tab._session_id = None
+                    try:
+                        await self.browser.send('Target.detachFromTarget',
+                                                sessionId=self.tab._session_id)
+                    except ChromeRuntimeError as error:
+                        if 'ws has been closed' not in str(error):
+                            raise error
+                    finally:
+                        self.browser._sessions.pop(self.tab._session_id, None)
+            else:
+                await self._stop_tasks()
+                if self.tab.ws:
+                    if not self.tab.ws.closed:
+                        await self.tab.ws.close()
+                    self._closed = self.tab.ws.closed
+                    self.tab.ws = None
+                else:
+                    self._closed = True
+        finally:
+            if self._auto_close:
+                await self.tab.close_tab()
 
     async def __aexit__(self, *args):
         await self.shutdown()
@@ -297,6 +316,10 @@ class AsyncTab(GetValueMixin):
     _DEFAULT_WS_KWARGS: Dict = {"max_msg_size": 20 * 1024**2}
     # default flatten arg
     _DEFAULT_FLATTEN = True
+    # EXPERIMENTAL methods
+    BACKWARD_COMPATIBLES: Dict[str, Literal[True, False, None]] = {
+        'Target.getTargetInfo': None
+    }
 
     def __init__(self,
                  tab_id: str = None,
@@ -349,7 +372,7 @@ class AsyncTab(GetValueMixin):
         tab_id = tab_id or kwargs.pop('id')
         if not tab_id:
             raise ChromeValueError(f'tab_id should not be null, {tab_id}')
-        self.tab_id = tab_id
+        self.id = self.tab_id = tab_id
         self._title = title
         self._url = url
         self.type = type
@@ -358,16 +381,16 @@ class AsyncTab(GetValueMixin):
         if tab_id and not webSocketDebuggerUrl:
             _chrome_port_str = f':{chrome.port}' if chrome.port else ''
             webSocketDebuggerUrl = f'ws://{chrome.host}{_chrome_port_str}/devtools/page/{tab_id}'
-        self.webSocketDebuggerUrl = webSocketDebuggerUrl
+        self.webSocketDebuggerUrl: str = webSocketDebuggerUrl
         self.json = json
         self.chrome = chrome
         self.timeout = self._DEFAULT_RECV_TIMEOUT if timeout is NotSet else timeout
-        self.ws_kwargs = ws_kwargs or self._DEFAULT_WS_KWARGS
+        self.ws_kwargs: dict = ws_kwargs or self._DEFAULT_WS_KWARGS
         self.ws_kwargs.setdefault('timeout', self._DEFAULT_CONNECT_TIMEOUT)
-        self.ws = None
+        self.ws: _WSRequestContextManager = None
         self.ws_connection: _WSConnection = _WSConnection(self)
         if self.chrome:
-            self.req = self.chrome.req
+            self.req: Requests = self.chrome.req
         else:
             self.req = Requests()
         # using default_recv_callback.setter, default_recv_callback can be list or function
@@ -388,13 +411,143 @@ class AsyncTab(GetValueMixin):
         self._default_recv_callback: List[Callable] = []
         self._sessions: WeakValueDictionary = WeakValueDictionary()
         self._session_id: str = None
+        # init after connected
+        self._target_info: dict = None
         # sessions for flatten mode
-        self.flatten = self._DEFAULT_FLATTEN if flatten is None else flatten
+        self.flatten: bool = self._DEFAULT_FLATTEN if flatten is None else flatten
         if self.flatten:
             self.set_flatten()
 
+    @property
+    def info(self):
+        """
+        {
+            'targetId': 'BF959E3FACA9541E63535E9DE81D9C0F',
+            'type': 'page',
+            'title': '',
+            'url': 'about:blank',
+            'attached': True,
+            'canAccessOpener': False,
+            'browserContextId': 'FA0395EEB5A5BCF9CAC35B886A9FB91A'
+        }"""
+        if self._target_info is None:
+            raise ChromeRuntimeError('tab not connected.')
+        return self._target_info
+
+    @property
+    def target_info(self):
+        return self.info
+
+    @property
+    def browserContextId(self):
+        return self.info.get('browserContextId')
+
+    async def new_tab(self,
+                      url: str = 'about:blank',
+                      width: int = None,
+                      height: int = None,
+                      enableBeginFrameControl: bool = None,
+                      newWindow: bool = None,
+                      background: bool = None,
+                      timeout=NotSet) -> 'AsyncTab':
+        '''Create a new tab with the same browser context(not connected).
+
+        Demo::
+
+            import asyncio
+
+            from ichrome import AsyncChromeDaemon
+
+
+            async def main():
+                async with AsyncChromeDaemon(headless=False, disable_image=True) as cd:
+                    async with cd.incognito_tab() as tab:
+                        url = 'http://www.bing.com/'
+                        await tab.goto(url, timeout=3)
+                        MUIDB = (await tab.get_cookies_dict([url])).get('MUIDB')
+                        new_tab = await tab.new_tab()
+                        async with new_tab(auto_close=True) as tab:
+                            # same context, so same cookie
+                            MUIDB2 = (await tab.get_cookies_dict([url])).get('MUIDB')
+                            print(MUIDB, MUIDB2, MUIDB == MUIDB2)
+                            await asyncio.sleep(2)
+                        # the new_tab auto closed
+                        await asyncio.sleep(2)
+
+
+            asyncio.run(main())
+        '''
+        _kwargs = dict(
+            url=url,
+            width=width,
+            height=height,
+            browserContextId=self.browserContextId,
+            enableBeginFrameControl=enableBeginFrameControl,
+            newWindow=newWindow,
+            background=background,
+        )
+        kwargs: dict = {k: v for k, v in _kwargs.items() if v is not None}
+        data = await self.send('Target.createTarget',
+                               kwargs=kwargs,
+                               timeout=timeout)
+        tab_id = data['result']['targetId']
+        tab = await self.chrome.get_tab(tab_id)
+        tab.flatten = self.flatten
+        return tab
+
     async def close_browser(self, timeout=0):
         return await self.send('Browser.close', timeout=timeout)
+
+    async def get_info(self, target_id: str = None, timeout=NotSet) -> dict:
+        if target_id is None:
+            if self.tab_id == 'browser' and self.type == 'browser':
+                return {'type': 'browser'}
+            else:
+                target_id = self.tab_id
+        result = {}
+        if self.BACKWARD_COMPATIBLES.get('Target.getTargetInfo') is not False:
+            data = await self.send('Target.getTargetInfo',
+                                   targetId=target_id,
+                                   timeout=timeout)
+            try:
+                result = data['result']['targetInfo']
+                self.BACKWARD_COMPATIBLES['Target.getTargetInfo'] = True
+            except KeyError:
+                logger.debug(f'[get_info] {self!r} KeyError => {data}')
+                error = self.get_data_value(data, 'error.message', '')
+                if "'Target.TargetInfo' wasn't found" in error:
+                    self.BACKWARD_COMPATIBLES['Target.getTargetInfo'] = False
+                elif 'No target with given id found' in error:
+                    self.BACKWARD_COMPATIBLES['Target.getTargetInfo'] = True
+        if not result:
+            # Target.getTargetInfo not support, use Target.getTargets
+            targets = await self.get_targets(timeout=timeout)
+            for target_info in targets:
+                if target_info['targetId'] == target_id:
+                    result = target_info
+                    break
+        if result.get('targetId') == self.tab_id:
+            # refresh self.meta
+            self._target_info = result
+        return result
+
+    async def get_targets(self, timeout=NotSet) -> List[dict]:
+        """Target.getTargets.
+        [{
+            'targetId': '32D514436186AF8703461F1127CC0472',
+            'type': 'page',
+            'title': 'about:blank',
+            'url': 'about:blank',
+            'attached': True,
+            'canAccessOpener': False,
+            'browserContextId': '8886F857FCC2B4D65A492918EF429638'
+        }]"""
+        data = await self.send('Target.getTargets', timeout=timeout)
+        try:
+            return data['result']['targetInfos']
+        except KeyError:
+            logger.debug(f'[get_targets] {self!r} error => {data}')
+            return []
 
     @property
     def url(self) -> Awaitable[str]:
@@ -575,6 +728,12 @@ class AsyncTab(GetValueMixin):
                                domain=domain,
                                path=path,
                                timeout=timeout)
+
+    async def get_cookies_dict(self,
+                               urls: Union[List[str], str] = None,
+                               timeout=NotSet) -> Dict[str, str]:
+        cookies = await self.get_cookies(urls=urls, timeout=timeout)
+        return {cookie['name']: cookie.get('value', '') for cookie in cookies}
 
     async def get_cookies(self,
                           urls: Union[List[str], str] = None,
@@ -2476,9 +2635,9 @@ True
                     f'callback function ({getattr(func, "__name__", func)}) should handle two args for {must_args}'
                 )
 
-    def __call__(self) -> _WSConnection:
+    def __call__(self, auto_close: bool = False) -> _WSConnection:
         '''`async with tab() as tab:` or just `async with tab():` and reuse `tab` variable.'''
-        return self.connect()
+        return self.connect(auto_close=auto_close)
 
     @property
     def msg_id(self) -> int:
@@ -2496,9 +2655,10 @@ True
             connected = bool(self.ws and not self.ws.closed)
         return {True: 'connected', False: 'disconnected'}[connected]
 
-    def connect(self) -> _WSConnection:
+    def connect(self, auto_close: bool = False) -> _WSConnection:
         '''`async with tab.connect() as tab:`'''
         self._enabled_domains.clear()
+        self.ws_connection._auto_close = auto_close
         return self.ws_connection
 
     @property
@@ -2833,6 +2993,7 @@ class AsyncChrome(GetValueMixin):
         # print(version)
         self._browser = AsyncTab(
             tab_id='browser',
+            type='browser',
             webSocketDebuggerUrl=version['webSocketDebuggerUrl'],
             chrome=self,
             flatten=False)
@@ -2912,7 +3073,7 @@ class AsyncChrome(GetValueMixin):
             return False
 
     @property
-    def req(self):
+    def req(self) -> Requests:
         if self._req is None:
             raise ChromeRuntimeError(
                 'please use Chrome in `async with` context')
