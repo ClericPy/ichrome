@@ -334,15 +334,21 @@ class ChromeDaemon(object):
             logger.debug(f'{dir_path} is not exists, ignore.')
             return
         import shutil
-        for _ in range(2):
+        for _ in range(6):
             try:
                 shutil.rmtree(dir_path, onerror=onerror)
                 if not dir_path.is_dir():
                     break
+                time.sleep(0.5)
+                logger.debug(
+                    f'clear_dir_with_shutil({dir_path}) error: {errors}')
             except FileNotFoundError as err:
                 errors.append(err)
-        if errors:
-            logger.debug(f'clear_dir_with_shutil({dir_path}) error: {errors}')
+        else:
+            if errors:
+                logger.debug(
+                    f'clear_dir_with_shutil({dir_path}) failed: errors={errors}'
+                )
 
     @classmethod
     def clear_dir(cls, dir_path):
