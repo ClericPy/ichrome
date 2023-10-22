@@ -30,7 +30,7 @@ NameError: name 'AsyncTab' is not defined
 'The world’s leading software development platform · GitHub'
 >>> tab.get_current_url()
 'https://github.com/'
->>> daemon.stop()
+>>> daemon.stop_running()
 INFO  2020-05-11 15:57:08 [ichrome] daemon.py(396): AsyncChromeDaemon(127.0.0.1:9222) shutting down, start-up: 2020-05-11 15:56:32, duration: 35 seconds 724 ms.
 INFO  2020-05-11 15:57:08 [ichrome] daemon.py(566): AsyncChromeDaemon(127.0.0.1:9222) daemon break after shutdown(2020-05-11 15:57:08).
 INFO  2020-05-11 15:57:08 [ichrome] daemon.py(584): AsyncChromeDaemon(127.0.0.1:9222) daemon exited.
@@ -44,6 +44,7 @@ __all__ = [
 class SyncLoop:
 
     _loop: asyncio.AbstractEventLoop = None
+    running = False
 
     @property
     def loop(self):
@@ -72,6 +73,10 @@ class SyncLoop:
         elif isawaitable(value):
             return self.run_sync(value)
         return value
+
+    def __del__(self):
+        if hasattr(self, 'stop_running'):
+            self.stop_running()
 
 
 def quit_while_daemon_missing(daemon):
@@ -124,25 +129,32 @@ class Daemon(SyncLoop):
             on_startup=on_startup,
             on_shutdown=on_shutdown,
         )
-        self.run_sync(self._self.__aenter__())
-        if not self.daemons:
-            atexit.register(stop_all_daemons)
-        self.daemons.add(self)
-        self.running = True
+        self.start_running()
 
-    def stop(self):
+    def start_running(self):
+        if not self.running:
+            self.run_sync(self._self.__aenter__())
+            if not self.daemons:
+                atexit.register(stop_all_daemons)
+            self.daemons.add(self)
+            self.running = True
+
+    def stop_running(self):
         if self.running:
-            return self.__aexit__(None, None, None)
-        self.running = False
+            self.run_sync(self._self.__aexit__(None, None, None))
+            self.running = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.stop_running()
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._self.host}:{self._self.port})"
 
     def __repr__(self):
         return str(self)
-
-    def __del__(self):
-        self.stop()
 
 
 class Chrome(SyncLoop):
@@ -152,11 +164,28 @@ class Chrome(SyncLoop):
                                  port=port,
                                  timeout=timeout,
                                  retry=retry)
-        ok = self.run_sync(self._self.connect())
-        if not ok:
-            raise ChromeRuntimeError(
-                'remote debugging chrome not found, please launch a daemon at first like `python -m ichrome`'
-            )
+        self.start_running()
+
+    def start_running(self):
+        if not self.running:
+            self.run_sync(self._self.__aenter__())
+            ok = self.run_sync(self._self.get_version())
+            if not ok:
+                raise ChromeRuntimeError(
+                    'remote debugging chrome not found, please launch a daemon at first like `python -m ichrome`'
+                )
+            self.running = True
+
+    def stop_running(self):
+        if self.running:
+            self.run_sync(self._self.__aexit__(None, None, None))
+            self.running = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.stop_running()
 
     def __getitem__(self, index: int):
         assert isinstance(index, int), 'only support int index'
@@ -175,7 +204,7 @@ class Chrome(SyncLoop):
 
     def new_tab(self, url: str = ""):
         api = f'/json/new?{quote_plus(url)}'
-        r = self.get_server(api)
+        r = self.get_server(api, method='PUT')
         if r:
             rjson = r.json()
             tab = Tab(self, **rjson)
@@ -197,11 +226,26 @@ class Tab(SyncLoop):
     def __init__(self, chrome_debugger: Chrome, *args, **kwargs):
         kwargs['chrome'] = chrome_debugger._self
         self.chrome_debugger = chrome_debugger
-        self._self = AsyncTab(*args, **kwargs)
-        self.run_sync(self._self.connect().connect())
+        tab = AsyncTab(*args, **kwargs)
+        self._self = tab
+        self.start_running()
 
-    def __del__(self):
-        self._self.__del__()
+    def start_running(self):
+        if not self.running:
+            self._tab_conn = self._self.connect()
+            self.run_sync(self._tab_conn.__aenter__())
+            self.running = True
+
+    def stop_running(self):
+        if self.running:
+            self.run_sync(self._tab_conn.__aexit__(None, None, None))
+            self.running = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.stop_running()
 
     def __str__(self):
         return str(self._self)
@@ -218,11 +262,13 @@ def connect_a_chrome(host='127.0.0.1', port=None, **daemon_kwargs) -> Chrome:
     if not port:
         port = ChromeDaemon.get_free_port(host=host)
     try:
-        return Chrome(host=host, port=port)
+        chrome = Chrome(host=host, port=port)
+        return chrome
     except RuntimeError:
         # no existing port, launch a new chrome, and auto quit if chrome process missed.
-        d = launch(host=host, port=port, **daemon_kwargs)
-        return Chrome(host=host, port=d.port)
+        d = Daemon(host=host, port=port, **daemon_kwargs)
+        chrome = Chrome(host=host, port=d.port)
+        return chrome
 
 
 def get_a_tab(host='127.0.0.1', port=9222, **daemon_kwargs) -> AsyncTab:
@@ -249,7 +295,7 @@ def stop_all_daemons():
     if Daemon.daemons:
         logger.debug(f'auto shutdown {Daemon.daemons}')
         for daemon in Daemon.daemons:
-            daemon.stop()
+            daemon.stop_running()
 
 
 def shutdown():

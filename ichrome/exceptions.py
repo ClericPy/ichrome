@@ -16,3 +16,8 @@ class ChromeTypeError(TypeError, ChromeException):
 
 class TabConnectionError(ChromeRuntimeError):
     pass
+
+
+class ChromeProcessMissingError(ChromeRuntimeError):
+    '{"method":"Inspector.detached","params":{"reason":"Render process gone."},"sessionId":"9B732FA5900F6CE37B7B647D99B74897"}'
+    pass
