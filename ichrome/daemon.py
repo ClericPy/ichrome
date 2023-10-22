@@ -159,6 +159,7 @@ class ChromeDaemon(object):
         self.start_time = time.time()
         self.max_deaths = max_deaths
         self._shutdown = False
+        self._shutdown_reason = ''
         self._use_daemon = daemon
         self._daemon_thread = None
         self._timeout = timeout
@@ -569,12 +570,12 @@ class ChromeDaemon(object):
                     f"{self} daemon break after shutdown({ttime(self._shutdown)})."
                 )
                 break
-            if deaths >= self.max_deaths:
+            elif deaths >= self.max_deaths:
                 logger.debug(
                     f"{self} daemon break for deaths is more than {self.max_deaths} times."
                 )
                 break
-            if not self.proc_ok:
+            elif not self.proc_ok:
                 logger.debug(f"{self} daemon is restarting proc.")
                 self.restart()
                 deaths += 1
@@ -584,7 +585,9 @@ class ChromeDaemon(object):
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
-        logger.debug(f"{self} daemon exited. return_code: {return_code}")
+        logger.debug(
+            f"{self} daemon exited for {self._shutdown_reason}. return_code: {return_code}"
+        )
         return return_code
 
     def run_forever(self, block=True, interval=None):
@@ -634,6 +637,7 @@ class ChromeDaemon(object):
         if self._shutdown:
             logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
+        self._shutdown_reason = reason
         self.update_shutdown_time()
         reason = f' for {reason}' if reason else ''
         logger.debug(
@@ -651,7 +655,7 @@ class ChromeDaemon(object):
         return self
 
     def __exit__(self, *args):
-        self.shutdown()
+        self.shutdown('__exit__')
 
     @staticmethod
     def get_proc(port, host=None):
@@ -683,7 +687,7 @@ class ChromeDaemon(object):
         return None
 
     def __del__(self):
-        self.shutdown()
+        self.shutdown('__del__')
 
     def __str__(self):
         return f"{self.__class__.__name__}({self.host}:{self.port})"
@@ -922,22 +926,26 @@ class AsyncChromeDaemon(ChromeDaemon):
                     f"{self} daemon break after shutdown({ttime(self._shutdown)})."
                 )
                 break
-            if deaths >= self.max_deaths:
+            elif deaths >= self.max_deaths:
                 logger.debug(
                     f"{self} daemon break for deaths is more than {self.max_deaths} times."
                 )
                 break
-            if not self.proc_ok:
+            elif not self.proc_ok:
                 logger.debug(f"{self} daemon is restarting proc.")
                 await self.restart()
                 deaths += 1
                 continue
             try:
                 return_code = await async_run(self.proc.wait, interval)
+                if self._shutdown_reason:
+                    break
                 deaths += 1
             except subprocess.TimeoutExpired:
                 deaths = 0
-        logger.debug(f"{self} daemon exited.")
+        logger.debug(
+            f"{self} daemon exited for {self._shutdown_reason}. return_code: {return_code}"
+        )
         return return_code
 
     async def __aenter__(self):
@@ -959,6 +967,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         if self._shutdown:
             # logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
+        self._shutdown_reason = reason
         self.update_shutdown_time()
         reason = f' for {reason}' if reason else ''
         logger.debug(
@@ -1103,7 +1112,7 @@ class ChromeWorkers:
 
     async def __aexit__(self, *args):
         for daemon in self.daemons:
-            await daemon.shutdown()
+            await daemon.shutdown('__aexit__')
 
     @classmethod
     async def run_chrome_workers(cls, start_port, workers, kwargs):
