@@ -1,6 +1,4 @@
 import asyncio
-import json
-import re
 from pathlib import Path
 from typing import List
 
@@ -11,8 +9,8 @@ from ichrome.async_utils import AsyncChrome, AsyncTab, Tag, logger
 
 # logger.setLevel('DEBUG')
 # AsyncTab._log_all_recv = True
-headless = True
 # headless = False
+headless = True
 
 
 async def test_chrome(chrome: AsyncChrome):
@@ -131,18 +129,19 @@ async def test_browser_context(tab1: AsyncTab, chrome: AsyncChrome,
 
 async def test_tab_set_url(tab: AsyncTab):
     # set new url for this tab, timeout will stop loading for timeout_stop_loading defaults to True
-    assert not (await tab.set_url('http://httpbin.org/delay/5', timeout=1))
-    assert await tab.set_url('https://bing.com', timeout=10)
-    await tab.goto('https://bing.com')
-    assert await tab.wait_tag(
-        '#sb_form_go', max_wait_time=10), 'wait_tag failed for #sb_form_go'
+    assert not (await tab.set_url('https://postman-echo.com/delay/5',
+                                  timeout=1))
+    assert (await tab.set_url('https://postman-echo.com/delay/1', timeout=5))
+    assert await tab.set_url('https://postman-echo.com/ip', timeout=5)
     mhtml_len = len(await tab.snapshot_mhtml())
-    assert mhtml_len in range(336278,
-                              836278), f'test snapshot failed {mhtml_len}'
+    assert mhtml_len in range(1, 1000), f'test snapshot failed {mhtml_len}'
+    await tab.goto('https://bing.com?setlang=en&cc=US')
+    assert await tab.wait_tag(
+        '#sb_form_q', max_wait_time=10), 'wait_tag failed for #sb_form_q'
 
 
 async def test_tab_js(tab: AsyncTab):
-    await tab.goto('https://bing.com')
+    await tab.goto("https://bing.com/?setlang=en&cc=US", timeout=5)
     # test js update title
     await tab.js("document.title = 'abc'")
     # test js_code
@@ -179,27 +178,31 @@ async def test_tab_js(tab: AsyncTab):
     tag = await tab.querySelector('#not-exist')
     assert not tag
     # querySelectorAll with JS, return list of Tag object
-    tags = await tab.querySelectorAll('#sb_form_go')
+    tags = await tab.querySelectorAll('#sb_form_q')
     assert tags, f'{[tags, type(tags)]}'
     assert isinstance(tags[0], Tag), f'{[tags[0], type(tags[0])]}'
-    assert tags[0].tagName == 'input', f'{[tags[0], tags[0].tagName]}'
+    assert tags[0].tagName in {'textarea',
+                               'input'}, f'{[tags[0], tags[0].tagName]}'
     # querySelectorAll with JS, index arg is Not None, return Tag or None
-    one_tag = await tab.querySelectorAll('input', index=0)
-    assert isinstance(one_tag, Tag)
+    one_tag = await tab.querySelectorAll('textarea,input', index=0)
+    assert isinstance(one_tag, Tag), type(one_tag)
     await tab.stop_loading_page()
     assert await tab.set_html('')
     current_html = await tab.current_html
     assert current_html == '<html><head></head><body></body></html>'
     # reload the page
-    assert await tab.reload()
-    await tab.wait_loading(5, timeout_stop_loading=True)
-    current_html = await tab.html
+    for _ in range(2):
+        assert await tab.reload()
+        await tab.wait_loading(5, timeout_stop_loading=True)
+        current_html = await tab.html
+        if current_html:
+            break
     # print(current_html)
     assert len(current_html) > 100, repr(current_html)
     # test wait tags
     result = await tab.wait_tags('abcdabcdabcdabcd', max_wait_time=1)
     assert result == []
-    assert await tab.wait_tag('#sb_form_go', max_wait_time=3)
+    assert await tab.wait_tag('#sb_form_q', max_wait_time=3)
     assert await tab.includes('bing.com')
     assert not (await tab.includes('abcdabcdabcdabcd'))
     assert await tab.wait_includes('bing.com')
@@ -348,34 +351,35 @@ async def test_iter_events(tab: AsyncTab):
 
     # test iter_fetch
     async with tab.iter_fetch(patterns=[{
-        'urlPattern': '*bing.com*',
-        'resourceType': 'Document'
+            'urlPattern': '*postman-echo.com*',
+            'resourceType': 'Document'
     }]) as f:
-        await tab.goto('https://r.bing.com/', timeout=0)
+        url = 'https://postman-echo.com/get'
+        await tab.goto(url, timeout=0)
         data = await f
         # print(data, flush=True)
         assert data
         # test continueRequest
         await f.continueRequest(data)
-        assert await tab.wait_includes('Our services',
+        assert await tab.wait_includes('"host"',
                                        max_wait_time=5), await tab.html
 
-        await tab.goto('https://r.bing.com/', timeout=0)
+        await tab.goto(url, timeout=0)
         data = await f
         assert data
         # test modify response
         await f.fulfillRequest(data, 200, body=b'hello world.')
         assert await tab.wait_includes('hello world.', max_wait_time=3)
-        await tab.goto('https://r.bing.com/', timeout=0)
+        await tab.goto(url, timeout=0)
         data = await f
         assert data
         await f.failRequest(data, 'AccessDenied')
         assert (await tab.url).startswith('chrome-error://')
 
     # response fetch
-    url = 'https://r.bing.com/'
+    url = 'https://postman-echo.com/get'
     RequestPatternList = [{
-        'urlPattern': 'https://r.bing.com*',
+        'urlPattern': '*postman-echo.com*',
         'requestStage': 'Response'
     }]
     async with tab.iter_fetch(RequestPatternList) as f:
@@ -386,7 +390,7 @@ async def test_iter_events(tab: AsyncTab):
         # print('request event:', json.dumps(event), flush=True)
         response = await f.get_response(event, timeout=5)
         # print('response body:', response)
-        assert 'Our services' in response['data'], response
+        assert '"host"' in response['data'], response
 
 
 async def test_init_tab(chromed: AsyncChromeDaemon):
@@ -399,10 +403,10 @@ async def test_init_tab(chromed: AsyncChromeDaemon):
             TEST_DRC_OK = True
 
         tab.default_recv_callback.append(test_drc)
-        await tab.goto("https://bing.com/?FORM=BEHPTB&ensearch=1", timeout=5)
+        await tab.goto("https://bing.com/?setlang=en&cc=US", timeout=5)
         title = await tab.current_title
         assert TEST_DRC_OK, 'test default_recv_callback failed'
-        assert title == 'Bing', title
+        assert title == 'Bing', repr(title)
         tab.default_recv_callback.clear()
 
 
@@ -591,11 +595,11 @@ async def test_chrome_engine():
             await tab.set_url(url, timeout=5)
             return 'Bing' in (await tab.title)
 
-        async with ChromeEngine(
-                max_concurrent_tabs=5,
-                headless=True,
-                disable_image=True,
-                after_shutdown=lambda cd: cd._clear_user_dir()) as ce:
+        async with ChromeEngine(max_concurrent_tabs=5,
+                                headless=True,
+                                disable_image=True,
+                                after_shutdown=lambda cd: cd.
+                                clear_dir_with_shutil(cd.user_data_dir)) as ce:
             # test normal usage
             tasks = [
                 asyncio.create_task(

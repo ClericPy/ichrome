@@ -43,6 +43,7 @@ from .base import (
     get_memory_by_port,
 )
 from .exceptions import (
+    ChromeProcessMissingError,
     ChromeRuntimeError,
     ChromeTypeError,
     ChromeValueError,
@@ -592,6 +593,11 @@ class AsyncTab(GetValueMixin):
         """[Page.crash], will lose ws, so timeout default to 0."""
         return await self.send("Page.crash", timeout=timeout)
 
+    def is_alive(self):
+        if not self._closed:
+            if self._session_id and self._session_id not in self.browser._sessions:
+                raise ChromeProcessMissingError('missing process')
+
     async def send(self,
                    method: str,
                    timeout=NotSet,
@@ -607,11 +613,14 @@ class AsyncTab(GetValueMixin):
 
         the `force` arg is deprecated, use auto_enable instead.
         '''
+        self.is_alive()
         timeout = self.ensure_timeout(timeout)
         if kwargs:
             _kwargs.update(kwargs)
         request = {"id": self.msg_id, "method": method, "params": _kwargs}
         if self._session_id:
+            if self._session_id not in self.browser._sessions:
+                raise RuntimeError(f'missing _session_id {self._session_id}')
             request['sessionId'] = self._session_id
         try:
             if not self.ws or self.ws.closed:
@@ -651,7 +660,7 @@ class AsyncTab(GetValueMixin):
         Returns:
             Awaitable[Union[dict, None]]: the event dict from websocket recv
         """
-
+        self.is_alive()
         timeout = self.ensure_timeout(timeout)
         if isinstance(timeout, (float, int)) and timeout <= 0:
             # no wait
@@ -922,7 +931,7 @@ expires [TimeSinceEpoch] Cookie expiration date, session cookie if not set"""
             if timeout is not None:
                 # update the real timeout
                 timeout = timeout - (time.time() - start_time)
-                if timeout < 0:
+                if timeout <= 0:
                     break
             # avoid same method but different event occured, use filter_function
             _result = await self.recv(event, timeout=timeout)
@@ -1969,7 +1978,7 @@ JSON.stringify(result)""" % (
                     cssselector: str,
                     index: int = 0,
                     action: str = "click()",
-                    timeout=NotSet) -> Union[List[Tag], Tag, None]:
+                    timeout=NotSet) -> Union[List[Tag], Tag, TagNotFound]:
         """Click some tag with javascript
         await tab.click("#sc_hdu>li>a") # click first node's link.
         await tab.click("#sc_hdu>li>a", index=3, action="removeAttribute('href')") # remove href of the a tag.
@@ -2665,6 +2674,19 @@ True
     def browser(self) -> 'AsyncTab':
         return self.chrome.browser
 
+    def handle_process_gone_error(self, tab: 'AsyncTab'):
+        if tab is None:
+            return
+        # raise error for listener futures
+        _error = ChromeProcessMissingError('missing process')
+        while True:
+            try:
+                _, f = tab._listener._registered_futures.popitem()
+                f.set_exception(_error)
+            except IndexError:
+                break
+        logger.debug(f'[missing] missing chrome process Tab({tab.id}).')
+
     async def _recv_daemon(self):
         """Daemon Coroutine for listening the ws.recv.
 
@@ -2678,6 +2700,10 @@ True
         {"method":"Page.frameStoppedLoading","params":{"frameId":"7F34509F1831E6F29351784861615D1C"}}
         {"method":"Page.domContentEventFired","params":{"timestamp":120277.623606}}
         """
+        # print(self.browser.id, self.id)
+        # print(self.browser is self)
+        # print(self.browser == self)
+        # quit()
         async for msg in self.ws:
             if self._log_all_recv:
                 logger.debug(f'[recv] {self!r} {msg}')
@@ -2704,13 +2730,24 @@ True
                 logger.debug(
                     f'[json] data_str can not be json.loads: {data_str}')
                 continue
+            # {"method":"Inspector.detached","params":{"reason":"Render process gone."},"sessionId":"9B732FA5900F6CE37B7B647D99B74897"}
+            process_gone = data_dict.get(
+                'method'
+            ) == 'Inspector.detached' and 'Render process gone.' in data_str
             if 'sessionId' in data_dict:
+                if process_gone:
+                    self.handle_process_gone_error(
+                        self._sessions.pop(data_dict['sessionId'], None))
+                    continue
                 _tab = self._sessions.get(data_dict['sessionId'])
                 if _tab:
                     default_recv_callback = _tab.default_recv_callback
                 else:
                     default_recv_callback = []
             else:
+                if process_gone:
+                    self.handle_process_gone_error(self)
+                    continue
                 default_recv_callback = self.default_recv_callback
             for callback in default_recv_callback:
                 asyncio.ensure_future(
@@ -3105,7 +3142,7 @@ class AsyncChrome(GetValueMixin):
         """await self.ok"""
         return self.check()
 
-    async def get_server(self, api: str = '', method='get') -> NewResponse:
+    async def get_server(self, api: str = '', method='GET') -> NewResponse:
         # maybe return failure request
         url = urljoin(self.server, api)
         resp = await self.req.request(method=method,
@@ -3168,7 +3205,7 @@ class AsyncChrome(GetValueMixin):
 
     async def new_tab(self, url: str = "") -> Union[AsyncTab, None]:
         api = f'/json/new?{quote_plus(url)}'
-        r = await self.get_server(api, method='put')
+        r = await self.get_server(api, method='PUT')
         if r:
             rjson = r.json()
             tab = AsyncTab(chrome=self, **rjson)
