@@ -2,7 +2,6 @@ import asyncio
 
 
 class ForwardedConnection(asyncio.Protocol):
-
     def __init__(self, peer):
         self.peer = peer
         self.transport = None
@@ -23,7 +22,6 @@ class ForwardedConnection(asyncio.Protocol):
 
 
 class PortForwarder(asyncio.Protocol):
-
     def __init__(self, src, dst):
         self.src_host, self.src_port = src
         self.dst_host, self.dst_port = dst
@@ -32,7 +30,8 @@ class PortForwarder(asyncio.Protocol):
 
     async def __aenter__(self):
         self.server = await asyncio.get_running_loop().create_server(
-            lambda: self, self.dst_host, self.dst_port)
+            lambda: self, self.dst_host, self.dst_port
+        )
         return self
 
     async def __aexit__(self, *_):
@@ -47,7 +46,8 @@ class PortForwarder(asyncio.Protocol):
     async def connection_daemon(self):
         try:
             return await asyncio.get_running_loop().create_connection(
-                lambda: self.fc, self.src_host, self.src_port)
+                lambda: self.fc, self.src_host, self.src_port
+            )
         except Exception:
             return
 

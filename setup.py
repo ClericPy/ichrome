@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 import sys
 from ichrome import __version__
+
 """
 mkdocs serve
 mkdocs gh-deploy
@@ -13,7 +14,7 @@ version = __version__
 if sys.version_info < (3, 7):
     sys.exit("Python 3.7+ requires")
 py_version = sys.version_info
-with open('requirements.txt') as f:
+with open("requirements.txt") as f:
     install_requires = f.read().strip().splitlines()
 with open("README.md", encoding="utf-8") as f:
     README = f.read()
@@ -21,7 +22,7 @@ desc = "Chrome controller for Humans, base on Chrome Devtools Protocol(CDP) and 
 setup(
     name="ichrome",
     version=version,
-    keywords=['chrome', 'Chrome Devtools Protocol', 'daemon', 'CDP', 'browser'],
+    keywords=["chrome", "Chrome Devtools Protocol", "daemon", "CDP", "browser"],
     description=desc,
     license="MIT License",
     install_requires=install_requires,
@@ -31,7 +32,7 @@ setup(
     author="ClericPy",
     author_email="clericpy@gmail.com",
     url="https://github.com/ClericPy/ichrome",
-    extras_require={'web': ['uvicorn', 'fastapi']},
+    extras_require={"web": ["uvicorn", "fastapi"]},
     packages=find_packages(),
     platforms="any",
     classifiers=[

@@ -8,6 +8,14 @@ from .pool import ChromeEngine
 __version__ = "4.0.0"
 __tips__ = "[github]: https://github.com/ClericPy/ichrome\n[cdp]: https://chromedevtools.github.io/devtools-protocol/\n[cmd args]: https://peter.sh/experiments/chromium-command-line-switches/"
 __all__ = [
-    'ChromeDaemon', 'Tag', 'AsyncChrome', 'AsyncTab', 'logger',
-    'AsyncChromeDaemon', 'ChromeWorkers', 'get_a_tab', 'ChromeEngine', 'repl'
+    "ChromeDaemon",
+    "Tag",
+    "AsyncChrome",
+    "AsyncTab",
+    "logger",
+    "AsyncChromeDaemon",
+    "ChromeWorkers",
+    "get_a_tab",
+    "ChromeEngine",
+    "repl",
 ]
