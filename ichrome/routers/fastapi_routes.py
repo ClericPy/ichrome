@@ -9,7 +9,7 @@ try:
     from pydantic import BaseModel
 except ImportError as error:
     logger.error(
-        'requirements are not all ready, run `pip install ichrome[web]` or `pip install fastapi uvicorn` first.'
+        "requirements are not all ready, run `pip install ichrome[web]` or `pip install fastapi uvicorn` first."
     )
     raise error
 """
@@ -81,7 +81,7 @@ print(
 
 
 class IncognitoArgs(BaseModel):
-    url: str = 'about:blank'
+    url: str = "about:blank"
     width: int = None
     height: int = None
     enableBeginFrameControl: bool = None
@@ -102,18 +102,19 @@ class TabOperation(BaseModel):
 
 
 class ChromeAPIRouter(APIRouter):
-
-    def __init__(self,
-                 routes=None,
-                 redirect_slashes=True,
-                 default=None,
-                 dependency_overrides_provider=None,
-                 route_class=APIRoute,
-                 default_response_class=None,
-                 on_startup=None,
-                 on_shutdown=None,
-                 *args,
-                 **kwargs):
+    def __init__(
+        self,
+        routes=None,
+        redirect_slashes=True,
+        default=None,
+        dependency_overrides_provider=None,
+        route_class=APIRoute,
+        default_response_class=None,
+        on_startup=None,
+        on_shutdown=None,
+        *args,
+        **kwargs,
+    ):
         super().__init__(
             routes=routes,
             redirect_slashes=redirect_slashes,
@@ -122,18 +123,19 @@ class ChromeAPIRouter(APIRouter):
             route_class=route_class,
             default_response_class=default_response_class,
             on_startup=on_startup,
-            on_shutdown=on_shutdown)
+            on_shutdown=on_shutdown,
+        )
         self.setup_chrome_engine(*args, **kwargs)
 
     def setup_chrome_engine(self, *args, **kwargs):
         self.chrome_engine = ChromeEngine(*args, **kwargs)
-        self.get('/preview')(self.preview)
-        self.get('/download')(self.download)
-        self.get('/screenshot')(self.screenshot)
-        self.get('/js')(self.js)
-        self.post('/do')(self.do)
-        self.add_event_handler('startup', self._chrome_on_startup)
-        self.add_event_handler('shutdown', self._chrome_on_shutdown)
+        self.get("/preview")(self.preview)
+        self.get("/download")(self.download)
+        self.get("/screenshot")(self.screenshot)
+        self.get("/js")(self.js)
+        self.post("/do")(self.do)
+        self.add_event_handler("startup", self._chrome_on_startup)
+        self.add_event_handler("shutdown", self._chrome_on_shutdown)
 
     async def _chrome_on_startup(self):
         await self.chrome_engine.start()
@@ -141,39 +143,39 @@ class ChromeAPIRouter(APIRouter):
     async def _chrome_on_shutdown(self):
         await self.chrome_engine.shutdown()
 
-    async def preview(self,
-                      url: str,
-                      wait_tag: str = None,
-                      timeout: float = None):
-        data = await self.chrome_engine.download(url,
-                                                 wait_tag=wait_tag,
-                                                 timeout=timeout)
+    async def preview(self, url: str, wait_tag: str = None, timeout: float = None):
+        data = await self.chrome_engine.download(
+            url, wait_tag=wait_tag, timeout=timeout
+        )
         if data:
-            return HTMLResponse(data['html'])
+            return HTMLResponse(data["html"])
         else:
-            return Response(content=b'', status_code=400)
+            return Response(content=b"", status_code=400)
 
-    async def download(self,
-                       url: str,
-                       cssselector: str = None,
-                       wait_tag: str = None,
-                       timeout: typing.Union[float, int] = None):
-        result = await self.chrome_engine.download(url,
-                                                   cssselector=cssselector,
-                                                   wait_tag=wait_tag,
-                                                   timeout=timeout)
+    async def download(
+        self,
+        url: str,
+        cssselector: str = None,
+        wait_tag: str = None,
+        timeout: typing.Union[float, int] = None,
+    ):
+        result = await self.chrome_engine.download(
+            url, cssselector=cssselector, wait_tag=wait_tag, timeout=timeout
+        )
         status_code = 200 if result else 400
         return JSONResponse(result or {}, status_code)
 
-    async def screenshot(self,
-                         url: str,
-                         cssselector: str = None,
-                         scale: float = 1,
-                         format: str = 'png',
-                         quality: int = 100,
-                         fromSurface: bool = True,
-                         timeout: typing.Union[float, int] = None,
-                         captureBeyondViewport: bool = False):
+    async def screenshot(
+        self,
+        url: str,
+        cssselector: str = None,
+        scale: float = 1,
+        format: str = "png",
+        quality: int = 100,
+        fromSurface: bool = True,
+        timeout: typing.Union[float, int] = None,
+        captureBeyondViewport: bool = False,
+    ):
         result = await self.chrome_engine.screenshot(
             url,
             cssselector=cssselector,
@@ -183,8 +185,9 @@ class ChromeAPIRouter(APIRouter):
             fromSurface=fromSurface,
             captureBeyondViewport=captureBeyondViewport,
             timeout=timeout,
-            as_base64=False)
-        result = result or b''
+            as_base64=False,
+        )
+        result = result or b""
         status_code = 200 if result else 400
         return Response(content=result, status_code=status_code)
 
@@ -197,21 +200,22 @@ class ChromeAPIRouter(APIRouter):
             data=tab_operation.data,
             tab_callback=tab_operation.tab_callback,
             timeout=tab_operation.timeout,
-            incognito_args=incognito_args)
+            incognito_args=incognito_args,
+        )
         result = result or {}
         status_code = 200 if result else 400
         return JSONResponse(content=result, status_code=status_code)
 
-    async def js(self,
-                 url: str,
-                 js: str = None,
-                 value_path='result.result',
-                 wait_tag: str = None,
-                 timeout: typing.Union[float, int] = None):
-        result = await self.chrome_engine.js(url,
-                                             js=js,
-                                             value_path=value_path,
-                                             wait_tag=wait_tag,
-                                             timeout=timeout)
+    async def js(
+        self,
+        url: str,
+        js: str = None,
+        value_path="result.result",
+        wait_tag: str = None,
+        timeout: typing.Union[float, int] = None,
+    ):
+        result = await self.chrome_engine.js(
+            url, js=js, value_path=value_path, wait_tag=wait_tag, timeout=timeout
+        )
         status_code = 200 if result else 400
         return JSONResponse(result or {}, status_code)

@@ -13,19 +13,22 @@ from .logs import logger
 
 class ChromeTask(asyncio.Future):
     """ExpireFuture"""
+
     _ID = 0
     MAX_TIMEOUT = 60 * 5
     MAX_TRIES = 5
     EXEC_GLOBALS: typing.Dict[str, typing.Any] = {}
     STOP_SIG = object()
 
-    def __init__(self,
-                 data,
-                 tab_callback: typing.Callable = None,
-                 timeout=None,
-                 tab_index=None,
-                 port: int = None,
-                 incognito_args: dict = None):
+    def __init__(
+        self,
+        data,
+        tab_callback: typing.Callable = None,
+        timeout=None,
+        tab_index=None,
+        port: int = None,
+        incognito_args: dict = None,
+    ):
         super().__init__()
         self.id = self.get_id()
         self.data = data
@@ -42,15 +45,16 @@ class ChromeTask(asyncio.Future):
         self._tries = 0
 
     @staticmethod
-    async def _default_tab_callback(self: 'ChromeTask', tab: AsyncTab,
-                                    data: typing.Any, timeout: float):
+    async def _default_tab_callback(
+        self: "ChromeTask", tab: AsyncTab, data: typing.Any, timeout: float
+    ):
         return
 
     def ensure_tab_callback(self, tab_callback):
         if tab_callback and isinstance(tab_callback, str):
-            exec_locals = {'tab_callback': None}
+            exec_locals = {"tab_callback": None}
             exec(tab_callback, self.EXEC_GLOBALS, exec_locals)
-            tab_callback = exec_locals['tab_callback']
+            tab_callback = exec_locals["tab_callback"]
             if not tab_callback:
                 raise RuntimeError(
                     'tab_callback source code should has function like `tab_callback(self: "ChromeTask", tab: AsyncTab, data: typing.Any, timeout: float)`'
@@ -61,12 +65,14 @@ class ChromeTask(asyncio.Future):
         self._tries += 1
         if self._tries > self.MAX_TRIES:
             logger.info(
-                f'[canceled] {self} for tries more than MAX_TRIES: {self._tries} > {self.MAX_TRIES}'
+                f"[canceled] {self} for tries more than MAX_TRIES: {self._tries} > {self.MAX_TRIES}"
             )
             return self.cancel()
         self._running_task = asyncio.create_task(
             ensure_awaitable(
-                self.tab_callback(self, tab, self.data, timeout=self.timeout)))
+                self.tab_callback(self, tab, self.data, timeout=self.timeout)
+            )
+        )
         result = None
         try:
             result = await self._running_task
@@ -74,11 +80,11 @@ class ChromeTask(asyncio.Future):
         except ChromeException as error:
             raise error
         except Exception as error:
-            logger.error(f'{self} catch an error while running task, {error!r}')
+            logger.error(f"{self} catch an error while running task, {error!r}")
             self.set_result(result)
 
     def set_result(self, result):
-        if self._state == 'PENDING':
+        if self._state == "PENDING":
             super().set_result(result)
 
     @classmethod
@@ -100,7 +106,7 @@ class ChromeTask(asyncio.Future):
             pass
 
     def cancel(self):
-        logger.info(f'[canceled] {self}')
+        logger.info(f"[canceled] {self}")
         self.cancel_task()
         super().cancel()
 
@@ -109,7 +115,7 @@ class ChromeTask(asyncio.Future):
 
     def __str__(self):
         # ChromeTask(<7>, FINISHED)
-        return f'{self.__class__.__name__}(<{self.port}>, {self._state}, id={self.id}, tab={self.tab_index})'
+        return f"{self.__class__.__name__}(<{self.port}>, {self._state}, id={self.id}, tab={self.tab_index})"
 
     def __repr__(self) -> str:
         return str(self)
@@ -123,14 +129,16 @@ class ChromeWorker:
     # --disk-cache-size default cache size 100MB
     DEFAULT_CACHE_SIZE = 100 * 1024**2
 
-    def __init__(self,
-                 port=None,
-                 max_concurrent_tabs: int = None,
-                 q: asyncio.PriorityQueue = None,
-                 restart_every: typing.Union[float, int] = None,
-                 flatten=None,
-                 **daemon_kwargs):
-        assert q, 'queue should not be null'
+    def __init__(
+        self,
+        port=None,
+        max_concurrent_tabs: int = None,
+        q: asyncio.PriorityQueue = None,
+        restart_every: typing.Union[float, int] = None,
+        flatten=None,
+        **daemon_kwargs,
+    ):
+        assert q, "queue should not be null"
         self.port = port
         self.q = q
         self.port_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
@@ -140,12 +148,13 @@ class ChromeWorker:
         self._flatten = flatten
         self._shutdown = False
         if self.DEFAULT_CACHE_SIZE:
-            _extra = f'--disk-cache-size={self.DEFAULT_CACHE_SIZE}'
+            _extra = f"--disk-cache-size={self.DEFAULT_CACHE_SIZE}"
             if _extra not in AsyncChromeDaemon.DEFAULT_EXTRA_CONFIG:
                 AsyncChromeDaemon.DEFAULT_EXTRA_CONFIG.append(_extra)
-        self.daemon_kwargs = daemon_kwargs or deepcopy(
-            self.DEFAULT_DAEMON_KWARGS)
-        assert 'port' not in self.daemon_kwargs, 'invalid key `port` for self.daemon_kwargs'
+        self.daemon_kwargs = daemon_kwargs or deepcopy(self.DEFAULT_DAEMON_KWARGS)
+        assert (
+            "port" not in self.daemon_kwargs
+        ), "invalid key `port` for self.daemon_kwargs"
         self.daemon_task = None
         self.consumers: typing.List[asyncio.Task] = []
         self._running_futures: typing.Set[int] = set()
@@ -182,10 +191,12 @@ class ChromeWorker:
             self._chrome_daemon_ready.clear()
             self._need_restart.clear()
             self._restart_interval = round(
-                self.restart_every + self.get_random_secs(), 3)
+                self.restart_every + self.get_random_secs(), 3
+            )
             self._will_restart_peacefully = False
-            async with AsyncChromeDaemon(port=self.port,
-                                         **self.daemon_kwargs) as chrome_daemon:
+            async with AsyncChromeDaemon(
+                port=self.port, **self.daemon_kwargs
+            ) as chrome_daemon:
                 self._daemon_start_time = time.time()
                 self.chrome_daemon = chrome_daemon
                 for _ in range(10):
@@ -194,9 +205,9 @@ class ChromeWorker:
                         break
                     await asyncio.sleep(0.5)
                 else:
-                    logger.info(f'[error] {self} launch failed.')
+                    logger.info(f"[error] {self} launch failed.")
                     continue
-                logger.info(f'[online] {self} is online.')
+                logger.info(f"[online] {self} is online.")
                 while 1:
                     await self._need_restart.wait()
                     self._chrome_daemon_ready.clear()
@@ -204,15 +215,16 @@ class ChromeWorker:
                     if not self._will_restart_peacefully:
                         break
                     elif self._will_restart_peacefully and not self._running_futures:
-                        msg = f'restarting for interval {self._restart_interval}. ({self})'
+                        msg = f"restarting for interval {self._restart_interval}. ({self})"
                         logger.info(msg)
                         break
-                logger.info(f'[offline] {self} is offline.')
+                logger.info(f"[offline] {self} is offline.")
 
     async def future_consumer(self, index=None):
         while not self._shutdown:
-            run_too_long = time.time(
-            ) - self._daemon_start_time > self._restart_interval
+            run_too_long = (
+                time.time() - self._daemon_start_time > self._restart_interval
+            )
             if run_too_long and not self.is_need_restart:
                 # stop consuming new futures
                 self._chrome_daemon_ready.clear()
@@ -226,7 +238,7 @@ class ChromeWorker:
                 future: ChromeTask = self.port_queue.get_nowait()
             except asyncio.QueueEmpty:
                 future: ChromeTask = await self.q.get()
-            logger.info(f'{self} get a new task {future}.')
+            logger.info(f"{self} get a new task {future}.")
             if future.data is ChromeTask.STOP_SIG:
                 if future.port:
                     await self.port_queue.put(future)
@@ -241,7 +253,8 @@ class ChromeWorker:
                 if isinstance(future.incognito_args, dict):
                     # incognito mode
                     async with self.chrome_daemon.incognito_tab(
-                            **future.incognito_args) as tab:
+                        **future.incognito_args
+                    ) as tab:
                         if isinstance(future.data, _TabWorker):
                             await self.handle_tab_worker_future(tab, future)
                         else:
@@ -250,9 +263,10 @@ class ChromeWorker:
                     # should not auto_close for int index (existing tab).
                     auto_close = not isinstance(future.tab_index, int)
                     async with self.chrome_daemon.connect_tab(
-                            index=future.tab_index,
-                            auto_close=auto_close,
-                            flatten=self._flatten) as tab:
+                        index=future.tab_index,
+                        auto_close=auto_close,
+                        flatten=self._flatten,
+                    ) as tab:
                         if isinstance(future.data, _TabWorker):
                             await self.handle_tab_worker_future(tab, future)
                         else:
@@ -264,24 +278,25 @@ class ChromeWorker:
                     await self.port_queue.put(future)
                 else:
                     await self.q.put(future)
-        return f'{self} future_consumer[{index}] done.'
+        return f"{self} future_consumer[{index}] done."
 
     async def handle_tab_worker_future(self, tab, future):
         try:
             tab_worker: _TabWorker = future.data
             tab_worker.tab_future.set_result(tab)
-            return await asyncio.wait_for(tab_worker._done.wait(),
-                                          timeout=future.timeout)
+            return await asyncio.wait_for(
+                tab_worker._done.wait(), timeout=future.timeout
+            )
         except (asyncio.CancelledError, asyncio.TimeoutError):
             return
         except ChromeException as error:
             if not self._shutdown:
-                logger.error(f'{self} restarting for error {error!r}')
+                logger.error(f"{self} restarting for error {error!r}")
                 self.set_need_restart()
         finally:
             if not future.done():
                 future.cancel()
-            logger.info(f'[finished]({self.todos}) {future}')
+            logger.info(f"[finished]({self.todos}) {future}")
             del future
 
     async def handle_default_future(self, tab, future):
@@ -294,11 +309,11 @@ class ChromeWorker:
             pass
         except ChromeException as error:
             if not self._shutdown:
-                logger.error(f'{self} restarting for error {error!r}')
+                logger.error(f"{self} restarting for error {error!r}")
                 self.set_need_restart()
         except Exception as error:
             # other errors may give a retry
-            logger.error(f'{self} catch an error {error!r} for {future}')
+            logger.error(f"{self} catch an error {error!r} for {future}")
         finally:
             self._running_futures.discard(future)
             if not future.done():
@@ -323,7 +338,7 @@ class ChromeWorker:
         return random.choice(range(start * 1000, end * 1000)) / 1000
 
     def __str__(self):
-        return f'{self.__class__.__name__}(<{self.port}>, {self.runnings}/{self.max_concurrent_tabs}, {self.todos} todos)'
+        return f"{self.__class__.__name__}(<{self.port}>, {self.runnings}/{self.max_concurrent_tabs}, {self.todos} todos)"
 
     def __repr__(self) -> str:
         return str(self)
@@ -338,19 +353,20 @@ class ChromeEngine:
     # Use incognico mode by default, or you can se ChromeEngine.DEFAULT_INCOGNITO_ARGS = None to use normal mode
     DEFAULT_INCOGNITO_ARGS: dict = {}
 
-    def __init__(self,
-                 workers_amount: int = None,
-                 max_concurrent_tabs=None,
-                 start_port: int = None,
-                 **daemon_kwargs):
+    def __init__(
+        self,
+        workers_amount: int = None,
+        max_concurrent_tabs=None,
+        start_port: int = None,
+        **daemon_kwargs,
+    ):
         self._q: typing.Union[asyncio.PriorityQueue, asyncio.Queue] = None
         self._shutdown = False
         # max tab currency num
         self.workers: typing.Dict[int, ChromeWorker] = {}
         self.workers_amount = workers_amount or self.DEFAULT_WORKERS_AMOUNT
         self.max_concurrent_tabs = max_concurrent_tabs
-        self.start_port = daemon_kwargs.pop('port',
-                                            start_port) or self.START_PORT
+        self.start_port = daemon_kwargs.pop("port", start_port) or self.START_PORT
         self.daemon_kwargs = daemon_kwargs
 
     @property
@@ -366,11 +382,13 @@ class ChromeEngine:
     def _add_default_workers(self):
         for offset in range(self.workers_amount):
             port = self.start_port + offset
-            worker = ChromeWorker(port=port,
-                                  max_concurrent_tabs=self.max_concurrent_tabs,
-                                  q=self.q,
-                                  flatten=self.FLATTEN,
-                                  **self.daemon_kwargs)
+            worker = ChromeWorker(
+                port=port,
+                max_concurrent_tabs=self.max_concurrent_tabs,
+                q=self.q,
+                flatten=self.FLATTEN,
+                **self.daemon_kwargs,
+            )
             self.workers[port] = worker
 
     async def start_workers(self):
@@ -387,34 +405,38 @@ class ChromeEngine:
         repr_data = repr(data)
         return f'{repr_data[:self.SHORTEN_DATA_LENGTH]}{"..." if len(repr_data)>self.SHORTEN_DATA_LENGTH else ""}'
 
-    async def do(self,
-                 data,
-                 tab_callback,
-                 timeout: float = None,
-                 tab_index=None,
-                 port=None,
-                 incognito_args: dict = None):
+    async def do(
+        self,
+        data,
+        tab_callback,
+        timeout: float = None,
+        tab_index=None,
+        port=None,
+        incognito_args: dict = None,
+    ):
         if self._shutdown:
-            raise RuntimeError(f'{self.__class__.__name__} has been shutdown.')
-        future = ChromeTask(data,
-                            tab_callback,
-                            timeout=timeout,
-                            tab_index=tab_index,
-                            port=port,
-                            incognito_args=incognito_args)
+            raise RuntimeError(f"{self.__class__.__name__} has been shutdown.")
+        future = ChromeTask(
+            data,
+            tab_callback,
+            timeout=timeout,
+            tab_index=tab_index,
+            port=port,
+            incognito_args=incognito_args,
+        )
         if port:
             await self.workers[port].port_queue.put(future)
         else:
             await self.q.put(future)
         logger.info(
-            f'[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}'
+            f"[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}"
         )
         try:
             return await asyncio.wait_for(future, timeout=future.timeout)
         except asyncio.TimeoutError:
             return None
         finally:
-            logger.info(f'[finished]({self.todos}) {future}')
+            logger.info(f"[finished]({self.todos}) {future}")
             del future
 
     async def shutdown(self):
@@ -445,80 +467,76 @@ class ChromeEngine:
                 break
 
     async def screenshot(
-            self,
-            url: str,
-            cssselector: str = None,
-            scale=1,
-            format: str = 'png',
-            quality: int = 100,
-            fromSurface: bool = True,
-            save_path=None,
-            timeout=None,
-            as_base64=True,
-            captureBeyondViewport=False) -> typing.Union[str, bytes]:
-        data = dict(url=url,
-                    cssselector=cssselector,
-                    scale=scale,
-                    format=format,
-                    quality=quality,
-                    fromSurface=fromSurface,
-                    save_path=save_path,
-                    captureBeyondViewport=bool(captureBeyondViewport))
-        image = await self.do(data=data,
-                              tab_callback=CommonUtils.screenshot,
-                              timeout=timeout,
-                              tab_index=None)
+        self,
+        url: str,
+        cssselector: str = None,
+        scale=1,
+        format: str = "png",
+        quality: int = 100,
+        fromSurface: bool = True,
+        save_path=None,
+        timeout=None,
+        as_base64=True,
+        captureBeyondViewport=False,
+    ) -> typing.Union[str, bytes]:
+        data = dict(
+            url=url,
+            cssselector=cssselector,
+            scale=scale,
+            format=format,
+            quality=quality,
+            fromSurface=fromSurface,
+            save_path=save_path,
+            captureBeyondViewport=bool(captureBeyondViewport),
+        )
+        image = await self.do(
+            data=data,
+            tab_callback=CommonUtils.screenshot,
+            timeout=timeout,
+            tab_index=None,
+        )
         if as_base64 or not image:
             return image
         else:
             return b64decode(image)
 
-    async def download(self,
-                       url: str,
-                       cssselector: str = None,
-                       wait_tag: str = None,
-                       timeout=None) -> dict:
-
+    async def download(
+        self, url: str, cssselector: str = None, wait_tag: str = None, timeout=None
+    ) -> dict:
         data = dict(url=url, cssselector=cssselector, wait_tag=wait_tag)
-        return await self.do(data=data,
-                             tab_callback=CommonUtils.download,
-                             timeout=timeout,
-                             tab_index=None)
+        return await self.do(
+            data=data,
+            tab_callback=CommonUtils.download,
+            timeout=timeout,
+            tab_index=None,
+        )
 
-    async def preview(self,
-                      url: str,
-                      wait_tag: str = None,
-                      timeout=None) -> bytes:
+    async def preview(self, url: str, wait_tag: str = None, timeout=None) -> bytes:
         "Not recommended for use. Use (await self.download(url, wait_tag=wait_tag, timeout=timeout))['html'] instead."
         data = await self.download(url, wait_tag=wait_tag, timeout=timeout)
         if data:
-            return data['html'].encode(data.get('encoding') or 'utf-8')
+            return data["html"].encode(data.get("encoding") or "utf-8")
         else:
-            return b''
+            return b""
 
-    async def js(self,
-                 url: str,
-                 js: str,
-                 value_path='result.result',
-                 wait_tag: str = None,
-                 timeout=None) -> bytes:
+    async def js(
+        self,
+        url: str,
+        js: str,
+        value_path="result.result",
+        wait_tag: str = None,
+        timeout=None,
+    ) -> bytes:
         data = dict(url=url, js=js, value_path=value_path, wait_tag=wait_tag)
-        return await self.do(data=data,
-                             tab_callback=CommonUtils.js,
-                             timeout=timeout,
-                             tab_index=None)
+        return await self.do(
+            data=data, tab_callback=CommonUtils.js, timeout=timeout, tab_index=None
+        )
 
-    def connect_tab(self,
-                    tab_index=None,
-                    timeout: float = None,
-                    port: int = None):
+    def connect_tab(self, tab_index=None, timeout: float = None, port: int = None):
         data = _TabWorker()
-        future = ChromeTask(data,
-                            timeout=timeout,
-                            tab_index=tab_index,
-                            port=port)
+        future = ChromeTask(data, timeout=timeout, tab_index=tab_index, port=port)
         logger.info(
-            f'[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}'
+            f"[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}"
         )
         if port:
             self.workers[port].port_queue.put_nowait(future)
@@ -550,32 +568,32 @@ class CommonUtils:
     """Some frequently-used callback functions."""
 
     async def screenshot(self, tab: AsyncTab, data, timeout):
-        await tab.set_url(data.pop('url'), timeout=timeout)
+        await tab.set_url(data.pop("url"), timeout=timeout)
         return await tab.screenshot_element(timeout=timeout, **data)
 
     async def download(self, tab: AsyncTab, data, timeout):
         start_time = time.time()
-        result = {'url': data['url']}
-        await tab.set_url(data['url'], timeout=timeout)
-        if data['wait_tag']:
+        result = {"url": data["url"]}
+        await tab.set_url(data["url"], timeout=timeout)
+        if data["wait_tag"]:
             timeout = timeout - (time.time() - start_time)
             if timeout > 0:
-                await tab.wait_tag(data['wait_tag'], max_wait_time=timeout)
-        if data['cssselector']:
-            result['html'] = None
-            tags: typing.Any = await tab.querySelectorAll(data['cssselector'])
-            result['tags'] = [tag.outerHTML for tag in tags]
+                await tab.wait_tag(data["wait_tag"], max_wait_time=timeout)
+        if data["cssselector"]:
+            result["html"] = None
+            tags: typing.Any = await tab.querySelectorAll(data["cssselector"])
+            result["tags"] = [tag.outerHTML for tag in tags]
         else:
-            result['html'] = await tab.current_html
-            result['tags'] = []
+            result["html"] = await tab.current_html
+            result["tags"] = []
         title, encoding = await tab.get_value(
             r'[document.title || document.body.textContent.trim().replace(/\s+/g, " ").slice(0,50), document.charset]',
-            jsonify=True)
-        result['title'] = title
-        result['encoding'] = encoding
+            jsonify=True,
+        )
+        result["title"] = title
+        result["encoding"] = encoding
         return result
 
     async def js(self, tab: AsyncTab, data, timeout):
-        await tab.set_url(data['url'], timeout=timeout)
-        return await tab.js(javascript=data['js'],
-                            value_path=data['value_path'])
+        await tab.set_url(data["url"], timeout=timeout)
+        return await tab.js(javascript=data["js"], value_path=data["value_path"])
