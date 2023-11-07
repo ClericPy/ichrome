@@ -187,6 +187,7 @@ class ChromeDaemon(object):
         self.popen_kwargs = (
             self.DEFAULT_POPEN_ARGS if popen_kwargs is None else popen_kwargs
         )
+        self._use_port_dir = False
         self.init()
 
     @classmethod
@@ -303,6 +304,7 @@ class ChromeDaemon(object):
                     f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
                 )
                 self.user_data_dir.mkdir(parents=True, exist_ok=True)
+                self._use_port_dir = True
 
     @classmethod
     def clear_user_dir(cls, user_data_dir=None, port=None):
@@ -317,12 +319,24 @@ class ChromeDaemon(object):
 
     def _clear_user_dir(self):
         # Deprecated
-        return self._clear_user_data_dir()
+        return self.clear_user_data_dir()
+
+    def _clear_user_data_dir(self):
+        self.clear_dir_with_shutil(self.user_data_dir)
+        if self._use_port_dir:
+            main_user_dir = self.user_data_dir.parent
+            if main_user_dir.is_dir():
+                for sub_file_or_dir in main_user_dir.iterdir():
+                    if sub_file_or_dir.exists():
+                        break
+                else:
+                    # remove null main_user_dir
+                    main_user_dir.rmdir()
 
     def clear_user_data_dir(self):
         # clear self user dir
         self.shutdown("_clear_user_dir")
-        return self.clear_dir_with_shutil(self.user_data_dir)
+        self._clear_user_data_dir()
 
     @staticmethod
     def clear_dir_with_shutil(dir_path):
@@ -983,7 +997,7 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def clear_user_data_dir(self):
         await self.shutdown("_clear_user_dir")
-        return await async_run(self.clear_dir_with_shutil, self.user_data_dir)
+        return await async_run(self._clear_user_data_dir)
 
     def connect_tab(
         self,

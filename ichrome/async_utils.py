@@ -3411,7 +3411,7 @@ class JavaScriptSnippets(object):
         text,
         style=None,
         max_lines: int = 10,
-        expires: float = None,
+        expires: Union[float, None] = None,
         timeout=NotSet,
     ):
         if style is None:
