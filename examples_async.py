@@ -662,7 +662,6 @@ def test_all():
             time.sleep(1)
     finally:
         loop.close()
-    AsyncChromeDaemon.clear_dir(AsyncChromeDaemon.DEFAULT_USER_DIR_PATH)
 
 
 if __name__ == "__main__":
