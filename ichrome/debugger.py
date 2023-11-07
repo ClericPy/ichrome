@@ -6,8 +6,7 @@ import time
 from functools import wraps
 from inspect import isawaitable
 from typing import Set
-
-from torequests.utils import quote_plus
+from urllib.parse import quote_plus
 
 from .async_utils import AsyncChrome, AsyncTab
 from .daemon import AsyncChromeDaemon, ChromeDaemon
@@ -115,6 +114,7 @@ class Daemon(SyncLoop):
         proc_check_interval=5,
         on_startup=None,
         on_shutdown=quit_while_daemon_missing,
+        **_kwargs,
     ):
         self._self = AsyncChromeDaemon(
             chrome_path=chrome_path,
@@ -135,6 +135,7 @@ class Daemon(SyncLoop):
             proc_check_interval=proc_check_interval,
             on_startup=on_startup,
             on_shutdown=on_shutdown,
+            **_kwargs,
         )
         self.start_running()
 
