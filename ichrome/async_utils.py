@@ -2750,7 +2750,7 @@ True
             try:
                 _, f = tab._listener._registered_futures.popitem()
                 f.set_exception(_error)
-            except IndexError:
+            except (IndexError, KeyError):
                 break
         logger.debug(f"[missing] missing chrome process Tab({tab.id}).")
 
@@ -2937,6 +2937,9 @@ True
         return await self.querySelector(
             cssselector=cssselector, action=action, timeout=timeout
         )
+
+    async def run_js_snippets(self, method: str, *args, **kwargs):
+        return await getattr(JavaScriptSnippets, method)(self, *args, **kwargs)
 
 
 class OffsetMoveWalker:
