@@ -1,3 +1,2 @@
 psutil
 torequests>=5.1.2
-websocket-client
