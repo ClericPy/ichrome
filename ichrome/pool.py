@@ -501,14 +501,30 @@ class ChromeEngine:
             return b64decode(image)
 
     async def download(
-        self, url: str, cssselector: str = None, wait_tag: str = None, timeout=None
+        self,
+        url: str,
+        cssselector: str = "",
+        wait_tag: str = "",
+        cookies: dict = None,
+        user_agent: str = "",
+        extra_headers: dict = None,
+        timeout=None,
+        incognito_args: dict = None,
     ) -> dict:
-        data = dict(url=url, cssselector=cssselector, wait_tag=wait_tag)
+        data = dict(
+            url=url,
+            cssselector=cssselector,
+            wait_tag=wait_tag,
+            cookies=cookies,
+            extra_headers=extra_headers,
+            user_agent=user_agent,
+        )
         return await self.do(
             data=data,
             tab_callback=CommonUtils.download,
             timeout=timeout,
             tab_index=None,
+            incognito_args=incognito_args,
         )
 
     async def preview(self, url: str, wait_tag: str = None, timeout=None) -> bytes:
@@ -574,6 +590,15 @@ class CommonUtils:
     async def download(self, tab: AsyncTab, data, timeout):
         start_time = time.time()
         result = {"url": data["url"]}
+        cookies = data.get("cookies") or {}
+        for name, value in cookies.items():
+            await tab.set_cookie(name=name, value=value, url=data["url"])
+        user_agent = data.get("user_agent")
+        if user_agent:
+            await tab.set_ua(user_agent)
+        extra_headers = data.get("extra_headers")
+        if extra_headers:
+            await tab.set_headers(extra_headers)
         await tab.set_url(data["url"], timeout=timeout)
         if data["wait_tag"]:
             timeout = timeout - (time.time() - start_time)

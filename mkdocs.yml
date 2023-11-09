@@ -8,10 +8,11 @@ nav:
   - quickstart.md
   - cmd.md
   - reference:
+      - base: "reference/base.md"
       - AsyncTab: "reference/AsyncTab.md"
       - AsyncChromeDaemon: "reference/AsyncChromeDaemon.md"
       - AsyncChrome: "reference/AsyncChrome.md"
       - Debugger: "reference/Debugger.md"
-      - base: "reference/base.md"
+      - WebAPP: "reference/WebAPP.md"
 plugins:
   - mkdocstrings
