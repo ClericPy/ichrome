@@ -537,23 +537,7 @@
 
         <details class="quote">
           <summary>Source code in <code>ichrome\daemon.py</code></summary>
-          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 689</span>
-<span class="normal"> 690</span>
-<span class="normal"> 691</span>
-<span class="normal"> 692</span>
-<span class="normal"> 693</span>
-<span class="normal"> 694</span>
-<span class="normal"> 695</span>
-<span class="normal"> 696</span>
-<span class="normal"> 697</span>
-<span class="normal"> 698</span>
-<span class="normal"> 699</span>
-<span class="normal"> 700</span>
-<span class="normal"> 701</span>
-<span class="normal"> 702</span>
-<span class="normal"> 703</span>
-<span class="normal"> 704</span>
-<span class="normal"> 705</span>
+          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 705</span>
 <span class="normal"> 706</span>
 <span class="normal"> 707</span>
 <span class="normal"> 708</span>
@@ -911,7 +895,31 @@
 <span class="normal">1060</span>
 <span class="normal">1061</span>
 <span class="normal">1062</span>
-<span class="normal">1063</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AsyncChromeDaemon</span><span class="p">(</span><span class="n">ChromeDaemon</span><span class="p">):</span>
+<span class="normal">1063</span>
+<span class="normal">1064</span>
+<span class="normal">1065</span>
+<span class="normal">1066</span>
+<span class="normal">1067</span>
+<span class="normal">1068</span>
+<span class="normal">1069</span>
+<span class="normal">1070</span>
+<span class="normal">1071</span>
+<span class="normal">1072</span>
+<span class="normal">1073</span>
+<span class="normal">1074</span>
+<span class="normal">1075</span>
+<span class="normal">1076</span>
+<span class="normal">1077</span>
+<span class="normal">1078</span>
+<span class="normal">1079</span>
+<span class="normal">1080</span>
+<span class="normal">1081</span>
+<span class="normal">1082</span>
+<span class="normal">1083</span>
+<span class="normal">1084</span>
+<span class="normal">1085</span>
+<span class="normal">1086</span>
+<span class="normal">1087</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AsyncChromeDaemon</span><span class="p">(</span><span class="n">ChromeDaemon</span><span class="p">):</span>
     <span class="n">_demo</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;&#39;&#39;</span>
 
 <span class="s1">    demo::</span>
@@ -958,51 +966,55 @@
 <span class="s1">&#39;&#39;&#39;</span>
     <span class="vm">__doc__</span> <span class="o">=</span> <span class="n">ChromeDaemon</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">+</span> <span class="n">_demo</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">chrome_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">host</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
-                 <span class="n">port</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span>
-                 <span class="n">headless</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                 <span class="n">user_agent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">proxy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">user_data_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">disable_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                 <span class="n">start_url</span><span class="o">=</span><span class="s2">&quot;about:blank&quot;</span><span class="p">,</span>
-                 <span class="n">extra_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">max_deaths</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                 <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                 <span class="n">block</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                 <span class="n">timeout</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-                 <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                 <span class="n">proc_check_interval</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-                 <span class="n">on_startup</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">on_shutdown</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">before_startup</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">after_shutdown</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">clear_after_shutdown</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                 <span class="n">popen_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">chrome_path</span><span class="o">=</span><span class="n">chrome_path</span><span class="p">,</span>
-                         <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
-                         <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
-                         <span class="n">headless</span><span class="o">=</span><span class="n">headless</span><span class="p">,</span>
-                         <span class="n">user_agent</span><span class="o">=</span><span class="n">user_agent</span><span class="p">,</span>
-                         <span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span>
-                         <span class="n">user_data_dir</span><span class="o">=</span><span class="n">user_data_dir</span><span class="p">,</span>
-                         <span class="n">disable_image</span><span class="o">=</span><span class="n">disable_image</span><span class="p">,</span>
-                         <span class="n">start_url</span><span class="o">=</span><span class="n">start_url</span><span class="p">,</span>
-                         <span class="n">extra_config</span><span class="o">=</span><span class="n">extra_config</span><span class="p">,</span>
-                         <span class="n">max_deaths</span><span class="o">=</span><span class="n">max_deaths</span><span class="p">,</span>
-                         <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">,</span>
-                         <span class="n">block</span><span class="o">=</span><span class="n">block</span><span class="p">,</span>
-                         <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
-                         <span class="n">debug</span><span class="o">=</span><span class="n">debug</span><span class="p">,</span>
-                         <span class="n">proc_check_interval</span><span class="o">=</span><span class="n">proc_check_interval</span><span class="p">,</span>
-                         <span class="n">on_startup</span><span class="o">=</span><span class="n">on_startup</span><span class="p">,</span>
-                         <span class="n">on_shutdown</span><span class="o">=</span><span class="n">on_shutdown</span><span class="p">,</span>
-                         <span class="n">before_startup</span><span class="o">=</span><span class="n">before_startup</span><span class="p">,</span>
-                         <span class="n">after_shutdown</span><span class="o">=</span><span class="n">after_shutdown</span><span class="p">,</span>
-                         <span class="n">clear_after_shutdown</span><span class="o">=</span><span class="n">clear_after_shutdown</span><span class="p">,</span>
-                         <span class="n">popen_kwargs</span><span class="o">=</span><span class="n">popen_kwargs</span><span class="p">)</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">chrome_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">host</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
+        <span class="n">port</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span>
+        <span class="n">headless</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">user_agent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">proxy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">user_data_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">disable_image</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">start_url</span><span class="o">=</span><span class="s2">&quot;about:blank&quot;</span><span class="p">,</span>
+        <span class="n">extra_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_deaths</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">block</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">proc_check_interval</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">on_startup</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">on_shutdown</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">before_startup</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">after_shutdown</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">clear_after_shutdown</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">popen_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">chrome_path</span><span class="o">=</span><span class="n">chrome_path</span><span class="p">,</span>
+            <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+            <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
+            <span class="n">headless</span><span class="o">=</span><span class="n">headless</span><span class="p">,</span>
+            <span class="n">user_agent</span><span class="o">=</span><span class="n">user_agent</span><span class="p">,</span>
+            <span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span>
+            <span class="n">user_data_dir</span><span class="o">=</span><span class="n">user_data_dir</span><span class="p">,</span>
+            <span class="n">disable_image</span><span class="o">=</span><span class="n">disable_image</span><span class="p">,</span>
+            <span class="n">start_url</span><span class="o">=</span><span class="n">start_url</span><span class="p">,</span>
+            <span class="n">extra_config</span><span class="o">=</span><span class="n">extra_config</span><span class="p">,</span>
+            <span class="n">max_deaths</span><span class="o">=</span><span class="n">max_deaths</span><span class="p">,</span>
+            <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">,</span>
+            <span class="n">block</span><span class="o">=</span><span class="n">block</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="n">debug</span><span class="o">=</span><span class="n">debug</span><span class="p">,</span>
+            <span class="n">proc_check_interval</span><span class="o">=</span><span class="n">proc_check_interval</span><span class="p">,</span>
+            <span class="n">on_startup</span><span class="o">=</span><span class="n">on_startup</span><span class="p">,</span>
+            <span class="n">on_shutdown</span><span class="o">=</span><span class="n">on_shutdown</span><span class="p">,</span>
+            <span class="n">before_startup</span><span class="o">=</span><span class="n">before_startup</span><span class="p">,</span>
+            <span class="n">after_shutdown</span><span class="o">=</span><span class="n">after_shutdown</span><span class="p">,</span>
+            <span class="n">clear_after_shutdown</span><span class="o">=</span><span class="n">clear_after_shutdown</span><span class="p">,</span>
+            <span class="n">popen_kwargs</span><span class="o">=</span><span class="n">popen_kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># Please init AsyncChromeDaemon in a running loop with `async with`</span>
@@ -1013,7 +1025,7 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">req</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_req</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ChromeRuntimeError</span><span class="p">(</span><span class="s1">&#39;please use Chrome in `async with`&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">ChromeRuntimeError</span><span class="p">(</span><span class="s2">&quot;please use Chrome in `async with`&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_req</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="nf">_init_chrome_daemon</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1048,14 +1060,14 @@
         <span class="n">error</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MAX_WAIT_CHECKING_SECONDS</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_proc_ok</span><span class="p">):</span>
-                <span class="n">error</span> <span class="o">=</span> <span class="s1">&#39;launch_chrome failed for proc not ok&#39;</span>
+                <span class="n">error</span> <span class="o">=</span> <span class="s2">&quot;launch_chrome failed for proc not ok&quot;</span>
                 <span class="k">break</span>
             <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_chrome_connection</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">ready</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="k">break</span>
             <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">error</span> <span class="o">=</span> <span class="s1">&#39;launch_chrome failed for connection not ok&#39;</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="s2">&quot;launch_chrome failed for connection not ok&quot;</span>
         <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
             <span class="k">raise</span> <span class="n">ChromeRuntimeError</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
@@ -1082,17 +1094,17 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_chrome_ready</span><span class="p">()</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_free_port</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
-                            <span class="n">host</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
-                            <span class="n">start</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span>
-                            <span class="n">max_tries</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                            <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_free_port</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span> <span class="n">max_tries</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">):</span>
         <span class="s2">&quot;find a free port which can be used&quot;</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_free_port</span><span class="p">,</span>
-                               <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
-                               <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span>
-                               <span class="n">max_tries</span><span class="o">=</span><span class="n">max_tries</span><span class="p">,</span>
-                               <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_free_port</span><span class="p">,</span>
+            <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span>
+            <span class="n">max_tries</span><span class="o">=</span><span class="n">max_tries</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="nf">check_ws_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chrome</span> <span class="k">as</span> <span class="n">chrome</span><span class="p">:</span>
@@ -1101,8 +1113,7 @@
     <span class="k">async</span> <span class="k">def</span> <span class="nf">check_chrome_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="s2">&quot;check if the chrome api is available&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_ok</span> <span class="ow">and</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_connection</span><span class="p">():</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;launch_chrome success: </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2">, args: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="o">.</span><span class="n">args</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;launch_chrome success: </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2">, args: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="o">.</span><span class="n">args</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">True</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;launch_chrome failed: </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2">, args: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cmd</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1123,7 +1134,8 @@
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> run_forever(block=</span><span class="si">{</span><span class="n">block</span><span class="si">}</span><span class="s2">, interval=</span><span class="si">{</span><span class="n">interval</span><span class="si">}</span><span class="s2">, max_deaths=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">max_deaths</span><span class="si">}</span><span class="s2">).&quot;</span>
         <span class="p">)</span>
         <span class="n">task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_daemon_thread</span> <span class="ow">or</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_daemon</span><span class="p">(</span><span class="n">interval</span><span class="o">=</span><span class="n">interval</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_daemon</span><span class="p">(</span><span class="n">interval</span><span class="o">=</span><span class="n">interval</span><span class="p">)</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="n">block</span><span class="p">:</span>
             <span class="k">await</span> <span class="n">task</span>
         <span class="k">return</span> <span class="n">task</span>
@@ -1141,29 +1153,33 @@
                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> daemon break after shutdown(</span><span class="si">{</span><span class="n">ttime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_shutdown</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
                 <span class="p">)</span>
                 <span class="k">break</span>
-            <span class="k">if</span> <span class="n">deaths</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_deaths</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="n">deaths</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_deaths</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> daemon break for deaths is more than </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">max_deaths</span><span class="si">}</span><span class="s2"> times.&quot;</span>
                 <span class="p">)</span>
                 <span class="k">break</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_ok</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_ok</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> daemon is restarting proc.&quot;</span><span class="p">)</span>
                 <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">restart</span><span class="p">()</span>
                 <span class="n">deaths</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">continue</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">return_code</span> <span class="o">=</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">,</span> <span class="n">interval</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown_reason</span><span class="p">:</span>
+                    <span class="k">break</span>
                 <span class="n">deaths</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
                 <span class="n">deaths</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> daemon exited.&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> daemon exited for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_shutdown_reason</span><span class="si">}</span><span class="s2">. return_code: </span><span class="si">{</span><span class="n">return_code</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">return_code</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="fm">__aenter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_init_coro</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="fm">__aexit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="s1">&#39;__aexit__&#39;</span><span class="p">)</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="s2">&quot;__aexit__&quot;</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">x</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1178,8 +1194,9 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown</span><span class="p">:</span>
             <span class="c1"># logger.debug(f&quot;{self} shutdown at {ttime(self._shutdown)} yet.&quot;)</span>
             <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown_reason</span> <span class="o">=</span> <span class="n">reason</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">update_shutdown_time</span><span class="p">()</span>
-        <span class="n">reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39; for </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; for </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> shutting down</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">, start-up: </span><span class="si">{</span><span class="n">ttime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span><span class="si">}</span><span class="s2">, duration: </span><span class="si">{</span><span class="n">timepass</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span> <span class="n">accuracy</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
         <span class="p">)</span>
@@ -1196,14 +1213,16 @@
         <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">clear_user_data_dir</span><span class="p">()</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="nf">clear_user_data_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="s1">&#39;_clear_user_dir&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clear_dir_with_shutil</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">)</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="s2">&quot;_clear_user_dir&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clear_user_data_dir</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">connect_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                    <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="n">auto_close</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                    <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;More easier way to init a connected Tab with `async with`.</span>
+    <span class="k">def</span> <span class="nf">connect_tab</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">auto_close</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;More easier way to init a connected Tab with `async with`.</span>
 
 <span class="sd">        Got a connected Tab object by using `async with chromed.connect_tab(0) as tab:`</span>
 
@@ -1214,13 +1233,14 @@
 
 <span class="sd">            If auto_close is True: close this tab while exiting context.</span>
 
-<span class="sd">            View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-attachToTarget</span>
-<span class="sd">&#39;&#39;&#39;</span>
-        <span class="k">return</span> <span class="n">_SingleTabConnectionManagerDaemon</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
-                                                 <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
-                                                 <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-                                                 <span class="n">auto_close</span><span class="o">=</span><span class="n">auto_close</span><span class="p">,</span>
-                                                 <span class="n">flatten</span><span class="o">=</span><span class="n">flatten</span><span class="p">)</span>
+<span class="sd">            View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-attachToTarget&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">_SingleTabConnectionManagerDaemon</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+            <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+            <span class="n">auto_close</span><span class="o">=</span><span class="n">auto_close</span><span class="p">,</span>
+            <span class="n">flatten</span><span class="o">=</span><span class="n">flatten</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span> <span class="nf">close_browser</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="s2">&quot;close browser peacefully&quot;</span>
@@ -1243,9 +1263,7 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BrowserContext</span><span class="p">:</span>
         <span class="s2">&quot;create a new browser context, which can be set new proxy, same like the incognito mode&quot;</span>
         <span class="k">return</span> <span class="n">BrowserContext</span><span class="p">(</span>
-            <span class="n">chrome</span><span class="o">=</span><span class="n">AsyncChrome</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
-                               <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
-                               <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">),</span>
+            <span class="n">chrome</span><span class="o">=</span><span class="n">AsyncChrome</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">),</span>
             <span class="n">disposeOnDetach</span><span class="o">=</span><span class="n">disposeOnDetach</span><span class="p">,</span>
             <span class="n">proxyServer</span><span class="o">=</span><span class="n">proxyServer</span><span class="p">,</span>
             <span class="n">proxyBypassList</span><span class="o">=</span><span class="n">proxyBypassList</span><span class="p">,</span>
@@ -1254,7 +1272,7 @@
 
     <span class="k">def</span> <span class="nf">incognito_tab</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;about:blank&#39;</span><span class="p">,</span>
+        <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;about:blank&quot;</span><span class="p">,</span>
         <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">enableBeginFrameControl</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1267,9 +1285,7 @@
         <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="s2">&quot;create a new tab with incognito mode, this is really a good choice&quot;</span>
-        <span class="n">chrome</span> <span class="o">=</span> <span class="n">AsyncChrome</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
-                             <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
-                             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">)</span>
+        <span class="n">chrome</span> <span class="o">=</span> <span class="n">AsyncChrome</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">chrome</span><span class="o">.</span><span class="n">incognito_tab</span><span class="p">(</span>
             <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
             <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
@@ -1321,19 +1337,17 @@
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">876</span>
-<span class="normal">877</span>
-<span class="normal">878</span>
-<span class="normal">879</span>
-<span class="normal">880</span>
-<span class="normal">881</span>
-<span class="normal">882</span>
-<span class="normal">883</span>
-<span class="normal">884</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">check_chrome_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">896</span>
+<span class="normal">897</span>
+<span class="normal">898</span>
+<span class="normal">899</span>
+<span class="normal">900</span>
+<span class="normal">901</span>
+<span class="normal">902</span>
+<span class="normal">903</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">check_chrome_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="s2">&quot;check if the chrome api is available&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_ok</span> <span class="ow">and</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_connection</span><span class="p">():</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;launch_chrome success: </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2">, args: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="o">.</span><span class="n">args</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;launch_chrome success: </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2">, args: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="o">.</span><span class="n">args</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">True</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;launch_chrome failed: </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2">, args: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cmd</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1364,14 +1378,14 @@
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">842</span>
-<span class="normal">843</span>
-<span class="normal">844</span>
-<span class="normal">845</span>
-<span class="normal">846</span>
-<span class="normal">847</span>
-<span class="normal">848</span>
-<span class="normal">849</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">check_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">862</span>
+<span class="normal">863</span>
+<span class="normal">864</span>
+<span class="normal">865</span>
+<span class="normal">866</span>
+<span class="normal">867</span>
+<span class="normal">868</span>
+<span class="normal">869</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">check_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="s2">&quot;check chrome connection ok&quot;</span>
     <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MAX_WAIT_CHECKING_SECONDS</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)):</span>
         <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_chrome_connection</span><span class="p">():</span>
@@ -1405,14 +1419,14 @@
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1000</span>
-<span class="normal">1001</span>
-<span class="normal">1002</span>
-<span class="normal">1003</span>
-<span class="normal">1004</span>
-<span class="normal">1005</span>
-<span class="normal">1006</span>
-<span class="normal">1007</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">close_browser</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1028</span>
+<span class="normal">1029</span>
+<span class="normal">1030</span>
+<span class="normal">1031</span>
+<span class="normal">1032</span>
+<span class="normal">1033</span>
+<span class="normal">1034</span>
+<span class="normal">1035</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">close_browser</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="s2">&quot;close browser peacefully&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_tab</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="k">as</span> <span class="n">tab</span><span class="p">:</span>
@@ -1452,49 +1466,55 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">977</span>
-<span class="normal">978</span>
-<span class="normal">979</span>
-<span class="normal">980</span>
-<span class="normal">981</span>
-<span class="normal">982</span>
-<span class="normal">983</span>
-<span class="normal">984</span>
-<span class="normal">985</span>
-<span class="normal">986</span>
-<span class="normal">987</span>
-<span class="normal">988</span>
-<span class="normal">989</span>
-<span class="normal">990</span>
-<span class="normal">991</span>
-<span class="normal">992</span>
-<span class="normal">993</span>
-<span class="normal">994</span>
-<span class="normal">995</span>
-<span class="normal">996</span>
-<span class="normal">997</span>
-<span class="normal">998</span></pre></div></td><td class="code"><div><pre><span></span><code>    <span class="k">def</span> <span class="nf">connect_tab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                    <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-                    <span class="n">auto_close</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                    <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;More easier way to init a connected Tab with `async with`.</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1002</span>
+<span class="normal">1003</span>
+<span class="normal">1004</span>
+<span class="normal">1005</span>
+<span class="normal">1006</span>
+<span class="normal">1007</span>
+<span class="normal">1008</span>
+<span class="normal">1009</span>
+<span class="normal">1010</span>
+<span class="normal">1011</span>
+<span class="normal">1012</span>
+<span class="normal">1013</span>
+<span class="normal">1014</span>
+<span class="normal">1015</span>
+<span class="normal">1016</span>
+<span class="normal">1017</span>
+<span class="normal">1018</span>
+<span class="normal">1019</span>
+<span class="normal">1020</span>
+<span class="normal">1021</span>
+<span class="normal">1022</span>
+<span class="normal">1023</span>
+<span class="normal">1024</span>
+<span class="normal">1025</span>
+<span class="normal">1026</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">connect_tab</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">index</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">auto_close</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;More easier way to init a connected Tab with `async with`.</span>
 
-<span class="sd">        Got a connected Tab object by using `async with chromed.connect_tab(0) as tab:`</span>
+<span class="sd">    Got a connected Tab object by using `async with chromed.connect_tab(0) as tab:`</span>
 
-<span class="sd">            index = 0 means the current tab.</span>
-<span class="sd">            index = None means create a new tab.</span>
-<span class="sd">            index = &#39;http://python.org&#39; means create a new tab with url.</span>
-<span class="sd">            index = &#39;F130D0295DB5879791AA490322133AFC&#39; means the tab with this id.</span>
+<span class="sd">        index = 0 means the current tab.</span>
+<span class="sd">        index = None means create a new tab.</span>
+<span class="sd">        index = &#39;http://python.org&#39; means create a new tab with url.</span>
+<span class="sd">        index = &#39;F130D0295DB5879791AA490322133AFC&#39; means the tab with this id.</span>
 
-<span class="sd">            If auto_close is True: close this tab while exiting context.</span>
+<span class="sd">        If auto_close is True: close this tab while exiting context.</span>
 
-<span class="sd">            View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-attachToTarget</span>
-<span class="sd">&#39;&#39;&#39;</span>
-        <span class="k">return</span> <span class="n">_SingleTabConnectionManagerDaemon</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
-                                                 <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
-                                                 <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-                                                 <span class="n">auto_close</span><span class="o">=</span><span class="n">auto_close</span><span class="p">,</span>
-                                                 <span class="n">flatten</span><span class="o">=</span><span class="n">flatten</span><span class="p">)</span>
+<span class="sd">        View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-attachToTarget&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_SingleTabConnectionManagerDaemon</span><span class="p">(</span>
+        <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+        <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+        <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+        <span class="n">auto_close</span><span class="o">=</span><span class="n">auto_close</span><span class="p">,</span>
+        <span class="n">flatten</span><span class="o">=</span><span class="n">flatten</span><span class="p">,</span>
+    <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
       </details>
   </div>
@@ -1517,23 +1537,21 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1012</span>
-<span class="normal">1013</span>
-<span class="normal">1014</span>
-<span class="normal">1015</span>
-<span class="normal">1016</span>
-<span class="normal">1017</span>
-<span class="normal">1018</span>
-<span class="normal">1019</span>
-<span class="normal">1020</span>
-<span class="normal">1021</span>
-<span class="normal">1022</span>
-<span class="normal">1023</span>
-<span class="normal">1024</span>
-<span class="normal">1025</span>
-<span class="normal">1026</span>
-<span class="normal">1027</span>
-<span class="normal">1028</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_context</span><span class="p">(</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1040</span>
+<span class="normal">1041</span>
+<span class="normal">1042</span>
+<span class="normal">1043</span>
+<span class="normal">1044</span>
+<span class="normal">1045</span>
+<span class="normal">1046</span>
+<span class="normal">1047</span>
+<span class="normal">1048</span>
+<span class="normal">1049</span>
+<span class="normal">1050</span>
+<span class="normal">1051</span>
+<span class="normal">1052</span>
+<span class="normal">1053</span>
+<span class="normal">1054</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">create_context</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">disposeOnDetach</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">proxyServer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1542,9 +1560,7 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BrowserContext</span><span class="p">:</span>
     <span class="s2">&quot;create a new browser context, which can be set new proxy, same like the incognito mode&quot;</span>
     <span class="k">return</span> <span class="n">BrowserContext</span><span class="p">(</span>
-        <span class="n">chrome</span><span class="o">=</span><span class="n">AsyncChrome</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
-                           <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
-                           <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">),</span>
+        <span class="n">chrome</span><span class="o">=</span><span class="n">AsyncChrome</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">),</span>
         <span class="n">disposeOnDetach</span><span class="o">=</span><span class="n">disposeOnDetach</span><span class="p">,</span>
         <span class="n">proxyServer</span><span class="o">=</span><span class="n">proxyServer</span><span class="p">,</span>
         <span class="n">proxyBypassList</span><span class="o">=</span><span class="n">proxyBypassList</span><span class="p">,</span>
@@ -1577,29 +1593,29 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">859</span>
-<span class="normal">860</span>
-<span class="normal">861</span>
-<span class="normal">862</span>
-<span class="normal">863</span>
-<span class="normal">864</span>
-<span class="normal">865</span>
-<span class="normal">866</span>
-<span class="normal">867</span>
-<span class="normal">868</span>
-<span class="normal">869</span>
-<span class="normal">870</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">async</span> <span class="k">def</span> <span class="nf">get_free_port</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
-                        <span class="n">host</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
-                        <span class="n">start</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span>
-                        <span class="n">max_tries</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                        <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">879</span>
+<span class="normal">880</span>
+<span class="normal">881</span>
+<span class="normal">882</span>
+<span class="normal">883</span>
+<span class="normal">884</span>
+<span class="normal">885</span>
+<span class="normal">886</span>
+<span class="normal">887</span>
+<span class="normal">888</span>
+<span class="normal">889</span>
+<span class="normal">890</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">get_free_port</span><span class="p">(</span>
+    <span class="bp">cls</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span> <span class="n">max_tries</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span>
+<span class="p">):</span>
     <span class="s2">&quot;find a free port which can be used&quot;</span>
-    <span class="k">return</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_free_port</span><span class="p">,</span>
-                           <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
-                           <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span>
-                           <span class="n">max_tries</span><span class="o">=</span><span class="n">max_tries</span><span class="p">,</span>
-                           <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_free_port</span><span class="p">,</span>
+        <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+        <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span>
+        <span class="n">max_tries</span><span class="o">=</span><span class="n">max_tries</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+    <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
       </details>
   </div>
@@ -1622,39 +1638,37 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1030</span>
-<span class="normal">1031</span>
-<span class="normal">1032</span>
-<span class="normal">1033</span>
-<span class="normal">1034</span>
-<span class="normal">1035</span>
-<span class="normal">1036</span>
-<span class="normal">1037</span>
-<span class="normal">1038</span>
-<span class="normal">1039</span>
-<span class="normal">1040</span>
-<span class="normal">1041</span>
-<span class="normal">1042</span>
-<span class="normal">1043</span>
-<span class="normal">1044</span>
-<span class="normal">1045</span>
-<span class="normal">1046</span>
-<span class="normal">1047</span>
-<span class="normal">1048</span>
-<span class="normal">1049</span>
-<span class="normal">1050</span>
-<span class="normal">1051</span>
-<span class="normal">1052</span>
-<span class="normal">1053</span>
-<span class="normal">1054</span>
-<span class="normal">1055</span>
-<span class="normal">1056</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1056</span>
 <span class="normal">1057</span>
 <span class="normal">1058</span>
 <span class="normal">1059</span>
-<span class="normal">1060</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">incognito_tab</span><span class="p">(</span>
+<span class="normal">1060</span>
+<span class="normal">1061</span>
+<span class="normal">1062</span>
+<span class="normal">1063</span>
+<span class="normal">1064</span>
+<span class="normal">1065</span>
+<span class="normal">1066</span>
+<span class="normal">1067</span>
+<span class="normal">1068</span>
+<span class="normal">1069</span>
+<span class="normal">1070</span>
+<span class="normal">1071</span>
+<span class="normal">1072</span>
+<span class="normal">1073</span>
+<span class="normal">1074</span>
+<span class="normal">1075</span>
+<span class="normal">1076</span>
+<span class="normal">1077</span>
+<span class="normal">1078</span>
+<span class="normal">1079</span>
+<span class="normal">1080</span>
+<span class="normal">1081</span>
+<span class="normal">1082</span>
+<span class="normal">1083</span>
+<span class="normal">1084</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">incognito_tab</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;about:blank&#39;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;about:blank&quot;</span><span class="p">,</span>
     <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">enableBeginFrameControl</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1667,9 +1681,7 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
     <span class="n">flatten</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
     <span class="s2">&quot;create a new tab with incognito mode, this is really a good choice&quot;</span>
-    <span class="n">chrome</span> <span class="o">=</span> <span class="n">AsyncChrome</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
-                         <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
-                         <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">)</span>
+    <span class="n">chrome</span> <span class="o">=</span> <span class="n">AsyncChrome</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">chrome</span><span class="o">.</span><span class="n">incognito_tab</span><span class="p">(</span>
         <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
         <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
@@ -1709,36 +1721,36 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">820</span>
-<span class="normal">821</span>
-<span class="normal">822</span>
-<span class="normal">823</span>
-<span class="normal">824</span>
-<span class="normal">825</span>
-<span class="normal">826</span>
-<span class="normal">827</span>
-<span class="normal">828</span>
-<span class="normal">829</span>
-<span class="normal">830</span>
-<span class="normal">831</span>
-<span class="normal">832</span>
-<span class="normal">833</span>
-<span class="normal">834</span>
-<span class="normal">835</span>
-<span class="normal">836</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">launch_chrome</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">840</span>
+<span class="normal">841</span>
+<span class="normal">842</span>
+<span class="normal">843</span>
+<span class="normal">844</span>
+<span class="normal">845</span>
+<span class="normal">846</span>
+<span class="normal">847</span>
+<span class="normal">848</span>
+<span class="normal">849</span>
+<span class="normal">850</span>
+<span class="normal">851</span>
+<span class="normal">852</span>
+<span class="normal">853</span>
+<span class="normal">854</span>
+<span class="normal">855</span>
+<span class="normal">856</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">launch_chrome</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="s2">&quot;launch the chrome with remote-debugging mode&quot;</span>
     <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_start_chrome_process</span><span class="p">)</span>
     <span class="n">error</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MAX_WAIT_CHECKING_SECONDS</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_proc_ok</span><span class="p">):</span>
-            <span class="n">error</span> <span class="o">=</span> <span class="s1">&#39;launch_chrome failed for proc not ok&#39;</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="s2">&quot;launch_chrome failed for proc not ok&quot;</span>
             <span class="k">break</span>
         <span class="k">if</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_chrome_connection</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ready</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">break</span>
         <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">error</span> <span class="o">=</span> <span class="s1">&#39;launch_chrome failed for connection not ok&#39;</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="s2">&quot;launch_chrome failed for connection not ok&quot;</span>
     <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">ChromeRuntimeError</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
@@ -1768,11 +1780,11 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">814</span>
-<span class="normal">815</span>
-<span class="normal">816</span>
-<span class="normal">817</span>
-<span class="normal">818</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">restart</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">834</span>
+<span class="normal">835</span>
+<span class="normal">836</span>
+<span class="normal">837</span>
+<span class="normal">838</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">restart</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="s2">&quot;restart the chrome process&quot;</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;restarting </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">await</span> <span class="n">async_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kill</span><span class="p">)</span>
@@ -1803,21 +1815,22 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">890</span>
-<span class="normal">891</span>
-<span class="normal">892</span>
-<span class="normal">893</span>
-<span class="normal">894</span>
-<span class="normal">895</span>
-<span class="normal">896</span>
-<span class="normal">897</span>
-<span class="normal">898</span>
-<span class="normal">899</span>
-<span class="normal">900</span>
-<span class="normal">901</span>
-<span class="normal">902</span>
-<span class="normal">903</span>
-<span class="normal">904</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">run_forever</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">909</span>
+<span class="normal">910</span>
+<span class="normal">911</span>
+<span class="normal">912</span>
+<span class="normal">913</span>
+<span class="normal">914</span>
+<span class="normal">915</span>
+<span class="normal">916</span>
+<span class="normal">917</span>
+<span class="normal">918</span>
+<span class="normal">919</span>
+<span class="normal">920</span>
+<span class="normal">921</span>
+<span class="normal">922</span>
+<span class="normal">923</span>
+<span class="normal">924</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">run_forever</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="s2">&quot;start the daemon and ensure proc is alive&quot;</span>
     <span class="n">interval</span> <span class="o">=</span> <span class="n">interval</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">proc_check_interval</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown</span><span class="p">:</span>
@@ -1828,7 +1841,8 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> run_forever(block=</span><span class="si">{</span><span class="n">block</span><span class="si">}</span><span class="s2">, interval=</span><span class="si">{</span><span class="n">interval</span><span class="si">}</span><span class="s2">, max_deaths=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">max_deaths</span><span class="si">}</span><span class="s2">).&quot;</span>
     <span class="p">)</span>
     <span class="n">task</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_daemon_thread</span> <span class="ow">or</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_daemon</span><span class="p">(</span><span class="n">interval</span><span class="o">=</span><span class="n">interval</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_daemon</span><span class="p">(</span><span class="n">interval</span><span class="o">=</span><span class="n">interval</span><span class="p">)</span>
+    <span class="p">)</span>
     <span class="k">if</span> <span class="n">block</span><span class="p">:</span>
         <span class="k">await</span> <span class="n">task</span>
     <span class="k">return</span> <span class="n">task</span>
@@ -1858,29 +1872,31 @@ View more about flatten: https://chromedevtools.github.io/devtools-protocol/tot/
 
       <details class="quote">
         <summary>Source code in <code>ichrome\daemon.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">951</span>
-<span class="normal">952</span>
-<span class="normal">953</span>
-<span class="normal">954</span>
-<span class="normal">955</span>
-<span class="normal">956</span>
-<span class="normal">957</span>
-<span class="normal">958</span>
-<span class="normal">959</span>
-<span class="normal">960</span>
-<span class="normal">961</span>
-<span class="normal">962</span>
-<span class="normal">963</span>
-<span class="normal">964</span>
-<span class="normal">965</span>
-<span class="normal">966</span>
-<span class="normal">967</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">975</span>
+<span class="normal">976</span>
+<span class="normal">977</span>
+<span class="normal">978</span>
+<span class="normal">979</span>
+<span class="normal">980</span>
+<span class="normal">981</span>
+<span class="normal">982</span>
+<span class="normal">983</span>
+<span class="normal">984</span>
+<span class="normal">985</span>
+<span class="normal">986</span>
+<span class="normal">987</span>
+<span class="normal">988</span>
+<span class="normal">989</span>
+<span class="normal">990</span>
+<span class="normal">991</span>
+<span class="normal">992</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="s2">&quot;shutdown the chrome, but do not use it, use async with instead.&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown</span><span class="p">:</span>
         <span class="c1"># logger.debug(f&quot;{self} shutdown at {ttime(self._shutdown)} yet.&quot;)</span>
         <span class="k">return</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_shutdown_reason</span> <span class="o">=</span> <span class="n">reason</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">update_shutdown_time</span><span class="p">()</span>
-    <span class="n">reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39; for </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; for </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> shutting down</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">, start-up: </span><span class="si">{</span><span class="n">ttime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span><span class="si">}</span><span class="s2">, duration: </span><span class="si">{</span><span class="n">timepass</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span> <span class="n">accuracy</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
     <span class="p">)</span>

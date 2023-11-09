@@ -635,12 +635,10 @@
 <span class="normal">77</span>
 <span class="normal">78</span>
 <span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Tag</span><span class="p">:</span>
+<span class="normal">80</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Tag</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;Handle the element&#39;s tagName, innerHTML, outerHTML, textContent, text, attributes, and the action result.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tagName</span><span class="p">,</span> <span class="n">innerHTML</span><span class="p">,</span> <span class="n">outerHTML</span><span class="p">,</span> <span class="n">textContent</span><span class="p">,</span> <span class="n">attributes</span><span class="p">,</span>
-                 <span class="n">result</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tagName</span><span class="p">,</span> <span class="n">innerHTML</span><span class="p">,</span> <span class="n">outerHTML</span><span class="p">,</span> <span class="n">textContent</span><span class="p">,</span> <span class="n">attributes</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tagName</span> <span class="o">=</span> <span class="n">tagName</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">innerHTML</span> <span class="o">=</span> <span class="n">innerHTML</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">outerHTML</span> <span class="o">=</span> <span class="n">outerHTML</span>
@@ -701,9 +699,9 @@
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="s2">&quot;get the attribute of the tag&quot;</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -728,7 +726,8 @@
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">66</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
+<span class="normal">66</span>
 <span class="normal">67</span>
 <span class="normal">68</span>
 <span class="normal">69</span>
@@ -736,8 +735,7 @@
 <span class="normal">71</span>
 <span class="normal">72</span>
 <span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal">74</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="s2">&quot;convert Tag object to dict&quot;</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">&quot;tagName&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tagName</span><span class="p">,</span>
@@ -867,7 +865,15 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">131</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
 <span class="normal">132</span>
 <span class="normal">133</span>
 <span class="normal">134</span>
@@ -894,23 +900,9 @@ set max_deaths and port, will return before timeout.</p>
 <span class="normal">155</span>
 <span class="normal">156</span>
 <span class="normal">157</span>
-<span class="normal">158</span>
-<span class="normal">159</span>
-<span class="normal">160</span>
-<span class="normal">161</span>
-<span class="normal">162</span>
-<span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">clear_chrome_process</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                         <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                         <span class="n">max_deaths</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                         <span class="n">interval</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-                         <span class="n">host</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                         <span class="n">proc_names</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">158</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">clear_chrome_process</span><span class="p">(</span>
+    <span class="n">port</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_deaths</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proc_names</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;kill chrome processes, if port is not set, kill all chrome with --remote-debugging-port.</span>
 <span class="sd">    set timeout to avoid running forever.</span>
 <span class="sd">    set max_deaths and port, will return before timeout.</span>
@@ -970,12 +962,12 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">388</span>
-<span class="normal">389</span>
-<span class="normal">390</span>
-<span class="normal">391</span>
-<span class="normal">392</span>
-<span class="normal">393</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">ensure_awaitable</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">ensure_awaitable</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
     <span class="s2">&quot;avoid raising awaitable error while await something&quot;</span>
     <span class="k">if</span> <span class="n">isawaitable</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
         <span class="k">return</span> <span class="k">await</span> <span class="n">result</span>
@@ -1003,7 +995,18 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">172</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
 <span class="normal">173</span>
 <span class="normal">174</span>
 <span class="normal">175</span>
@@ -1014,18 +1017,7 @@ set max_deaths and port, will return before timeout.</p>
 <span class="normal">180</span>
 <span class="normal">181</span>
 <span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_dir_size</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<span class="normal">183</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_dir_size</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="s2">&quot;return the dir space usage of the given dir path&quot;</span>
 
     <span class="k">def</span> <span class="nf">get_st_size</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
@@ -1070,29 +1062,21 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">115</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
 <span class="normal">116</span>
 <span class="normal">117</span>
 <span class="normal">118</span>
 <span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_memory_by_port</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span>
-                       <span class="n">attr</span><span class="o">=</span><span class="s1">&#39;uss&#39;</span><span class="p">,</span>
-                       <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;MB&#39;</span><span class="p">,</span>
-                       <span class="n">host</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                       <span class="n">proc_names</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">120</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_memory_by_port</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="s2">&quot;uss&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;MB&quot;</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proc_names</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;get memory usage of chrome proc found with port and host.Only support local Daemon. `uss` is slower than `rss` but useful.&quot;&quot;&quot;</span>
     <span class="n">procs</span> <span class="o">=</span> <span class="n">get_proc</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">proc_names</span><span class="o">=</span><span class="n">proc_names</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">procs</span><span class="p">:</span>
-        <span class="n">u</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;KB&#39;</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="s1">&#39;MB&#39;</span><span class="p">:</span> <span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;GB&#39;</span><span class="p">:</span> <span class="mi">1024</span><span class="o">**</span><span class="mi">3</span><span class="p">}</span>
-        <span class="k">if</span> <span class="n">attr</span> <span class="o">==</span> <span class="s1">&#39;uss&#39;</span><span class="p">:</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;KB&quot;</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="s2">&quot;MB&quot;</span><span class="p">:</span> <span class="mi">1024</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;GB&quot;</span><span class="p">:</span> <span class="mi">1024</span><span class="o">**</span><span class="mi">3</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">attr</span> <span class="o">==</span> <span class="s2">&quot;uss&quot;</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">((</span><span class="n">proc</span><span class="o">.</span><span class="n">memory_full_info</span><span class="p">()</span><span class="o">.</span><span class="n">uss</span> <span class="k">for</span> <span class="n">proc</span> <span class="ow">in</span> <span class="n">procs</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">((</span><span class="nb">getattr</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="n">memory_info</span><span class="p">(),</span> <span class="n">attr</span><span class="p">)</span> <span class="k">for</span> <span class="n">proc</span> <span class="ow">in</span> <span class="n">procs</span><span class="p">))</span>
@@ -1119,21 +1103,17 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">105</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_proc</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span> <span class="n">proc_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">psutil</span><span class="o">.</span><span class="n">Process</span><span class="p">]:</span>
+<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_proc</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">9222</span><span class="p">,</span> <span class="n">proc_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">psutil</span><span class="o">.</span><span class="n">Process</span><span class="p">]:</span>
     <span class="s2">&quot;find procs with given port and proc_names and host&quot;</span>
     <span class="n">regex</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;--remote-debugging-port=</span><span class="si">{</span><span class="n">port</span> <span class="ow">or</span> <span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="n">host_regex</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;--remote-debugging-address=</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">host</span> <span class="k">else</span> <span class="kc">None</span>
     <span class="n">proc_names</span> <span class="o">=</span> <span class="n">proc_names</span> <span class="ow">or</span> <span class="n">CHROME_PROCESS_NAMES</span>
-    <span class="k">return</span> <span class="n">get_proc_by_regex</span><span class="p">(</span><span class="n">regex</span><span class="p">,</span>
-                             <span class="n">proc_names</span><span class="o">=</span><span class="n">proc_names</span><span class="p">,</span>
-                             <span class="n">host_regex</span><span class="o">=</span><span class="n">host_regex</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">get_proc_by_regex</span><span class="p">(</span><span class="n">regex</span><span class="p">,</span> <span class="n">proc_names</span><span class="o">=</span><span class="n">proc_names</span><span class="p">,</span> <span class="n">host_regex</span><span class="o">=</span><span class="n">host_regex</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
       </details>
   </div>
@@ -1156,7 +1136,8 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 84</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 83</span>
+<span class="normal"> 84</span>
 <span class="normal"> 85</span>
 <span class="normal"> 86</span>
 <span class="normal"> 87</span>
@@ -1172,21 +1153,18 @@ set max_deaths and port, will return before timeout.</p>
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_proc_by_regex</span><span class="p">(</span><span class="n">regex</span><span class="p">,</span> <span class="n">proc_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">host_regex</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_proc_by_regex</span><span class="p">(</span><span class="n">regex</span><span class="p">,</span> <span class="n">proc_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">host_regex</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="s2">&quot;find the procs with given proc_names and host_regex&quot;</span>
     <span class="n">proc_names</span> <span class="o">=</span> <span class="n">proc_names</span> <span class="ow">or</span> <span class="n">CHROME_PROCESS_NAMES</span>
     <span class="n">procs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">proc</span> <span class="ow">in</span> <span class="n">psutil</span><span class="o">.</span><span class="n">process_iter</span><span class="p">():</span>
-                <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">proc_names</span> <span class="ow">or</span> <span class="n">proc</span><span class="o">.</span><span class="n">name</span><span class="p">()</span> <span class="ow">in</span> <span class="n">proc_names</span><span class="p">):</span>
-                    <span class="n">cmd_string</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="n">cmdline</span><span class="p">())</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">proc_names</span> <span class="ow">or</span> <span class="n">proc</span><span class="o">.</span><span class="n">name</span><span class="p">()</span> <span class="ow">in</span> <span class="n">proc_names</span><span class="p">:</span>
+                    <span class="n">cmd_string</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="n">cmdline</span><span class="p">())</span>
                     <span class="n">match_port</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">regex</span><span class="p">,</span> <span class="n">cmd_string</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">match_port</span><span class="p">:</span>
-                        <span class="n">match_host</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">host_regex</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
-                            <span class="n">host_regex</span><span class="p">,</span> <span class="n">cmd_string</span><span class="p">)</span>
+                        <span class="n">match_host</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">host_regex</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">host_regex</span><span class="p">,</span> <span class="n">cmd_string</span><span class="p">)</span>
                         <span class="k">if</span> <span class="n">match_host</span><span class="p">:</span>
                             <span class="n">procs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">procs</span>
@@ -1215,9 +1193,9 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_readable_dir_size</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_readable_dir_size</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="s2">&quot;return the dir space usage of the given dir path with readable text.&quot;</span>
     <span class="k">return</span> <span class="n">get_readable_size</span><span class="p">(</span><span class="n">get_dir_size</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">rounded</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -1242,7 +1220,18 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">202</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
 <span class="normal">203</span>
 <span class="normal">204</span>
 <span class="normal">205</span>
@@ -1389,29 +1378,9 @@ set max_deaths and port, will return before timeout.</p>
 <span class="normal">346</span>
 <span class="normal">347</span>
 <span class="normal">348</span>
-<span class="normal">349</span>
-<span class="normal">350</span>
-<span class="normal">351</span>
-<span class="normal">352</span>
-<span class="normal">353</span>
-<span class="normal">354</span>
-<span class="normal">355</span>
-<span class="normal">356</span>
-<span class="normal">357</span>
-<span class="normal">358</span>
-<span class="normal">359</span>
-<span class="normal">360</span>
-<span class="normal">361</span>
-<span class="normal">362</span>
-<span class="normal">363</span>
-<span class="normal">364</span>
-<span class="normal">365</span>
-<span class="normal">366</span>
-<span class="normal">367</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">install_chromium</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                     <span class="n">platform_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                     <span class="n">x64</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                     <span class="n">max_threads</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-                     <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">349</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">install_chromium</span><span class="p">(</span>
+    <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">platform_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x64</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_threads</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
     <span class="s2">&quot;download and unzip the portable chromium automatically&quot;</span>
     <span class="kn">import</span> <span class="nn">os</span>
     <span class="kn">import</span> <span class="nn">platform</span>
@@ -1435,86 +1404,82 @@ set max_deaths and port, will return before timeout.</p>
             <span class="n">start</span> <span class="o">+=</span> <span class="n">chunk</span> <span class="o">+</span> <span class="mi">1</span>
 
     <span class="k">def</span> <span class="nf">show_versions</span><span class="p">():</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://omahaproxy.appspot.com/all.json&#39;</span><span class="p">,</span>
-                    <span class="n">proxies</span><span class="o">=</span><span class="p">{</span>
-                        <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span>
-                        <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span>
-                    <span class="p">},</span>
-                    <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;https://omahaproxy.appspot.com/all.json&quot;</span><span class="p">,</span>
+            <span class="n">proxies</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">},</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
                 <span class="n">rj</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
                 <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
                 <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">rj</span><span class="p">:</span>
-                    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;versions&#39;</span><span class="p">]:</span>
-                        <span class="n">result</span><span class="p">[</span><span class="n">v</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-                            <span class="n">v</span><span class="p">[</span><span class="s1">&#39;channel&#39;</span><span class="p">],</span>
-                            <span class="n">v</span><span class="p">[</span><span class="s1">&#39;branch_base_position&#39;</span><span class="p">],</span>
-                            <span class="n">v</span><span class="p">[</span><span class="s1">&#39;current_reldate&#39;</span><span class="p">],</span>
+                    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">o</span><span class="p">[</span><span class="s2">&quot;versions&quot;</span><span class="p">]:</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">v</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="n">v</span><span class="p">[</span><span class="s2">&quot;channel&quot;</span><span class="p">],</span>
+                            <span class="n">v</span><span class="p">[</span><span class="s2">&quot;branch_base_position&quot;</span><span class="p">],</span>
+                            <span class="n">v</span><span class="p">[</span><span class="s2">&quot;current_reldate&quot;</span><span class="p">],</span>
                         <span class="p">]</span>
                 <span class="n">items</span> <span class="o">=</span> <span class="p">[[</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
                 <span class="n">items</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Current Versions:&#39;</span><span class="p">)</span>
-                <span class="n">head</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;version_code&#39;</span><span class="p">,</span> <span class="s1">&#39;version&#39;</span><span class="p">,</span> <span class="s1">&#39;channel&#39;</span><span class="p">]</span>
-                <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">head</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current Versions:&quot;</span><span class="p">)</span>
+                <span class="n">head</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;version_code&quot;</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="s2">&quot;channel&quot;</span><span class="p">]</span>
+                <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">head</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">item</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">item</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="kn">import</span> <span class="nn">traceback</span>
+
             <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
             <span class="k">return</span>
 
     <span class="c1"># https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html</span>
     <span class="c1"># https://storage.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Linux_x64%2FLAST_CHANGE?alt=media</span>
     <span class="c1"># https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/798492/chrome-linux.zip</span>
-    <span class="n">welcome</span> <span class="o">=</span> <span class="s1">&#39;Referer:</span><span class="se">\n</span><span class="s1">  1. chromium build archives</span><span class="se">\n</span><span class="s1">    https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html</span><span class="se">\n</span><span class="s1">  2. latest releases</span><span class="se">\n</span><span class="s1">    https://omahaproxy.appspot.com/</span><span class="se">\n</span><span class="s1">    https://omahaproxy.appspot.com/all.json&#39;</span>
+    <span class="n">welcome</span> <span class="o">=</span> <span class="s2">&quot;Referer:</span><span class="se">\n</span><span class="s2">  1. chromium build archives</span><span class="se">\n</span><span class="s2">    https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html</span><span class="se">\n</span><span class="s2">  2. latest releases</span><span class="se">\n</span><span class="s2">    https://omahaproxy.appspot.com/</span><span class="se">\n</span><span class="s2">    https://omahaproxy.appspot.com/all.json&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">welcome</span><span class="p">)</span>
     <span class="n">req</span> <span class="o">=</span> <span class="n">tPool</span><span class="p">(</span><span class="n">max_threads</span><span class="p">)</span>
     <span class="c1"># os.environ[&#39;http_proxy&#39;] = &#39;https://localhost:1080&#39;</span>
-    <span class="n">proxy</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;HTTPS_PROXY&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;https_proxy&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span>
-        <span class="s1">&#39;http_proxy&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;HTTP_PROXY&#39;</span><span class="p">)</span>
+    <span class="n">proxy</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HTTPS_PROXY&quot;</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;https_proxy&quot;</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;http_proxy&quot;</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;HTTP_PROXY&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
     <span class="n">show_versions</span><span class="p">()</span>
     <span class="n">platform_name</span> <span class="o">=</span> <span class="n">platform_name</span> <span class="ow">or</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
     <span class="n">platform_map</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s1">&#39;Linux&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Linux&#39;</span><span class="p">,</span> <span class="s1">&#39;_x64&#39;</span> <span class="k">if</span> <span class="n">x64</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;chrome-linux&#39;</span><span class="p">,</span> <span class="s1">&#39;chrome&#39;</span><span class="p">],</span>
-        <span class="s1">&#39;Windows&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Win&#39;</span><span class="p">,</span> <span class="s1">&#39;_x64&#39;</span> <span class="k">if</span> <span class="n">x64</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;chrome-win&#39;</span><span class="p">,</span> <span class="s1">&#39;chrome.exe&#39;</span><span class="p">],</span>
-        <span class="s1">&#39;Darwin&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Mac&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;chrome-mac&#39;</span><span class="p">,</span> <span class="s1">&#39;chrome.app&#39;</span><span class="p">],</span>
+        <span class="s2">&quot;Linux&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Linux&quot;</span><span class="p">,</span> <span class="s2">&quot;_x64&quot;</span> <span class="k">if</span> <span class="n">x64</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;chrome-linux&quot;</span><span class="p">,</span> <span class="s2">&quot;chrome&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;Windows&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Win&quot;</span><span class="p">,</span> <span class="s2">&quot;_x64&quot;</span> <span class="k">if</span> <span class="n">x64</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;chrome-win&quot;</span><span class="p">,</span> <span class="s2">&quot;chrome.exe&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;Darwin&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Mac&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;chrome-mac&quot;</span><span class="p">,</span> <span class="s2">&quot;chrome.app&quot;</span><span class="p">],</span>
     <span class="p">}</span>
     <span class="c1"># alias names</span>
-    <span class="n">platform_map</span><span class="p">[</span><span class="s1">&#39;Mac&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">platform_map</span><span class="p">[</span><span class="s1">&#39;Darwin&#39;</span><span class="p">]</span>
-    <span class="n">platform_map</span><span class="p">[</span><span class="s1">&#39;Win&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">platform_map</span><span class="p">[</span><span class="s1">&#39;Windows&#39;</span><span class="p">]</span>
+    <span class="n">platform_map</span><span class="p">[</span><span class="s2">&quot;Mac&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">platform_map</span><span class="p">[</span><span class="s2">&quot;Darwin&quot;</span><span class="p">]</span>
+    <span class="n">platform_map</span><span class="p">[</span><span class="s2">&quot;Win&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">platform_map</span><span class="p">[</span><span class="s2">&quot;Windows&quot;</span><span class="p">]</span>
     <span class="n">_platform_name</span><span class="p">,</span> <span class="n">_x64</span><span class="p">,</span> <span class="n">zip_file_name</span><span class="p">,</span> <span class="n">chrome_runner_name</span> <span class="o">=</span> <span class="n">platform_map</span><span class="p">[</span>
-        <span class="n">platform_name</span><span class="p">]</span>
-    <span class="n">os_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">_platform_name</span><span class="si">}{</span><span class="n">_x64</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">platform_name</span>
+    <span class="p">]</span>
+    <span class="n">os_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_platform_name</span><span class="si">}{</span><span class="n">_x64</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">version</span><span class="p">:</span>
-        <span class="n">version_api</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;https://storage.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/</span><span class="si">{</span><span class="n">os_prefix</span><span class="si">}</span><span class="s1">%2FLAST_CHANGE?alt=media&#39;</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">version_api</span><span class="p">,</span>
-                    <span class="n">timeout</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-                    <span class="n">retry</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                    <span class="n">proxies</span><span class="o">=</span><span class="p">{</span>
-                        <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span>
-                        <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span>
-                    <span class="p">})</span>
+        <span class="n">version_api</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://storage.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/</span><span class="si">{</span><span class="n">os_prefix</span><span class="si">}</span><span class="s2">%2FLAST_CHANGE?alt=media&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">version_api</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">retry</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">proxies</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">}</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;check your network connect to </span><span class="si">{</span><span class="n">version_api</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;check your network connect to </span><span class="si">{</span><span class="n">version_api</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span>
         <span class="n">version</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span>
     <span class="n">version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">version</span><span class="p">)</span>
-    <span class="n">download_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/</span><span class="si">{</span><span class="n">os_prefix</span><span class="si">}</span><span class="s1">%2F</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s1">%2F</span><span class="si">{</span><span class="n">zip_file_name</span><span class="si">}</span><span class="s1">.zip?alt=media&#39;</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Downloading zip file from:&#39;</span><span class="p">,</span> <span class="n">download_url</span><span class="p">)</span>
+    <span class="n">download_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/</span><span class="si">{</span><span class="n">os_prefix</span><span class="si">}</span><span class="s2">%2F</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">%2F</span><span class="si">{</span><span class="n">zip_file_name</span><span class="si">}</span><span class="s2">.zip?alt=media&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Downloading zip file from:&quot;</span><span class="p">,</span> <span class="n">download_url</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">BytesIO</span><span class="p">()</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">download_url</span><span class="p">,</span>
-                     <span class="n">retry</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                     <span class="n">proxies</span><span class="o">=</span><span class="p">{</span>
-                         <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span>
-                         <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span>
-                     <span class="p">})</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">download_url</span><span class="p">,</span> <span class="n">retry</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">proxies</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">})</span>
         <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
-            <span class="n">_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os_prefix</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">version</span><span class="o">-</span><span class="mi">1</span><span class="si">}</span><span class="s1">/&#39;</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
-            <span class="n">pageToken</span> <span class="o">=</span> <span class="n">b64encode</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\n\x0f</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">_prefix</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
-            <span class="n">api</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;https://www.googleapis.com/storage/v1/b/chromium-browser-snapshots/o?delimiter=/&amp;prefix=</span><span class="si">{</span><span class="n">os_prefix</span><span class="si">}</span><span class="s1">/&amp;fields=items(kind,mediaLink,metadata,name,size,updated),kind,prefixes,nextPageToken&amp;pageToken=</span><span class="si">{</span><span class="n">pageToken</span><span class="si">}</span><span class="s1">&#39;</span>
-            <span class="n">r</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api</span><span class="p">,</span> <span class="n">retry</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">proxies</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span> <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">})</span>
-            <span class="n">_items</span> <span class="o">=</span> <span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;.*/(\d+)/$&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s1">&#39;prefixes&#39;</span><span class="p">]]</span>
+            <span class="n">_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">os_prefix</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">version</span><span class="o">-</span><span class="mi">1</span><span class="si">}</span><span class="s2">/&quot;</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="n">pageToken</span> <span class="o">=</span> <span class="n">b64encode</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;</span><span class="se">\n\x0f</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">_prefix</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="n">api</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://www.googleapis.com/storage/v1/b/chromium-browser-snapshots/o?delimiter=/&amp;prefix=</span><span class="si">{</span><span class="n">os_prefix</span><span class="si">}</span><span class="s2">/&amp;fields=items(kind,mediaLink,metadata,name,size,updated),kind,prefixes,nextPageToken&amp;pageToken=</span><span class="si">{</span><span class="n">pageToken</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api</span><span class="p">,</span> <span class="n">retry</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">proxies</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">})</span>
+            <span class="n">_items</span> <span class="o">=</span> <span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;.*/(\d+)/$&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;prefixes&quot;</span><span class="p">]]</span>
             <span class="n">version_list</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">_items</span> <span class="k">if</span> <span class="n">i</span><span class="p">]</span>
             <span class="n">version_list</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
             <span class="n">nearby_versions</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1524,55 +1489,54 @@ set max_deaths and port, will return before timeout.</p>
                 <span class="k">elif</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="n">version</span><span class="p">:</span>
                     <span class="n">nearby_versions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s1">&#39;Downloading failed </span><span class="si">{</span><span class="n">download_url</span><span class="si">}</span><span class="s1">.</span><span class="se">\n</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s1"> not found, maybe you can use a nearby version: </span><span class="si">{</span><span class="n">nearby_versions</span><span class="si">}</span><span class="s1">?&#39;</span>
+                <span class="sa">f</span><span class="s2">&quot;Downloading failed </span><span class="si">{</span><span class="n">download_url</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2"> not found, maybe you can use a nearby version: </span><span class="si">{</span><span class="n">nearby_versions</span><span class="si">}</span><span class="s2">?&quot;</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;path is null, skip downloading&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;path is null, skip downloading&quot;</span><span class="p">)</span>
             <span class="k">return</span>
-        <span class="n">total</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s1">&#39;Content-Length&#39;</span><span class="p">])</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Content-Length&quot;</span><span class="p">])</span>
         <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
         <span class="n">responses</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">req</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
                 <span class="n">download_url</span><span class="p">,</span>
-                <span class="n">proxies</span><span class="o">=</span><span class="p">{</span>
-                    <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span>
-                    <span class="s1">&#39;https&#39;</span><span class="p">:</span> <span class="n">proxy</span>
-                <span class="p">},</span>
+                <span class="n">proxies</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">:</span> <span class="n">proxy</span><span class="p">},</span>
                 <span class="n">retry</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-                <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Range&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;bytes=</span><span class="si">{</span><span class="n">range_start</span><span class="si">}</span><span class="s1">-</span><span class="si">{</span><span class="n">range_end</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">},</span>
-            <span class="p">)</span> <span class="k">for</span> <span class="n">range_start</span><span class="p">,</span> <span class="n">range_end</span> <span class="ow">in</span> <span class="n">slice_content_length</span><span class="p">(</span>
-                <span class="n">total</span><span class="p">,</span> <span class="mi">1</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
+                <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Range&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;bytes=</span><span class="si">{</span><span class="n">range_start</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">range_end</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">range_start</span><span class="p">,</span> <span class="n">range_end</span> <span class="ow">in</span> <span class="n">slice_content_length</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="mi">1</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
         <span class="p">]</span>
         <span class="n">total_mb</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">total</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
         <span class="n">proc</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">responses</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">ChromeValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Bad request </span><span class="si">{</span><span class="n">r</span><span class="si">!r}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">ChromeValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bad request </span><span class="si">{</span><span class="n">r</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="n">i</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">content</span>
             <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
             <span class="n">proc</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">proc</span> <span class="o">/</span> <span class="n">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span><span class="si">:</span><span class="s1"> &gt;3</span><span class="si">}</span><span class="s1">% | </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">proc</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s1">mb / </span><span class="si">{</span><span class="n">total_mb</span><span class="si">}</span><span class="s1">mb | </span><span class="si">{</span><span class="n">get_readable_size</span><span class="p">(</span><span class="n">proc</span><span class="o">/</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_time</span><span class="o">+</span><span class="mf">0.001</span><span class="p">),</span> <span class="n">rounded</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s1">/s&#39;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">proc</span> <span class="o">/</span> <span class="n">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span><span class="si">:</span><span class="s2"> &gt;3</span><span class="si">}</span><span class="s2">% | </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">proc</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">mb / </span><span class="si">{</span><span class="n">total_mb</span><span class="si">}</span><span class="s2">mb | </span><span class="si">{</span><span class="n">get_readable_size</span><span class="p">(</span><span class="n">proc</span><span class="o">/</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_time</span><span class="o">+</span><span class="mf">0.001</span><span class="p">),</span> <span class="n">rounded</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2">/s&quot;</span>
             <span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Downloading is finished, will unzip it to:&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Downloading is finished, will unzip it to:&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
         <span class="n">zf</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
         <span class="n">zf</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="n">install_folder_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">/</span> <span class="n">zip_file_name</span>
-    <span class="k">if</span> <span class="n">_platform_name</span> <span class="o">==</span> <span class="s1">&#39;Mac&#39;</span> <span class="ow">and</span> <span class="n">install_folder_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Install succeeded, check your folder:&#39;</span><span class="p">,</span>
-              <span class="n">install_folder_path</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span><span class="o">.</span><span class="n">as_posix</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">_platform_name</span> <span class="o">==</span> <span class="s2">&quot;Mac&quot;</span> <span class="ow">and</span> <span class="n">install_folder_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;Install succeeded, check your folder:&quot;</span><span class="p">,</span>
+            <span class="n">install_folder_path</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span><span class="o">.</span><span class="n">as_posix</span><span class="p">(),</span>
+        <span class="p">)</span>
         <span class="k">return</span>
     <span class="n">chrome_path</span> <span class="o">=</span> <span class="n">install_folder_path</span> <span class="o">/</span> <span class="n">chrome_runner_name</span>
     <span class="k">if</span> <span class="n">chrome_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
         <span class="n">chrome_abs_path</span> <span class="o">=</span> <span class="n">chrome_path</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;chrome_path:&#39;</span><span class="p">,</span> <span class="n">chrome_abs_path</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">_platform_name</span> <span class="o">==</span> <span class="s1">&#39;Linux&#39;</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;chmod 755 </span><span class="si">{</span><span class="n">chrome_abs_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;chrome_path:&quot;</span><span class="p">,</span> <span class="n">chrome_abs_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_platform_name</span> <span class="o">==</span> <span class="s2">&quot;Linux&quot;</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chmod 755 </span><span class="si">{</span><span class="n">chrome_abs_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">chrome_path</span><span class="p">,</span> <span class="mi">755</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;check chromium version:</span><span class="se">\n</span><span class="si">{</span><span class="n">chrome_abs_path</span><span class="si">}</span><span class="s1"> --version&#39;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Install succeeded.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;check chromium version:</span><span class="se">\n</span><span class="si">{</span><span class="n">chrome_abs_path</span><span class="si">}</span><span class="s2"> --version&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Install succeeded.&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Mission failed.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Mission failed.&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
       </details>
   </div>
@@ -1599,12 +1563,12 @@ set max_deaths and port, will return before timeout.</p>
 
       <details class="quote">
         <summary>Source code in <code>ichrome\base.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">377</span>
-<span class="normal">378</span>
-<span class="normal">379</span>
-<span class="normal">380</span>
-<span class="normal">381</span>
-<span class="normal">382</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">to_thread</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">to_thread</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;copy python3.9&quot;&quot;&quot;</span>
     <span class="n">loop</span> <span class="o">=</span> <span class="n">get_running_loop</span><span class="p">()</span>
     <span class="n">ctx</span> <span class="o">=</span> <span class="n">copy_context</span><span class="p">()</span>
