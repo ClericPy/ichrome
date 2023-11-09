@@ -83,3 +83,4 @@ asyncio.run(test())
   - After v3.0.1
     - `AsyncTab._DEFAULT_FLATTEN = True`
 - The install script of chromium
+- debug mode for sync usage with `ichrome.debugger` >4.0.0 (EXPERIMENTAL)
