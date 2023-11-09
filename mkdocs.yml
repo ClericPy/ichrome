@@ -11,6 +11,7 @@ nav:
       - AsyncTab: "reference/AsyncTab.md"
       - AsyncChromeDaemon: "reference/AsyncChromeDaemon.md"
       - AsyncChrome: "reference/AsyncChrome.md"
+      - Debugger: "reference/Debugger.md"
       - base: "reference/base.md"
 plugins:
   - mkdocstrings
