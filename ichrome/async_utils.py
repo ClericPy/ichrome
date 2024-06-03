@@ -18,7 +18,6 @@ from typing import (
     Coroutine,
     Dict,
     List,
-    Literal,
     Optional,
     Set,
     Union,
@@ -343,7 +342,7 @@ class AsyncTab(GetValueMixin):
     # default flatten arg
     _DEFAULT_FLATTEN = True
     # EXPERIMENTAL methods
-    BACKWARD_COMPATIBLES: Dict[str, Literal[True, False, None]] = {
+    BACKWARD_COMPATIBLES: Dict[str, Union[bool, None]] = {
         "Target.getTargetInfo": None
     }
 
