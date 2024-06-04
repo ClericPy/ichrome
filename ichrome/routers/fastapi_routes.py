@@ -18,29 +18,6 @@ except ImportError as error:
 
 __doc__ = """
 # ======================= server code ===========================
-
-import uvicorn
-from fastapi import FastAPI
-
-from ichrome import AsyncTab
-from ichrome.routers.fastapi_routes import ChromeAPIRouter
-
-app = FastAPI()
-# reset max_msg_size and window size for a large size screenshot
-AsyncTab._DEFAULT_WS_KWARGS["max_msg_size"] = 10 * 1024**2
-app.include_router(
-    ChromeAPIRouter(headless=True, extra_config=["--window-size=1920,1080"]),
-    prefix="/chrome",
-)
-
-uvicorn.run(app, port=8009)
-
-# view url with your browser
-# http://127.0.0.1:8009/chrome/screenshot?url=http://bing.com
-# http://127.0.0.1:8009/chrome/download?url=http://bing.com
-
-# ======================= client code ===========================
-
 from inspect import getsource
 
 import requests
@@ -68,22 +45,25 @@ print(
 )
 # <html><head><meta name="color-scheme" content="light dark"></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">{
 #   "args": {
+#     "a": "1", 
 #     "my_query": "OK"
-#   },
+#   }, 
 #   "headers": {
-#     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-#     "Accept-Encoding": "gzip, deflate",
-#     "Cookie": "my_cookie1=OK",
-#     "Host": "httpbin.org",
-#     "My-Header": "OK",
-#     "Upgrade-Insecure-Requests": "1",
-#     "User-Agent": "OK",
-#     "X-Amzn-Trace-Id": "Root=1-654d0157-04ab908a3779add762b164e3"
-#   },
-#   "origin": "0.0.0.0",
-#   "url": "http://httpbin.org/get?my_query=OK"
+#     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7", 
+#     "Accept-Encoding": "gzip, deflate", 
+#     "Cookie": "my_cookie1=OK", 
+#     "Host": "httpbin.org", 
+#     "My-Header": "OK", 
+#     "Upgrade-Insecure-Requests": "1", 
+#     "User-Agent": "OK", 
+#     "X-Amzn-Trace-Id": "Root=1-654d0664-74457b4317c2f41d17b6a823"
+#   }, 
+#   "origin": "1.1.1.1", 
+#   "url": "http://httpbin.org/get?a=1&amp;my_query=OK"
 # }
 # </pre></body></html>
+# '"Herman Melville - Moby-Dick"'
+# "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">{\n  \"origin\": \"103.171.177.94\"\n}\n</pre></body></html>"
 
 
 # 2. test tab_callback
@@ -124,7 +104,6 @@ print(
     ).text
 )
 # "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">{\n  \"origin\": \"103.171.177.94\"\n}\n</pre></body></html>"
-
 """
 
 
