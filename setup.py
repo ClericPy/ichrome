@@ -8,7 +8,7 @@ mkdocs gh-deploy
 linux:
 rm -rf "dist/*";rm -rf "build/*";python3 setup.py bdist_wheel;twine upload "dist/*;rm -rf "dist/*";rm -rf "build/*""
 win32-git-bash:
-rm -r -Force dist;rm -r -Force build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -r -Force dist;rm -r -Force build;rm -r -Force ichrome.egg-info
+rm -r -f dist;rm -r -f build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -r -f dist;rm -r -f build;rm -r -f ichrome.egg-info
 """
 version = __version__
 if sys.version_info < (3, 7):
