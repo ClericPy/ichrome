@@ -6,7 +6,82 @@ import sys
 from pathlib import Path
 
 from ichrome import ChromeDaemon, ChromeWorkers, __version__, logger
-from ichrome.base import get_readable_dir_size, install_chromium
+from ichrome.base import get_readable_dir_size
+
+
+def show_best(proxy=None):
+    def get_platform():
+        import platform
+
+        system = platform.system()
+        machine = platform.machine()
+        if system == "Linux":
+            return "linux64" if machine.endswith("64") else "linux32"
+        elif system == "Darwin":
+            if machine == "arm64":
+                return "mac-arm64"
+            elif machine == "x86_64":
+                return "mac-x64"
+        elif system == "Windows":
+            if "64" in platform.architecture()[0]:
+                return "win64"
+            else:
+                return "win32"
+        else:
+            return None
+        return f"{system.lower()}-{machine.lower()}"
+
+    def get_json(url, f):
+        import requests
+
+        try:
+            r = requests.get(
+                url,
+                timeout=3,
+                headers={"User-Agent": ""},
+                proxies={"all": proxy},
+            )
+            f.set_result(r.json())
+        except Exception as e:
+            f.set_exception(e)
+
+    doc = r"""Chrome for testing:
+https://github.com/GoogleChromeLabs/chrome-for-testing
+Latest version downloads:
+https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json
+More version downloads:
+https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json
+=============================="""
+    print(doc, flush=True)
+    current_platform = get_platform()
+    print("current platform:", current_platform, flush=True)
+    url = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
+    print("fetching", url, flush=True)
+    try:
+        from concurrent.futures import Future
+        from threading import Thread
+
+        # use thread fix requests timeout issue
+        f = Future()
+        t = Thread(target=get_json, args=(url, f), daemon=True)
+        t.start()
+        data = f.result(timeout=3.1)
+        item = data["channels"]["Stable"]
+        item["platform"] = current_platform
+        downloads = item.pop("downloads")
+        print(item, flush=True)
+        for key, values in downloads.items():
+            print("-" * 30)
+            print(key, item["platform"])
+            print(
+                (
+                    [i["url"] for i in values if i["platform"] == item["platform"]]
+                    + [""]
+                )[0],
+                flush=True,
+            )
+    except Exception as e:
+        print("fetch url error:", repr(e), flush=True)
 
 
 def main():
@@ -187,15 +262,6 @@ Other operations:
         action="store_true",
     )
     parser.add_argument(
-        "--install", help="download chromium and unzip it to given path", default=""
-    )
-    parser.add_argument(
-        "--install-version",
-        help="install version code, like 812852. "
-        "view more: https://omahaproxy.appspot.com/",
-        default="",
-    )
-    parser.add_argument(
         "-t",
         "--try",
         "--demo",
@@ -220,7 +286,7 @@ Other operations:
         print(__version__)
         return
     if args.install:
-        return install_chromium(args.install, version=args.install_version)
+        return show_best(proxy=args.proxy)
     if args.config:
         path = Path(args.config)
         if not path.is_file():
