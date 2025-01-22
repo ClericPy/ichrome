@@ -557,7 +557,6 @@ class ChromeDaemon(object):
                         yield path
                 except (FileNotFoundError, subprocess.TimeoutExpired):
                     continue
-        raise ChromeRuntimeError("Executable chrome file was not found.")
 
     @classmethod
     def _get_default_path(cls):
