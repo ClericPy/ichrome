@@ -5,7 +5,7 @@ from .debugger import get_a_tab, repl
 from .logs import logger
 from .pool import ChromeEngine
 
-__version__ = "4.0.4"
+__version__ = "5.0.0"
 __tips__ = "[github]: https://github.com/ClericPy/ichrome\n[cdp]: https://chromedevtools.github.io/devtools-protocol/\n[cmd args]: https://peter.sh/experiments/chromium-command-line-switches/"
 __all__ = [
     "ChromeDaemon",

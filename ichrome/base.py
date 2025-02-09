@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List
 
 import psutil
-from torequests.utils import get_readable_size
+from morebuiltins.utils import read_size
 
 from .logs import logger
 
@@ -186,7 +186,7 @@ def get_dir_size(path):
 
 def get_readable_dir_size(path):
     "return the dir space usage of the given dir path with readable text."
-    return get_readable_size(get_dir_size(path), rounded=1)
+    return read_size(get_dir_size(path), rounded=1)
 
 
 try:

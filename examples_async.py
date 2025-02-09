@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import List
 
-from torequests.dummy import Requests
+from aiohttp import ClientSession
 
 from ichrome import AsyncChromeDaemon, ChromeEngine
 from ichrome.async_utils import AsyncChrome, AsyncTab, Tag, logger
@@ -436,11 +436,17 @@ async def test_port_forwarding(host, port):
     from ichrome.utils import PortForwarder
 
     dst_port = port + 100
-    async with PortForwarder((host, port), (host, dst_port)):
-        r = await Requests().get(f"http://{host}:{dst_port}/json/version", timeout=5)
-        assert "webSocketDebuggerUrl" in r.text, r.text
-    r = await Requests().get(f"http://{host}:{dst_port}/json/version", timeout=5)
-    assert "webSocketDebuggerUrl" not in r.text, r.text
+    async with ClientSession() as cs:
+        async with PortForwarder((host, port), (host, dst_port)):
+            r = await cs.get(f"http://{host}:{dst_port}/json/version", timeout=5)
+            html = await r.text()
+            assert "webSocketDebuggerUrl" in html, html
+        try:
+            r = await cs.get(f"http://{host}:{dst_port}/json/version", timeout=5)
+            html = await r.text()
+        except Exception:
+            html = ""
+        assert "webSocketDebuggerUrl" not in html, html
 
 
 async def test_duplicated_key_error(tab: AsyncTab):
