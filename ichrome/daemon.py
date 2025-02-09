@@ -14,9 +14,9 @@ from json import loads as _json_loads
 from pathlib import Path
 from typing import List, Set, Union
 
-from torequests import tPool
-from torequests.aiohttp_dummy import Requests
-from torequests.utils import timepass, ttime
+from aiohttp import ClientSession
+from morebuiltins.request import req
+from morebuiltins.utils import read_time, ttime
 
 from .async_utils import AsyncChrome, BrowserContext, _SingleTabConnectionManagerDaemon
 from .base import (
@@ -227,7 +227,6 @@ class ChromeDaemon(object):
         if _chrome_path.is_file():
             CHROME_PROCESS_NAMES.add(_chrome_path.name)
         self._ensure_port_free()
-        self.req = tPool()
         if self.before_startup:
             self.before_startup(self)
         self.launch_chrome()
@@ -418,11 +417,15 @@ class ChromeDaemon(object):
     @property
     def connection_ok(self):
         for _ in range(int(self.MAX_WAIT_CHECKING_SECONDS * 2)):
-            r = self.req.head(self.server, timeout=self._timeout)
-            if r.x and r.ok:
-                self.ready = True
-                return True
-            time.sleep(0.5)
+            try:
+                r = req.head(self.server, timeout=self._timeout)
+            except Exception:
+                time.sleep(0.5)
+                continue
+            else:
+                if r.ok:
+                    self.ready = True
+                    return True
         return False
 
     @property
@@ -474,10 +477,13 @@ class ChromeDaemon(object):
             if not self.proc_ok:
                 error = "launch_chrome failed for proc not ok"
                 break
-            r = self.req.head(self.server, timeout=self._timeout)
-            if r.x and r.ok:
-                self.ready = True
-                break
+            try:
+                r = req.head(self.server, timeout=self._timeout)
+                if r.ok:
+                    self.ready = True
+                    break
+            except Exception:
+                pass
             time.sleep(0.5)
         else:
             error = "launch_chrome failed for connection not ok"
@@ -649,7 +655,7 @@ class ChromeDaemon(object):
         self.update_shutdown_time()
         reason = f" for {reason}" if reason else ""
         logger.debug(
-            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
+            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {read_time(time.time() - self.start_time, accuracy=3, format=1)}."
         )
         if self.on_shutdown:
             self.on_shutdown(self)
@@ -803,15 +809,8 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     def init(self):
         # Please init AsyncChromeDaemon in a running loop with `async with`
-        self._req = None
         self._chrome = AsyncChrome(self.host, self.port, timeout=self._timeout)
         self._init_coro = self._init_chrome_daemon()
-
-    @property
-    def req(self):
-        if self._req is None:
-            raise ChromeRuntimeError("please use Chrome in `async with`")
-        return self._req
 
     async def _init_chrome_daemon(self):
         await async_run(self._init_extra_config)
@@ -823,7 +822,6 @@ class AsyncChromeDaemon(ChromeDaemon):
         if _chrome_path.is_file():
             CHROME_PROCESS_NAMES.add(_chrome_path.name)
         await async_run(self._ensure_port_free)
-        self._req = Requests()
         if self.before_startup:
             await ensure_awaitable(self.before_startup(self))
         await self.launch_chrome()
@@ -858,8 +856,9 @@ class AsyncChromeDaemon(ChromeDaemon):
             raise ChromeRuntimeError(error)
 
     async def _check_chrome_connection(self):
-        r = await self.req.head(self.server, timeout=self._timeout)
-        return r and r.ok
+        async with ClientSession() as session:
+            r = await session.head(self.server, timeout=self._timeout)
+            return r.ok
 
     async def check_connection(self):
         "check chrome connection ok"
@@ -983,7 +982,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         self.update_shutdown_time()
         reason = f" for {reason}" if reason else ""
         logger.debug(
-            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {timepass(time.time() - self.start_time, accuracy=3, format=1)}."
+            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {read_time(time.time() - self.start_time, accuracy=3, format=1)}."
         )
         if self.on_shutdown:
             await ensure_awaitable(self.on_shutdown(self))
