@@ -117,6 +117,8 @@ def get_memory_by_port(port=9222, attr="uss", unit="MB", host=None, proc_names=N
         else:
             result = sum((getattr(proc.memory_info(), attr) for proc in procs))
         return result / u.get(unit, 1)
+    else:
+        return 0
 
 
 def clear_chrome_process(

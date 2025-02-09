@@ -122,7 +122,7 @@ class _SingleTabConnectionManager:
         if self.tab:
             await self.tab.ws_connection.__aexit__()
             if self._auto_close:
-                await self.tab.close_tab()
+                await self.tab.close()
 
 
 class _SingleTabConnectionManagerDaemon(_SingleTabConnectionManager):
@@ -342,9 +342,7 @@ class AsyncTab(GetValueMixin):
     # default flatten arg
     _DEFAULT_FLATTEN = True
     # EXPERIMENTAL methods
-    BACKWARD_COMPATIBLES: Dict[str, Union[bool, None]] = {
-        "Target.getTargetInfo": None
-    }
+    BACKWARD_COMPATIBLES: Dict[str, Union[bool, None]] = {"Target.getTargetInfo": None}
 
     def __init__(
         self,
@@ -527,7 +525,7 @@ class AsyncTab(GetValueMixin):
         return tab
 
     async def close_browser(self, timeout=0):
-        return await self.send("Browser.close", timeout=timeout)
+        asyncio.create_task(self.send("Browser.close", timeout=timeout))
 
     async def get_info(self, target_id: str = None, timeout=NotSet) -> dict:
         if target_id is None:
@@ -747,10 +745,17 @@ class AsyncTab(GetValueMixin):
             self._enabled_domains.discard(domain)
         return result
 
-    async def get_all_cookies(self, timeout=NotSet):
-        """[Network.getAllCookies], return all the cookies of this browser."""
+    async def get_all_cookies(
+        self, browserContextId="", tab_context=False, timeout=NotSet
+    ):
+        """[Storage.getCookies], return all the cookies of this browser."""
         # {'id': 12, 'result': {'cookies': [{'name': 'test2', 'value': 'test_value', 'domain': 'python.org', 'path': '/', 'expires': -1, 'size': 15, 'httpOnly': False, 'secure': False, 'session': True}]}}
-        result = await self.send("Network.getAllCookies", timeout=timeout)
+        kwargs = {}
+        if browserContextId:
+            kwargs = {"browserContextId": browserContextId}
+        elif tab_context:
+            kwargs = {"browserContextId": self.target_info["browserContextId"]}
+        result = await self.send("Storage.getCookies", kwargs=kwargs, timeout=timeout)
         return self.get_data_value(result, "result.cookies")
 
     async def clear_browser_cookies(self, timeout=NotSet):
@@ -2703,11 +2708,11 @@ True
         for func in _default_recv_callback:
             if not callable(func):
                 raise ChromeTypeError(
-                    f'callback function ({getattr(func, "__name__", func)}) should be callable'
+                    f"callback function ({getattr(func, '__name__', func)}) should be callable"
                 )
             if not inspect.isbuiltin(func) and len(func.__code__.co_varnames) != 2:
                 raise ChromeTypeError(
-                    f'callback function ({getattr(func, "__name__", func)}) should handle two args for {must_args}'
+                    f"callback function ({getattr(func, '__name__', func)}) should handle two args for {must_args}"
                 )
 
     def __call__(self, auto_close: bool = False) -> _WSConnection:
@@ -3031,13 +3036,13 @@ class Listener:
             )
         if "id" in event_dict:
             # id is unique
-            key = f'id={event_dict["id"]}'
+            key = f"id={event_dict['id']}"
         elif "method" in event_dict:
             # method may be duplicate
-            key = f'method={event_dict["method"]}'
+            key = f"method={event_dict['method']}"
         else:
             key = f"json={self._normalize_dict(event_dict)}"
-        return f'{key}@{event_dict.get("sessionId")}'
+        return f"{key}@{event_dict.get('sessionId')}"
 
     def register(self, event_dict: dict):
         """Listener will register a event_dict, such as {'id': 1} or {'method': 'Page.loadEventFired'}, maybe the dict doesn't has key [method]."""

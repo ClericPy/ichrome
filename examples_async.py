@@ -100,31 +100,31 @@ async def test_browser_context(
     assert len(await tab1.get_all_cookies()) > 0
     async with chrome.create_context(proxyServer=None) as context:
         async with context.new_tab() as tab:
-            assert len(await tab.get_all_cookies()) == 0
+            assert len(await tab.get_all_cookies(tab_context=True)) == 0
             await tab.set_cookie("a", "1", "http://httpbin.org")
-            assert len(await tab.get_all_cookies()) > 0
+            assert len(await tab.get_all_cookies(tab_context=True)) > 0
 
     # test chrome_daemon.create_context
     assert len(await tab1.get_all_cookies()) > 0
     async with chromed.create_context(proxyServer=None) as context:
         async with context.new_tab() as tab:
-            assert len(await tab.get_all_cookies()) == 0
+            assert len(await tab.get_all_cookies(tab_context=True)) == 0
             await tab.set_cookie("a", "1", "http://httpbin.org")
-            assert len(await tab.get_all_cookies()) > 0
+            assert len(await tab.get_all_cookies(tab_context=True)) > 0
 
     # test chrome.incognito_tab
     assert len(await tab1.get_all_cookies()) > 0
     async with chrome.incognito_tab(proxyServer=None) as tab:
-        assert len(await tab.get_all_cookies()) == 0
+        assert len(await tab.get_all_cookies(tab_context=True)) == 0
         await tab.set_cookie("a", "1", "http://httpbin.org")
-        assert len(await tab.get_all_cookies()) > 0
+        assert len(await tab.get_all_cookies(tab_context=True)) > 0
 
     # test chrome_daemon.incognito_tab
     assert len(await tab1.get_all_cookies()) > 0
     async with chromed.incognito_tab(proxyServer=None) as tab:
-        assert len(await tab.get_all_cookies()) == 0
+        assert len(await tab.get_all_cookies(tab_context=True)) == 0
         await tab.set_cookie("a", "1", "http://httpbin.org")
-        assert len(await tab.get_all_cookies()) > 0
+        assert len(await tab.get_all_cookies(tab_context=True)) > 0
 
 
 async def test_tab_set_url(tab: AsyncTab):
@@ -135,13 +135,13 @@ async def test_tab_set_url(tab: AsyncTab):
     mhtml_len = len(await tab.snapshot_mhtml())
     assert mhtml_len in range(1, 1000), f"test snapshot failed {mhtml_len}"
     await tab.goto("https://bing.com?setlang=en&cc=US")
-    assert await tab.wait_tag(
-        "#sb_form_q", max_wait_time=10
-    ), "wait_tag failed for #sb_form_q"
+    assert await tab.wait_tag("#sb_form_q", max_wait_time=10), (
+        "wait_tag failed for #sb_form_q"
+    )
 
 
 async def test_tab_js(tab: AsyncTab):
-    await tab.goto("https://staticfile.org/about_en.html", timeout=5)
+    await tab.goto("https://staticfile.org/about", timeout=5)
     # test js update title
     await tab.js("document.title = 'abc'")
     # test js_code
@@ -178,12 +178,12 @@ async def test_tab_js(tab: AsyncTab):
     tag = await tab.querySelector("#not-exist")
     assert not tag
     # querySelectorAll with JS, return list of Tag object
-    tags = await tab.querySelectorAll("#logo")
+    tags = await tab.querySelectorAll("title")
     assert tags, f"{[tags, type(tags)]}"
     assert isinstance(tags[0], Tag), f"{[tags[0], type(tags[0])]}"
-    assert tags[0].tagName in {"a"}, f"{[tags[0], tags[0].tagName]}"
+    assert tags[0].tagName in {"title"}, f"{[tags[0], tags[0].tagName]}"
     # querySelectorAll with JS, index arg is Not None, return Tag or None
-    one_tag = await tab.querySelectorAll("#logo", index=0)
+    one_tag = await tab.querySelectorAll("title", index=0)
     assert isinstance(one_tag, Tag), type(one_tag)
     await tab.stop_loading_page()
     assert await tab.set_html("")
@@ -201,12 +201,12 @@ async def test_tab_js(tab: AsyncTab):
     # test wait tags
     result = await tab.wait_tags("abcdabcdabcdabcd", max_wait_time=1)
     assert result == []
-    assert await tab.wait_tag("#logo", max_wait_time=3)
-    assert await tab.includes("This repo is open-source. Licensed under MIT.")
+    assert await tab.wait_tag("title", max_wait_time=3)
+    assert await tab.includes("MIT License")
     assert not (await tab.includes("abcdabcdabcdabcd"))
-    assert await tab.wait_includes("This repo is open-source. Licensed under MIT.")
+    assert await tab.wait_includes("MIT License")
     assert (await tab.wait_includes("abcdabcdabcdabcd", max_wait_time=1)) is False
-    assert await tab.wait_findall("This repo is open-source. Licensed under MIT.")
+    assert await tab.wait_findall("MIT License")
     assert (await tab.wait_findall("abcdabcdabcdabcd", max_wait_time=1)) == []
     # test wait_console_value
     await tab.js("setTimeout(() => {console.log(123)}, 2);")
@@ -404,10 +404,10 @@ async def test_init_tab(chromed: AsyncChromeDaemon):
             TEST_DEFAULT_CB_OK = True
 
         tab.default_recv_callback.append(test_default_cb)
-        await tab.goto("https://staticfile.org/about_en.html", timeout=5)
+        await tab.goto("https://www.staticfile.net/images/favicon.ico", timeout=5)
         title = await tab.current_title
         assert TEST_DEFAULT_CB_OK, "test default_recv_callback failed"
-        assert title == "About - StaticFile CDN", repr(title)
+        assert title == "favicon.ico (32×32)", repr(title)
         tab.default_recv_callback.clear()
 
 
@@ -465,6 +465,7 @@ async def test_tab_new_tab(chromed: AsyncChromeDaemon):
             MUIDB2 = (await tab.get_cookies_dict([url])).get("MUIDB")
             # print(MUIDB, MUIDB2, MUIDB == MUIDB2)
             assert MUIDB == MUIDB2
+        await asyncio.sleep(1)
         # the new_tab auto closed
         tab_exist = bool(await tab.chrome.get_tab(new_tab.tab_id))
         assert not tab_exist
@@ -569,7 +570,7 @@ async def test_examples():
             # close_browser gracefully, I have no more need of chrome instance
             await chrome.close_browser()
             # await chrome.kill()
-            sep = f'\n{"=" * 80}\n'
+            sep = f"\n{'=' * 80}\n"
             logger.critical(
                 f"{sep}Congratulations, all test cases passed(flatten={AsyncTab._DEFAULT_FLATTEN}).{sep}"
             )
