@@ -129,6 +129,24 @@ class ChromeDaemon(object):
     DEFAULT_EXTRA_CONFIG = ["--disable-gpu", "--no-first-run"]
     DEFAULT_POPEN_ARGS = {"start_new_session": True}
     LAUNCHED_PIDS: Set[int] = set()
+    WIN32_PATHS = [
+        "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+        "C:/Program Files/Google/Chrome/Application/chrome.exe",
+        f"{os.getenv('USERPROFILE')}\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
+        "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+        "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
+    ]
+    LINUX_PATHS = [
+        "google-chrome",
+        "google-chrome-stable",
+        "google-chrome-beta",
+        "google-chrome-dev",
+        "microsoft-edge-stable",
+    ]
+    DARWIN_PATHS = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    ]
 
     def __init__(
         self,
@@ -481,7 +499,7 @@ class ChromeDaemon(object):
             port = start + offset
             if cls._check_host_port_in_use(host, port, timeout):
                 return port
-        raise ChromeRuntimeError(f"No free port beteen {start} and {start+max_tries}")
+        raise ChromeRuntimeError(f"No free port beteen {start} and {start + max_tries}")
 
     @staticmethod
     def _check_host_port_in_use(host="127.0.0.1", port=9222, timeout=1):
@@ -514,17 +532,11 @@ class ChromeDaemon(object):
         except ChromeRuntimeError:
             return None
 
-    @staticmethod
-    def _iter_chrome_path():
+    @classmethod
+    def _iter_chrome_path(cls):
         current_platform = platform.system()
         if current_platform == "Windows":
-            paths = [
-                "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
-                "C:/Program Files/Google/Chrome/Application/chrome.exe",
-                f"{os.getenv('USERPROFILE')}\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
-                "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-                "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
-            ]
+            paths = cls.WIN32_PATHS
             for path in paths:
                 if not path:
                     continue
@@ -532,18 +544,9 @@ class ChromeDaemon(object):
                     yield path
         else:
             if current_platform == "Linux":
-                paths = [
-                    "google-chrome",
-                    "google-chrome-stable",
-                    "google-chrome-beta",
-                    "google-chrome-dev",
-                    "microsoft-edge-stable",
-                ]
+                paths = cls.LINUX_PATHS
             elif current_platform == "Darwin":
-                paths = [
-                    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-                ]
+                paths = cls.DARWIN_PATHS
             else:
                 raise ChromeRuntimeError(
                     "unknown platform, could not find the default chrome path."
