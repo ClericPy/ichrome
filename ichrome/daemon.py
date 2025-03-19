@@ -147,6 +147,7 @@ class ChromeDaemon(object):
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
         "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
     ]
+    SYSTEM_ENCODING = os.getenv("SYSTEM_ENCODING") or ""
 
     def __init__(
         self,
@@ -482,7 +483,7 @@ class ChromeDaemon(object):
                     )
                     if need_reopen:
                         _path = self.user_data_dir / stdout_path
-                        self.opened_files[0] = _path.open("wb")
+                        self.opened_files[0] = _path.open("wb+")
                         kwargs["stdout"] = self.opened_files[0]
                         logger.debug(f"stdout_path -> {_path.absolute().as_posix()}")
             if "stderr" not in kwargs and stderr_path:
@@ -490,22 +491,49 @@ class ChromeDaemon(object):
                     kwargs["stderr"] = subprocess.DEVNULL
                 elif stdout_path and stderr_path == stdout_path:
                     kwargs["stderr"] = subprocess.STDOUT
+                    self.opened_files[1] = self.opened_files[0]
                 else:
                     need_reopen = (
                         not self.opened_files[1] or self.opened_files[1].closed
                     )
                     if need_reopen:
                         _path = self.user_data_dir / stderr_path
-                        self.opened_files[1] = _path.open("wb")
+                        self.opened_files[1] = _path.open("wb+")
                         kwargs["stderr"] = self.opened_files[1]
                         logger.debug(f"stderr_path -> {_path.absolute().as_posix()}")
         self.cmd_args = kwargs
         return kwargs
 
-    def close_stdout_stderr(self):
+    def close_stdout_stderr(self, error_name=""):
         for f in self.opened_files:
             try:
                 if f and not f.closed:
+                    try:
+                        if error_name and f is self.opened_files[1]:
+                            last_5_lines = []
+                            f.seek(0)
+                            for line in f:
+                                if not line.strip():
+                                    continue
+                                last_5_lines.append(line)
+                                if len(last_5_lines) > 5:
+                                    last_5_lines.pop(0)
+                            if last_5_lines:
+                                content = b"".join(last_5_lines)
+                                if self.SYSTEM_ENCODING:
+                                    text = content.decode(self.SYSTEM_ENCODING)
+                                else:
+                                    try:
+                                        text = content.decode("utf-8")
+                                    except UnicodeDecodeError:
+                                        text = content.decode(
+                                            "gb18030", errors="replace"
+                                        )
+                                logger.error(
+                                    f"stderr file last 5 lines for {error_name}: {text}"
+                                )
+                    except Exception:
+                        pass
                     f.close()
             except Exception:
                 pass
@@ -692,20 +720,23 @@ class ChromeDaemon(object):
     def update_shutdown_time(self):
         self._shutdown = time.time()
 
-    def shutdown(self, reason=None):
+    def shutdown(self, reason=None, exc_type=None):
         if self._shutdown:
             logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
         self._shutdown_reason = reason
         self.update_shutdown_time()
-        reason = f" for {reason}" if reason else ""
-        logger.debug(
-            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {read_time(time.time() - self.start_time)}."
-        )
+        msg = f"{self} shutting down, reason={reason!r}, start-up: {ttime(self.start_time)}, duration: {read_time(time.time() - self.start_time)}."
+        if exc_type:
+            logger.exception(msg)
+        else:
+            logger.debug(msg)
         if self.on_shutdown:
             self.on_shutdown(self)
         self.kill(True)
-        self.close_stdout_stderr()
+        self.close_stdout_stderr(
+            error_name=getattr(exc_type, "__name__", repr(exc_type))
+        )
         if self.after_shutdown:
             self.after_shutdown(self)
         if self.clear_after_shutdown:
@@ -714,8 +745,8 @@ class ChromeDaemon(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
-        self.shutdown("__exit__")
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.shutdown("__exit__", exc_type)
 
     @staticmethod
     def get_proc(port, host=None):
@@ -1013,8 +1044,8 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def __aenter__(self):
         return await self._init_coro
 
-    async def __aexit__(self, *args, **kwargs):
-        await self.shutdown("__aexit__")
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.shutdown("__aexit__", exc_type=exc_type)
 
     @property
     def x(self):
@@ -1024,21 +1055,25 @@ class AsyncChromeDaemon(ChromeDaemon):
         else:
             return asyncio.sleep(0)
 
-    async def shutdown(self, reason=None):
+    async def shutdown(self, reason=None, exc_type=None):
         "shutdown the chrome, but do not use it, use async with instead."
         if self._shutdown:
             # logger.debug(f"{self} shutdown at {ttime(self._shutdown)} yet.")
             return
         self._shutdown_reason = reason
         self.update_shutdown_time()
-        reason = f" for {reason}" if reason else ""
-        logger.debug(
-            f"{self} shutting down{reason}, start-up: {ttime(self.start_time)}, duration: {read_time(time.time() - self.start_time)}."
-        )
+        msg = f"{self} shutting down, reason={reason!r}, start-up: {ttime(self.start_time)}, duration: {read_time(time.time() - self.start_time)}."
+        if exc_type:
+            logger.exception(msg)
+        else:
+            logger.debug(msg)
         if self.on_shutdown:
             await ensure_awaitable(self.on_shutdown(self))
         await async_run(self.kill, True)
-        await async_run(self.close_stdout_stderr)
+        await async_run(
+            self.close_stdout_stderr,
+            error_name=getattr(exc_type, "__name__", repr(exc_type)),
+        )
         if self.after_shutdown:
             await ensure_awaitable(self.after_shutdown(self))
         if self.clear_after_shutdown:
@@ -1145,7 +1180,7 @@ class ChromeWorkers:
         self.start_port = start_port or 9222
         self.workers = workers or 1
         self.kwargs = kwargs or {}
-        self.daemons = []
+        self.daemons: List[AsyncChromeDaemon] = []
         self.tasks = []
 
     async def __aenter__(self):
@@ -1170,9 +1205,9 @@ class ChromeWorkers:
             except asyncio.CancelledError:
                 pass
 
-    async def __aexit__(self, *args):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         for daemon in self.daemons:
-            await daemon.shutdown("__aexit__")
+            await daemon.shutdown("__aexit__", exc_type=exc_type)
 
     @classmethod
     async def run_chrome_workers(cls, start_port, workers, kwargs):
