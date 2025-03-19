@@ -12,7 +12,7 @@ from getpass import getuser
 from inspect import isawaitable
 from json import loads as _json_loads
 from pathlib import Path
-from typing import List, Set, Union
+from typing import List, Literal, Optional, Set, Tuple, Union
 
 from aiohttp import ClientSession
 from morebuiltins.request import req
@@ -171,7 +171,11 @@ class ChromeDaemon(object):
         before_startup=None,
         after_shutdown=None,
         clear_after_shutdown=False,
-        popen_kwargs: dict = None,
+        popen_kwargs: Optional[dict] = None,
+        stdout_stderr: Tuple[
+            Literal["", "/dev/null", "stdout.log"],
+            Literal["", "/dev/null", "stderr.log", "stdout.log"],
+        ] = ("stdout.log", "stdout.log"),
     ):
         if debug:
             logger.setLevel("DEBUG")
@@ -192,7 +196,7 @@ class ChromeDaemon(object):
         self.headless = headless
         self.proxy = proxy
         self.disable_image = disable_image
-        self.user_data_dir = user_data_dir
+        self.user_data_dir: Optional[Path] = user_data_dir
         self.start_url = start_url
         self.extra_config = extra_config
         self.proc_check_interval = proc_check_interval
@@ -206,6 +210,8 @@ class ChromeDaemon(object):
             self.DEFAULT_POPEN_ARGS if popen_kwargs is None else popen_kwargs
         )
         self._use_port_dir = False
+        self.stdout_stderr = stdout_stderr
+        self.opened_files = [None, None]
         self.init()
 
     @classmethod
@@ -453,17 +459,56 @@ class ChromeDaemon(object):
             args.append(self.start_url)
         return args
 
-    def get_cmd_args(self):
+    @property
+    def cmd_string(self):
         # list2cmdline for linux use args list failed...
-        cmd_string = subprocess.list2cmdline(self.cmd)
-        logger.debug(f"running with: {cmd_string}")
-        kwargs = {"args": cmd_string, "shell": True}
-        if not self.debug:
-            kwargs["stdout"] = subprocess.DEVNULL
-            kwargs["stderr"] = subprocess.DEVNULL
+        return subprocess.list2cmdline(self.cmd)
+
+    def get_cmd_args(self):
+        kwargs = {"args": self.cmd_string, "shell": True}
+        msg = f"running with: {kwargs['args']}."
+        logger.debug(msg)
+        # kwargs["stdout"] = subprocess.DEVNULL
+        # kwargs["stderr"] = subprocess.DEVNULL
         kwargs.update(self.popen_kwargs)
+        if self.user_data_dir and "text" not in kwargs:
+            stdout_path, stderr_path = self.stdout_stderr
+            if "stdout" not in kwargs and stdout_path:
+                if stdout_path == "/dev/null":
+                    kwargs["stdout"] = subprocess.DEVNULL
+                else:
+                    need_reopen = (
+                        not self.opened_files[0] or self.opened_files[0].closed
+                    )
+                    if need_reopen:
+                        _path = self.user_data_dir / stdout_path
+                        self.opened_files[0] = _path.open("wb")
+                        kwargs["stdout"] = self.opened_files[0]
+                        logger.debug(f"stdout_path -> {_path.absolute().as_posix()}")
+            if "stderr" not in kwargs and stderr_path:
+                if stderr_path == "/dev/null":
+                    kwargs["stderr"] = subprocess.DEVNULL
+                elif stdout_path and stderr_path == stdout_path:
+                    kwargs["stderr"] = subprocess.STDOUT
+                else:
+                    need_reopen = (
+                        not self.opened_files[1] or self.opened_files[1].closed
+                    )
+                    if need_reopen:
+                        _path = self.user_data_dir / stderr_path
+                        self.opened_files[1] = _path.open("wb")
+                        kwargs["stderr"] = self.opened_files[1]
+                        logger.debug(f"stderr_path -> {_path.absolute().as_posix()}")
         self.cmd_args = kwargs
         return kwargs
+
+    def close_stdout_stderr(self):
+        for f in self.opened_files:
+            try:
+                if f and not f.closed:
+                    f.close()
+            except Exception:
+                pass
 
     def _start_chrome_process(self):
         self.chrome_proc_start_time = time.time()
@@ -660,6 +705,7 @@ class ChromeDaemon(object):
         if self.on_shutdown:
             self.on_shutdown(self)
         self.kill(True)
+        self.close_stdout_stderr()
         if self.after_shutdown:
             self.after_shutdown(self)
         if self.clear_after_shutdown:
@@ -755,7 +801,7 @@ class AsyncChromeDaemon(ChromeDaemon):
             asyncio.run(main())
 
 '''
-    __doc__ = ChromeDaemon.__doc__ + _demo
+    __doc__ = (ChromeDaemon.__doc__ or "") + _demo
 
     def __init__(
         self,
@@ -780,7 +826,11 @@ class AsyncChromeDaemon(ChromeDaemon):
         before_startup=None,
         after_shutdown=None,
         clear_after_shutdown=False,
-        popen_kwargs: dict = None,
+        popen_kwargs: Optional[dict] = None,
+        stdout_stderr: Tuple[
+            Literal["", "/dev/null", "stdout.log"],
+            Literal["", "/dev/null", "stderr.log", "stdout.log"],
+        ] = ("stdout.log", "stdout.log"),
     ):
         super().__init__(
             chrome_path=chrome_path,
@@ -805,6 +855,7 @@ class AsyncChromeDaemon(ChromeDaemon):
             after_shutdown=after_shutdown,
             clear_after_shutdown=clear_after_shutdown,
             popen_kwargs=popen_kwargs,
+            stdout_stderr=stdout_stderr,
         )
 
     def init(self):
@@ -987,6 +1038,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         if self.on_shutdown:
             await ensure_awaitable(self.on_shutdown(self))
         await async_run(self.kill, True)
+        await async_run(self.close_stdout_stderr)
         if self.after_shutdown:
             await ensure_awaitable(self.after_shutdown(self))
         if self.clear_after_shutdown:
