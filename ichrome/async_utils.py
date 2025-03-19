@@ -22,14 +22,14 @@ from typing import (
     Set,
     Union,
 )
+from urllib.parse import quote_plus, urljoin
 from weakref import WeakValueDictionary
 
 from aiohttp.client import _WSRequestContextManager
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
 from torequests.aiohttp_dummy import Requests
-from torequests.dummy import NewResponse, _exhaust_simple_coro
-from torequests.utils import UA, quote_plus, urljoin
+from torequests.dummy import NewResponse
 
 from .base import (
     INF,
@@ -2040,11 +2040,17 @@ JSON.stringify(result)""" % (
         )
 
     async def inject_js_url(
-        self, url, timeout=None, retry=0, verify=False, **requests_kwargs
+        self,
+        url,
+        timeout=None,
+        retry=0,
+        verify=False,
+        user_agent="Chrome",
+        **requests_kwargs,
     ) -> Union[dict, None]:
         "inject and run the given JS URL"
         if not requests_kwargs.get("headers"):
-            requests_kwargs["headers"] = {"User-Agent": UA.Chrome}
+            requests_kwargs["headers"] = {"User-Agent": user_agent}
         r = await self.req.get(
             url, timeout=timeout, retry=retry, ssl=verify, **requests_kwargs
         )
@@ -3357,9 +3363,6 @@ class AsyncChrome(GetValueMixin):
 
     def __str__(self):
         return f"<Chrome({self.status}): {self.server}>"
-
-    def __del__(self):
-        _exhaust_simple_coro(self.close())
 
     def create_context(
         self,
