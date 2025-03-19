@@ -280,6 +280,12 @@ Other operations:
         dest="demo_connection",
         action="store_true",
     )
+    parser.add_argument(
+        "--install",
+        help="show the best chrome version for testing",
+        default=False,
+        action="store_true",
+    )
     args, extra_config = parser.parse_known_args()
 
     if args.version:
