@@ -23,16 +23,19 @@ async def test_chrome(chrome: AsyncChrome):
     ok = await chrome.ok
     assert ok is True, ok
     resp = await chrome.get_server("json")
-    assert isinstance(resp.json(), list)
+    assert resp
+    assert isinstance(await resp.json(), list)
     await chrome.new_tab()
     tabs1: List[AsyncTab] = await chrome.get_tabs()
     tabs2: List[AsyncTab] = await chrome.tabs
     assert tabs1 == tabs2 and tabs1 and tabs2, (tabs1, tabs2)
     tab0: AsyncTab = await chrome.get_tab(0)
+    assert tab0
     tab0_by_getitem = await chrome[0]
     assert tab0 == tab0_by_getitem
     assert tabs1[0] == tab0, (tabs1, tab0)
     tab1: AsyncTab = await chrome.new_tab()
+    assert tab1
     assert isinstance(tab1, AsyncTab)
     await asyncio.sleep(0.2)
     await chrome.activate_tab(tab0)
@@ -297,7 +300,7 @@ async def test_tab_set_ua_headers(tab: AsyncTab):
     html = await tab.get_html()
     assert (
         '"A": "1"' in html and '"B": "2"' in html and '"User-Agent": "Test UA"' in html
-    )
+    ), html
 
 
 async def test_tab_keyboard_mouse(tab: AsyncTab):

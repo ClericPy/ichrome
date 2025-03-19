@@ -210,7 +210,7 @@ class Chrome(SyncLoop):
         api = f"/json/new?{quote_plus(url)}"
         r = self.get_server(api, method="PUT")
         if r:
-            rjson = r.json()
+            rjson = self.run_sync(r.json())
             tab = Tab(self, **rjson)
             tab._self._created_time = int(time.time())
             logger.debug(f"[new_tab] {tab._self} {rjson}")

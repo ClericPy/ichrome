@@ -25,11 +25,10 @@ from typing import (
 from urllib.parse import quote_plus, urljoin
 from weakref import WeakValueDictionary
 
-from aiohttp.client import _WSRequestContextManager
+from aiohttp.client import ClientWebSocketResponse
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
-from torequests.aiohttp_dummy import Requests
-from torequests.dummy import NewResponse
+from aiohttp import ClientSession, ClientResponse
 
 from .base import (
     INF,
@@ -182,7 +181,7 @@ class _WSConnection:
         else:
             for _ in range(3):
                 try:
-                    self.tab.ws = await self.tab.req.session.ws_connect(
+                    self.tab.ws = await self.tab.req.ws_connect(
                         self.tab.webSocketDebuggerUrl, **self.tab.ws_kwargs
                     )
                     logger.debug(
@@ -414,12 +413,12 @@ class AsyncTab(GetValueMixin):
         self.timeout = self._DEFAULT_RECV_TIMEOUT if timeout is NotSet else timeout
         self.ws_kwargs: dict = ws_kwargs or self._DEFAULT_WS_KWARGS
         self.ws_kwargs.setdefault("timeout", self._DEFAULT_CONNECT_TIMEOUT)
-        self.ws: _WSRequestContextManager = None
+        self.ws: Optional[ClientWebSocketResponse] = None
         self.ws_connection: _WSConnection = _WSConnection(self)
         if self.chrome:
-            self.req: Requests = self.chrome.req
+            self.req: ClientSession = self.chrome.req
         else:
-            self.req = Requests()
+            self.req = ClientSession()
         # using default_recv_callback.setter, default_recv_callback can be list or function
         self.default_recv_callback = default_recv_callback
         # alias of methods
@@ -587,7 +586,7 @@ class AsyncTab(GetValueMixin):
         "refresh the tab meta info with tab_id from /json"
         r = await self.chrome.get_server("/json")
         if r:
-            for tab_info in r.json():
+            for tab_info in await r.json():
                 if tab_info["id"] == self.tab_id:
                     self._title = tab_info["title"]
                     self.description = tab_info["description"]
@@ -2043,7 +2042,6 @@ JSON.stringify(result)""" % (
         self,
         url,
         timeout=None,
-        retry=0,
         verify=False,
         user_agent="Chrome",
         **requests_kwargs,
@@ -2051,11 +2049,9 @@ JSON.stringify(result)""" % (
         "inject and run the given JS URL"
         if not requests_kwargs.get("headers"):
             requests_kwargs["headers"] = {"User-Agent": user_agent}
-        r = await self.req.get(
-            url, timeout=timeout, retry=retry, ssl=verify, **requests_kwargs
-        )
+        r = await self.req.get(url, timeout=timeout, ssl=verify, **requests_kwargs)
         if r:
-            javascript = r.text
+            javascript = await r.text()
             return await self.js(javascript, timeout=timeout)
         else:
             logger.error(f"inject_js_url failed for request: {r.text}")
@@ -3081,23 +3077,22 @@ class Listener:
 
 class AsyncChrome(GetValueMixin):
     _DEFAULT_CONNECT_TIMEOUT = 3
-    _DEFAULT_RETRY = 1
 
     def __init__(
         self,
         host: str = "127.0.0.1",
         port: int = 9222,
-        timeout: int = None,
-        retry: int = None,
+        timeout: Optional[int] = None,
+        retry: Optional[int] = None,  # deprecated
     ):
         self.host = host
         # port can be null for chrome address without port.
         self.port = port
         self.timeout = timeout or self._DEFAULT_CONNECT_TIMEOUT
-        self.retry = self._DEFAULT_RETRY if retry is None else retry
+        self.retry = retry
         self.status = "init"
-        self._req = None
-        self._browser: AsyncTab = None
+        self._req: Optional[ClientSession] = None
+        self._browser: Optional[AsyncTab] = None
 
     @property
     def browser(self) -> AsyncTab:
@@ -3169,9 +3164,9 @@ class AsyncChrome(GetValueMixin):
         /json/version"""
         resp = await self.get_server("/json/version")
         if resp:
-            return resp.json()
+            return await resp.json()
         else:
-            return resp
+            return {}
 
     @property
     def version(self) -> Awaitable[dict]:
@@ -3186,14 +3181,14 @@ class AsyncChrome(GetValueMixin):
 
     async def connect(self) -> bool:
         """await self.connect()"""
-        self._req = Requests()
+        self._req = ClientSession()
         if await self.check_http_ready():
             return True
         else:
             return False
 
     @property
-    def req(self) -> Requests:
+    def req(self) -> ClientSession:
         if self._req is None:
             raise ChromeRuntimeError("please use Chrome in `async with` context")
         return self._req
@@ -3203,16 +3198,20 @@ class AsyncChrome(GetValueMixin):
         return bool(await self.check_http_ready()) and (await self.check_ws_ready())
 
     async def check_http_ready(self):
-        resp = await self.req.head(self.server, timeout=self.timeout, retry=self.retry)
-        if not resp:
-            self.status = resp.text
-        return bool(resp)
+        try:
+            resp: ClientResponse = await self.req.head(
+                self.server, timeout=self.timeout
+            )
+            return resp.ok
+        except Exception:
+            return False
 
     async def check_ws_ready(self):
         try:
             data = await self.browser.browser_version()
             return bool(isinstance(data, dict) and data.get("result"))
-        except Exception:
+        except Exception as e:
+            self.status = repr(e)
             return False
 
     @property
@@ -3220,15 +3219,15 @@ class AsyncChrome(GetValueMixin):
         """await self.ok"""
         return self.check()
 
-    async def get_server(self, api: str = "", method="GET") -> NewResponse:
+    async def get_server(self, api: str = "", method="GET") -> Optional[ClientResponse]:
         # maybe return failure request
         url = urljoin(self.server, api)
-        resp = await self.req.request(
-            method=method, url=url, timeout=self.timeout, retry=self.retry
-        )
-        if not resp:
-            self.status = resp.text
-        return resp
+        try:
+            resp = await self.req.request(method=method, url=url, timeout=self.timeout)
+            return resp
+        except Exception as e:
+            self.status = repr(e)
+            return None
 
     async def get_tabs(self, filt_page_type: bool = True) -> List[AsyncTab]:
         """`await self.get_tabs()`.
@@ -3238,7 +3237,7 @@ class AsyncChrome(GetValueMixin):
             if r:
                 return [
                     AsyncTab(chrome=self, json=rjson, **rjson)
-                    for rjson in r.json()
+                    for rjson in await r.json()
                     if (rjson["type"] == "page" or filt_page_type is not True)
                 ]
         except Exception as error:
@@ -3269,7 +3268,7 @@ class AsyncChrome(GetValueMixin):
         return self.get_tabs()
 
     async def kill(
-        self, timeout: Union[int, float] = None, max_deaths: int = 1
+        self, timeout: Union[int, float, None] = None, max_deaths: int = 1
     ) -> None:
         if self.req:
             await self.req.close()
@@ -3281,7 +3280,7 @@ class AsyncChrome(GetValueMixin):
         api = f"/json/new?{quote_plus(url)}"
         r = await self.get_server(api, method="PUT")
         if r:
-            rjson = r.json()
+            rjson = await r.json()
             tab = AsyncTab(chrome=self, **rjson)
             tab._created_time = int(time.time())
             logger.debug(f"[new_tab] {tab} {rjson}")
@@ -3298,11 +3297,11 @@ class AsyncChrome(GetValueMixin):
         r = await self.get_server(f"/json/{action}/{tab_id}")
         if r:
             if action == "close":
-                ok = r.text == "Target is closing"
+                ok = (await r.text()) == "Target is closing"
             elif action == "activate":
-                ok = r.text == "Target activated"
+                ok = (await r.text()) == "Target activated"
             else:
-                ok == r.text
+                ok == (await r.text())
         logger.debug(f"[{action}_tab] <Tab: {tab_id}>: {ok}")
         return ok
 
