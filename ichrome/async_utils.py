@@ -18,6 +18,7 @@ from typing import (
     Coroutine,
     Dict,
     List,
+    Literal,
     Optional,
     Set,
     Union,
@@ -25,10 +26,10 @@ from typing import (
 from urllib.parse import quote_plus, urljoin
 from weakref import WeakValueDictionary
 
+from aiohttp import ClientResponse, ClientSession
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
-from aiohttp import ClientSession, ClientResponse
 
 from .base import (
     INF,
@@ -612,8 +613,7 @@ class AsyncTab(GetValueMixin):
         """[Page.close], close tab with cdp websocket. will lose ws, so timeout default to 0."""
         try:
             return await self.send("Page.close", timeout=timeout)
-        except ChromeRuntimeError as error:
-            logger.error(f"close tab failed for {error!r}")
+        except ChromeRuntimeError:
             return None
 
     async def crash(self, timeout=0) -> Union[dict, None]:
@@ -1752,7 +1752,13 @@ class AsyncTab(GetValueMixin):
         self,
         regex: str,
         cssselector: str = "html",
-        attribute: str = "outerHTML",
+        attribute: Literal[
+            "outerHTML",
+            "innerHTML",
+            "textContent",
+            "innerText",
+            "outerText",
+        ] = "outerHTML",
         flags: str = "g",
         max_wait_time: Optional[float] = None,
         interval: float = 1,
@@ -1778,7 +1784,13 @@ class AsyncTab(GetValueMixin):
         self,
         regex: str,
         cssselector: str = "html",
-        attribute: str = "outerHTML",
+        attribute: Literal[
+            "outerHTML",
+            "innerHTML",
+            "textContent",
+            "innerText",
+            "outerText",
+        ] = "outerHTML",
         timeout=NotSet,
     ):
         "find the string in html(select with given css)"
@@ -1793,7 +1805,13 @@ class AsyncTab(GetValueMixin):
         self,
         regex: str,
         cssselector: str = "html",
-        attribute: str = "outerHTML",
+        attribute: Literal[
+            "outerHTML",
+            "innerHTML",
+            "textContent",
+            "innerText",
+            "outerText",
+        ] = "outerHTML",
         flags: str = "g",
         timeout=NotSet,
     ) -> list:
@@ -1851,7 +1869,13 @@ JSON.stringify(result)
         self,
         text,
         cssselector: str = "html",
-        attribute: str = "outerHTML",
+        attribute: Literal[
+            "outerHTML",
+            "innerHTML",
+            "textContent",
+            "innerText",
+            "outerText",
+        ] = "outerHTML",
         timeout=NotSet,
     ) -> bool:
         """alias for Tab.includes"""
@@ -1863,7 +1887,13 @@ JSON.stringify(result)
         self,
         text,
         cssselector: str = "html",
-        attribute: str = "outerHTML",
+        attribute: Literal[
+            "outerHTML",
+            "innerHTML",
+            "textContent",
+            "innerText",
+            "outerText",
+        ] = "outerHTML",
         timeout=NotSet,
     ) -> bool:
         """String.prototype.includes.
@@ -1882,7 +1912,13 @@ JSON.stringify(result)
         self,
         text: str,
         cssselector: str = "html",
-        attribute: str = "outerHTML",
+        attribute: Literal[
+            "outerHTML",
+            "innerHTML",
+            "textContent",
+            "innerText",
+            "outerText",
+        ] = "outerHTML",
         max_wait_time: Optional[float] = None,
         interval: float = 1,
         timeout=NotSet,
@@ -3888,7 +3924,7 @@ class BrowserContext:
         if self.browserContextId:
             try:
                 await self.browser.send("Target.disposeBrowserContext")
-            except ChromeRuntimeError:
+            except Exception:
                 pass
             self.browserContextId = None
         if self._need_init_chrome:

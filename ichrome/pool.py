@@ -105,10 +105,10 @@ class ChromeTask(asyncio.Future):
         except AttributeError:
             pass
 
-    def cancel(self):
+    def cancel(self, msg=None):
         logger.info(f"[canceled] {self}")
         self.cancel_task()
-        super().cancel()
+        super().cancel(msg=msg)
 
     def __lt__(self, other):
         return self.expire_time < other.expire_time

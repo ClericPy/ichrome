@@ -148,6 +148,7 @@ class ChromeDaemon(object):
         "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
     ]
     SYSTEM_ENCODING = os.getenv("SYSTEM_ENCODING") or ""
+    LAST_N_LINES_STDOUT = 5
 
     def __init__(
         self,
@@ -510,16 +511,16 @@ class ChromeDaemon(object):
                 if f and not f.closed:
                     try:
                         if error_name and f is self.opened_files[1]:
-                            last_5_lines = []
+                            last_n_lines = []
                             f.seek(0)
                             for line in f:
                                 if not line.strip():
                                     continue
-                                last_5_lines.append(line)
-                                if len(last_5_lines) > 5:
-                                    last_5_lines.pop(0)
-                            if last_5_lines:
-                                content = b"".join(last_5_lines)
+                                last_n_lines.append(line)
+                                if len(last_n_lines) > self.LAST_N_LINES_STDOUT:
+                                    last_n_lines.pop(0)
+                            if last_n_lines:
+                                content = b"".join(last_n_lines)
                                 if self.SYSTEM_ENCODING:
                                     text = content.decode(self.SYSTEM_ENCODING)
                                 else:
@@ -529,9 +530,14 @@ class ChromeDaemon(object):
                                         text = content.decode(
                                             "gb18030", errors="replace"
                                         )
-                                logger.error(
-                                    f"stderr file last 5 lines for {error_name}: {text}"
-                                )
+                                if (
+                                    self.LAST_N_LINES_STDOUT
+                                    and error_name
+                                    and error_name != "None"
+                                ):
+                                    logger.error(
+                                        f"stderr file last {self.LAST_N_LINES_STDOUT} lines for {error_name!r}: {text}"
+                                    )
                     except Exception:
                         pass
                     f.close()
@@ -734,9 +740,7 @@ class ChromeDaemon(object):
         if self.on_shutdown:
             self.on_shutdown(self)
         self.kill(True)
-        self.close_stdout_stderr(
-            error_name=getattr(exc_type, "__name__", repr(exc_type))
-        )
+        self.close_stdout_stderr(error_name=getattr(exc_type, "__name__", ""))
         if self.after_shutdown:
             self.after_shutdown(self)
         if self.clear_after_shutdown:
@@ -939,8 +943,18 @@ class AsyncChromeDaemon(ChromeDaemon):
 
     async def _check_chrome_connection(self):
         async with ClientSession() as session:
-            r = await session.head(self.server, timeout=self._timeout)
-            return r.ok
+            start = time.time()
+            for _ in range(20):
+                try:
+                    r = await session.head(self.server, timeout=self._timeout)
+                    return r.ok
+                except Exception:
+                    if time.time() - start > self.MAX_WAIT_CHECKING_SECONDS:
+                        break
+                    await asyncio.sleep(0.1)
+            raise ChromeRuntimeError(
+                f"check_chrome_connection failed for {self.server} not ok."
+            )
 
     async def check_connection(self):
         "check chrome connection ok"
@@ -1072,7 +1086,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         await async_run(self.kill, True)
         await async_run(
             self.close_stdout_stderr,
-            error_name=getattr(exc_type, "__name__", repr(exc_type)),
+            error_name=getattr(exc_type, "__name__", ""),
         )
         if self.after_shutdown:
             await ensure_awaitable(self.after_shutdown(self))

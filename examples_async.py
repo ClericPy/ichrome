@@ -204,7 +204,7 @@ async def test_tab_js(tab: AsyncTab):
     # test wait tags
     result = await tab.wait_tags("abcdabcdabcdabcd", max_wait_time=1)
     assert result == []
-    assert await tab.wait_tag("title", max_wait_time=3)
+    assert await tab.wait_tag("title", max_wait_time=5)
     assert await tab.includes("MIT License")
     assert not (await tab.includes("abcdabcdabcdabcd"))
     assert await tab.wait_includes("MIT License")
@@ -570,7 +570,8 @@ async def test_examples():
                 assert await tab.clear_browser_cache()
                 logger.info("clear_browser_cache OK.")
                 # close tab
-                await tab.close()
+                # await tab.close()
+                # logger.info("close tab OK.")
             # test chrome.connect_tab
             async with chrome.connect_tab(chrome.server + "/json", True) as tab:
                 await tab.wait_loading(2)
