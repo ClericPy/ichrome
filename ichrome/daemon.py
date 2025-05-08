@@ -149,6 +149,8 @@ class ChromeDaemon(object):
     ]
     SYSTEM_ENCODING = os.getenv("SYSTEM_ENCODING") or ""
     LAST_N_LINES_STDOUT = 5
+    # if set USE_PORT_USER_DIR=0, default user_data_dir will not create port dir
+    USE_PORT_USER_DIR = os.getenv("USE_PORT_USER_DIR") != "0"
 
     def __init__(
         self,
@@ -322,14 +324,23 @@ class ChromeDaemon(object):
             self.user_data_dir = main_user_dir
             return
         else:
-            port_user_dir = main_user_dir / f"chrome_{self.port}"
-            self.user_data_dir = port_user_dir
-            if not self.user_data_dir.is_dir():
-                logger.debug(
-                    f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
-                )
-                self.user_data_dir.mkdir(parents=True, exist_ok=True)
-                self._use_port_dir = True
+            if self.USE_PORT_USER_DIR:
+                port_user_dir = main_user_dir / f"chrome_{self.port}"
+                self.user_data_dir = port_user_dir
+                if not self.user_data_dir.is_dir():
+                    logger.debug(
+                        f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
+                    )
+                    self.user_data_dir.mkdir(parents=True, exist_ok=True)
+                    self._use_port_dir = True
+            else:
+                # create user data dir
+                self.user_data_dir = main_user_dir
+                if not self.user_data_dir.is_dir():
+                    logger.debug(
+                        f"creating user data dir at [{os.path.realpath(self.user_data_dir)}]."
+                    )
+                    self.user_data_dir.mkdir(parents=True, exist_ok=True)
 
     @classmethod
     def clear_user_dir(cls, user_data_dir=None, port=None):
