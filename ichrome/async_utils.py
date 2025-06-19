@@ -120,9 +120,9 @@ class _SingleTabConnectionManager:
 
     async def __aexit__(self, *args):
         if self.tab:
-            await self.tab.ws_connection.__aexit__()
             if self._auto_close:
                 await self.tab.close()
+            await self.tab.ws_connection.__aexit__()
 
 
 class _SingleTabConnectionManagerDaemon(_SingleTabConnectionManager):
