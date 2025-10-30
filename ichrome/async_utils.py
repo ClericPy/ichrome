@@ -355,7 +355,7 @@ class AsyncTab(GetValueMixin):
         devtoolsFrontendUrl: str = None,
         json: str = None,
         chrome: "AsyncChrome" = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         ws_kwargs: dict = None,
         default_recv_callback: Callable = None,
         _recv_daemon_break_callback: Callable = None,
@@ -479,7 +479,7 @@ class AsyncTab(GetValueMixin):
         enableBeginFrameControl: bool = None,
         newWindow: bool = None,
         background: bool = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> "AsyncTab":
         """Create a new tab with the same browser context(not connected).
 
@@ -628,7 +628,7 @@ class AsyncTab(GetValueMixin):
     async def send(
         self,
         method: str,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         callback_function: Optional[Callable] = None,
         kwargs: Dict[str, Any] = None,
         auto_enable=True,
@@ -676,7 +676,7 @@ class AsyncTab(GetValueMixin):
     async def recv(
         self,
         event_dict: dict,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         callback_function: Callable = None,
     ) -> Union[dict, None]:
         """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
@@ -771,7 +771,7 @@ class AsyncTab(GetValueMixin):
         url: Optional[str] = "",
         domain: Optional[str] = "",
         path: Optional[str] = "",
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         """[Network.deleteCookies], deleteCookies by name, with url / domain / path."""
         if not any((url, domain)):
@@ -839,7 +839,7 @@ class AsyncTab(GetValueMixin):
         httpOnly: Optional[bool] = False,
         sameSite: Optional[str] = "",
         expires: Optional[int] = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         **_,
     ):
         """[Network.setCookie]
@@ -1054,7 +1054,7 @@ class AsyncTab(GetValueMixin):
         filter_function: Optional[Callable] = None,
         callback_function: Optional[Callable] = None,
         response_body: bool = True,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         """
         Handler context for tab.wait_response.
@@ -1083,7 +1083,7 @@ class AsyncTab(GetValueMixin):
         filter_function: Optional[Callable] = None,
         callback_function: Optional[Callable] = None,
         response_body: bool = True,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         """wait a special response filted by function, then run the callback_function.
 
@@ -1414,7 +1414,7 @@ class AsyncTab(GetValueMixin):
     async def get_response(
         self,
         request_dict: Union[None, dict, str],
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         wait_loading: bool = None,
     ) -> Union[dict, None]:
         """return Network.getResponseBody raw response.
@@ -1443,7 +1443,7 @@ class AsyncTab(GetValueMixin):
         )
 
     async def get_response_body(
-        self, request_dict: Union[None, dict, str], timeout=NotSet, wait_loading=None
+        self, request_dict: Union[None, dict, str], timeout: Union[Any, float, int]=NotSet, wait_loading=None
     ) -> Union[dict, None]:
         """get result.body from self.get_response."""
         result = await self.get_response(
@@ -1467,7 +1467,7 @@ class AsyncTab(GetValueMixin):
         self,
         ignoreCache: bool = False,
         scriptToEvaluateOnLoad: str = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         """Reload the page.
 
@@ -1499,7 +1499,7 @@ class AsyncTab(GetValueMixin):
         userAgent: str,
         acceptLanguage: Optional[str] = "",
         platform: Optional[str] = "",
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         "[Network.setUserAgentOverride], reset the User-Agent of this tab"
         logger.debug(f"[set_ua] {self!r} userAgent => {userAgent}")
@@ -1584,7 +1584,7 @@ class AsyncTab(GetValueMixin):
         self,
         url: Optional[str] = None,
         referrer: Optional[str] = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         timeout_stop_loading: bool = False,
     ) -> bool:
         "alias for self.set_url"
@@ -1599,7 +1599,7 @@ class AsyncTab(GetValueMixin):
         self,
         url: Optional[str] = None,
         referrer: Optional[str] = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         timeout_stop_loading: bool = False,
     ) -> bool:
         """
@@ -1655,7 +1655,7 @@ class AsyncTab(GetValueMixin):
         javascript: str,
         value_path="result.result.value",
         kwargs=None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         """javascript will be filled into function template.
 
@@ -1683,7 +1683,7 @@ class AsyncTab(GetValueMixin):
         cssselector: str,
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         "wait the tag appeared and click it"
         tag = await self.wait_tag(
@@ -1700,7 +1700,7 @@ class AsyncTab(GetValueMixin):
         cssselector: str,
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> Union[None, Tag, TagNotFound]:
         """Wait until the tag is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tag.
@@ -1727,7 +1727,7 @@ class AsyncTab(GetValueMixin):
         cssselector: str,
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> Union[List[Tag], Tag, TagNotFound]:
         """Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
@@ -1762,7 +1762,7 @@ class AsyncTab(GetValueMixin):
         flags: str = "g",
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> list:
         """while loop until await tab.findall got somethine."""
         result = []
@@ -1791,7 +1791,7 @@ class AsyncTab(GetValueMixin):
             "innerText",
             "outerText",
         ] = "outerHTML",
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         "find the string in html(select with given css)"
         result = await self.findall(
@@ -1813,7 +1813,7 @@ class AsyncTab(GetValueMixin):
             "outerText",
         ] = "outerHTML",
         flags: str = "g",
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> list:
         """Similar to python re.findall.
 
@@ -1876,7 +1876,7 @@ JSON.stringify(result)
             "innerText",
             "outerText",
         ] = "outerHTML",
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> bool:
         """alias for Tab.includes"""
         return await self.includes(
@@ -1894,7 +1894,7 @@ JSON.stringify(result)
             "innerText",
             "outerText",
         ] = "outerHTML",
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> bool:
         """String.prototype.includes.
 
@@ -1921,7 +1921,7 @@ JSON.stringify(result)
         ] = "outerHTML",
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> bool:
         """while loop until element contains the substring."""
         exist = False
@@ -1948,7 +1948,7 @@ JSON.stringify(result)
         cssselector: str,
         index: Union[None, int, str] = None,
         action: Union[None, str] = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ) -> Union[List[Tag], Tag, TagNotFound]:
         """deprecated. CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, TagNotFound.
         Tag hasattr: tagName, innerHTML, outerHTML, textContent, attributes, result
@@ -2049,7 +2049,7 @@ JSON.stringify(result)""" % (
         html: str,
         cssselector: str = "body",
         position: str = "beforeend",
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         """Insert HTML source code into document. Often used for injecting CSS element.
 
@@ -2067,7 +2067,7 @@ JSON.stringify(result)""" % (
         html: str,
         cssselector: str = "body",
         position: str = "beforeend",
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         """An alias name for tab.insertAdjacentHTML."""
         return await self.insertAdjacentHTML(
@@ -2105,7 +2105,7 @@ JSON.stringify(result)""" % (
         )
 
     async def get_element_clip(
-        self, cssselector: str, scale=1, timeout=NotSet, captureBeyondViewport=False
+        self, cssselector: str, scale=1, timeout: Union[Any, float, int]=NotSet, captureBeyondViewport=False
     ):
         """Element.getBoundingClientRect. If captureBeyondViewport is True, use scrollWidth & scrollHeight instead.
         {"x":241,"y":85.59375,"width":165,"height":36,"top":85.59375,"right":406,"bottom":121.59375,"left":241}
@@ -2130,7 +2130,7 @@ JSON.stringify(result)""" % (
                 pass
 
     async def snapshot_mhtml(
-        self, save_path=None, encoding="utf-8", timeout=NotSet, **kwargs
+        self, save_path=None, encoding="utf-8", timeout: Union[Any, float, int]=NotSet, **kwargs
     ):
         """[Page.captureSnapshot], as the mhtml page"""
         result = await self.send(
@@ -2158,7 +2158,7 @@ JSON.stringify(result)""" % (
         quality: int = 100,
         fromSurface: bool = True,
         save_path=None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         captureBeyondViewport=False,
         **kwargs,
     ):
@@ -2187,7 +2187,7 @@ JSON.stringify(result)""" % (
         clip: dict = None,
         fromSurface: bool = True,
         save_path=None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
         captureBeyondViewport=False,
         **kwargs,
     ):
@@ -2247,7 +2247,7 @@ JSON.stringify(result)""" % (
         )
 
     async def keyboard_send(
-        self, *, type="char", timeout=NotSet, string=None, **kwargs
+        self, *, type="char", timeout: Union[Any, float, int]=NotSet, string=None, **kwargs
     ):
         """[Input.dispatchKeyEvent]
 
@@ -2284,7 +2284,7 @@ JSON.stringify(result)""" % (
         count=1,
         scale=1,
         multiplier=(0.5, 0.5),
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         "dispatchMouseEvent on selected element center"
         rect = await self.get_element_clip(cssselector, scale=scale, timeout=timeout)
@@ -2426,7 +2426,7 @@ JSON.stringify(result)""" % (
         target_y,
         button="left",
         duration=0,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         await self.mouse_press(start_x, start_y, button=button, timeout=timeout)
         await self.mouse_move(target_x, target_y, duration=duration, timeout=timeout)
@@ -2441,7 +2441,7 @@ JSON.stringify(result)""" % (
         offset_y,
         button="left",
         duration=0,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         "drag mouse relatively"
         return await self.mouse_drag(
@@ -2640,7 +2640,7 @@ True
         filepaths: List[Union[str, Path]],
         cssselector: str = 'input[type="file"]',
         root_id: str = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         """set file type input nodes with given filepaths.
         1. path of filepaths will be reset as absolute posix path.
@@ -2884,6 +2884,8 @@ True
         except asyncio.TimeoutError:
             logger.debug(f"[timeout] {event_dict} [recv] timeout({timeout}).")
             self._listener.unregister(event_dict)
+        except ChromeProcessMissingError:
+            pass
         except Exception as e:
             logger.debug(f"[error] {event_dict} [recv] {e!r}.")
             error = e
@@ -2926,11 +2928,11 @@ True
                 f"request type should be None or dict or str, but `{type(request_id)}` was given."
             )
 
-    async def get_value(self, name: str, timeout=NotSet, jsonify: bool = False):
+    async def get_value(self, name: str, timeout: Union[Any, float, int]=NotSet, jsonify: bool = False):
         """name or expression. jsonify will transport the data by JSON, such as the array."""
         return await self.get_variable(name, timeout=timeout, jsonify=jsonify)
 
-    async def get_variable(self, name: str, timeout=NotSet, jsonify: bool = False):
+    async def get_variable(self, name: str, timeout: Union[Any, float, int]=NotSet, jsonify: bool = False):
         """variable or expression. jsonify will transport the data by JSON, such as the array."""
         # using JSON to keep value type
         if jsonify:
@@ -2959,7 +2961,7 @@ True
         latitude: Optional[int] = None,
         longitude: Optional[int] = None,
         accuracy: Optional[int] = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         logger.debug(
             f"[set_geolocation_override] {self!r} latitude => {latitude}, longitude => {longitude}, accuracy => {accuracy}"
@@ -3454,7 +3456,7 @@ class JavaScriptSnippets(object):
         style=None,
         max_lines: int = 10,
         expires: Union[float, None] = None,
-        timeout=NotSet,
+        timeout: Union[Any, float, int]=NotSet,
     ):
         if style is None:
             style = "position: absolute;max-width: 50%;top: 0.8em; font-size:1.2em; line-height:1.5em; word-break: break-word; right: 0;color: #FF6666; background-color: #ffff99;padding: 1em;z-index:999;display:block;"

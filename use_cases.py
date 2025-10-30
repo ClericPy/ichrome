@@ -3,105 +3,100 @@
 iChrome common use cases.
 """
 
+import asyncio
+import re
 
-def network_sniffer(timeout=60):
-    """network flow sniffer
-
-    1. run the function.
-    2. change url of chrome's tab.
-    3. watch the console logs.
-    """
-    import asyncio
-    from ichrome import AsyncChrome, AsyncTab, AsyncChromeDaemon
-    import json
-
-    get_data_value = AsyncTab.get_data_value
-
-    def filter_function(r):
-        req = json.dumps(get_data_value(r, "params.request"), ensure_ascii=0, indent=2)
-        req_type = get_data_value(r, "params.type")
-        req_type = get_data_value(r, "params.type")
-        doc_url = get_data_value(r, "params.documentURL")
-        print(f"{doc_url} - {req_type}\n{req}", end=f'\n{"="*40}\n')
-        # print(r)
-
-    async def main():
-        async with AsyncChromeDaemon():
-            async with AsyncChrome() as chrome:
-                async with chrome.connect_tab(0) as tab:
-                    await tab.wait_request(
-                        filter_function=filter_function, timeout=timeout
-                    )
-
-    asyncio.run(main())
+from ichrome import AsyncChrome, AsyncChromeDaemon
 
 
-def html_headless_crawler(url="http://httpbin.org/html"):
+async def network_sniffer():
+    """network flow sniffer"""
+
+    async with AsyncChromeDaemon(headless=True) as cd:
+        async with cd.connect_tab(0) as tab:
+            stop_sig = asyncio.Future()
+
+            async def cb(event, tab, buffer):
+                print(
+                    "Event:",
+                    event["method"],
+                    "Tab ID:URL:",
+                    event["params"].get("request", {}).get("url"),
+                )
+                await buffer.continueRequest(event)
+                # get response body
+                response = await f.get_response(event, timeout=5)
+                if response:
+                    print("response body:", response["data"])
+                else:
+                    print("No response body")
+                stop_sig.set_result(True)
+
+            async with (
+                tab.iter_fetch(
+                    patterns=[
+                        {
+                            "urlPattern": "*myip.ipip.net*",  # wildcard pattern to filter requests
+                            "requestStage": "Response",  # can be "Request" or "Response", response means to intercept after response headers received
+                        },
+                    ],
+                    callback=cb,
+                ) as f
+            ):
+                await tab.goto("https://myip.ipip.net/", timeout=0)
+                async for _ in f:
+                    if not stop_sig.done():
+                        continue
+
+
+async def html_headless_crawler():
     """crawl a page with headless chrome"""
-    import asyncio
-    import re
-
-    from ichrome import AsyncChrome, AsyncChromeDaemon
 
     # WARNING: Chrome has a limit of 6 connections per host name, and a max of 10 connections.
     # Read more: https://blog.bluetriangle.com/blocking-web-performance-villain
+    print(*AsyncChromeDaemon._iter_chrome_path())
 
-    async def main():
-        # crawl 3 urls in 3 tabs
-        timeout = 3
+    # crawl 3 urls in 3 tabs
+    async def crawl(url):
+        async with chrome.connect_tab(url, auto_close=True) as tab:
+            print(f"Crawling: {url}", tab.id)
+            await tab.wait_loading(timeout=10)
+            return await tab.html
 
-        async def crawl(url):
-            async with chrome.connect_tab(url, True) as tab:
-                await tab.wait_loading(timeout=timeout)
-                html = await tab.html
-                result = re.search("<h1>(.*?)</h1>", html).group(1)
-                print(result)
-                assert result == "Herman Melville - Moby-Dick"
-
-        # multi-urls concurrently crawl
-        # test_urls = ['http://httpbin.org/html'] * 3
-        # async with AsyncChromeDaemon(headless=True):
-        #     async with AsyncChrome() as chrome:
-        #         tasks = [asyncio.ensure_future(crawl(url)) for url in test_urls]
-        #         await asyncio.wait(tasks)
-        #         # await asyncio.sleep(2)
-        async with AsyncChromeDaemon(headless=True):
-            async with AsyncChrome() as chrome:
-                await crawl(url)
-
-    asyncio.run(main())
+    # multi-urls concurrently crawl
+    test_urls = [f"http://httpbin.org/get?a={i}" for i in range(2)]
+    async with AsyncChromeDaemon(headless=True):
+        async with AsyncChrome() as chrome:
+            tasks = [asyncio.ensure_future(crawl(url)) for url in test_urls]
+            for task in asyncio.as_completed(tasks):
+                html = await task
+                match = re.search(r'"url": "([^"]+)"', html)
+                if match:
+                    print("Crawled:", match.group(1))
+                else:
+                    print("Crawled: Unknown URL")
+    # Crawling: http://httpbin.org/get?a=0 E32C6001BEA62446E70A0CD187B9F9CB
+    # Crawling: http://httpbin.org/get?a=1 5D1C7C80265BE7CBCBD0A9BEF75A4EB7
+    # Crawled: https://httpbin.org/get?a=1
+    # Crawled: https://httpbin.org/get?a=0
 
 
-def custom_ua_headless_crawler():
-    """crawl a page with headless chrome"""
-    import asyncio
-    import re
-
-    from ichrome import AsyncChrome, AsyncTab, AsyncChromeDaemon
-
-    # WARNING: Chrome has a limit of 6 connections per host name, and a max of 10 connections.
-    # Read more: https://blog.bluetriangle.com/blocking-web-performance-villain
-    test_url = "http://httpbin.org/user-agent"
-
-    async def main():
-        # crawl url with custom UA
-        timeout = 3
-
-        async with AsyncChromeDaemon(headless=True, user_agent="no UA"):
-            async with AsyncChrome() as chrome:
-                async with (await chrome[0])() as tab:
-                    tab: AsyncTab
-                    await tab.set_url(test_url, timeout=timeout)
-                    html = await tab.html
-                    result = re.search('("user-agent".*)', html).group(1)
-                    print(result)
-                    assert result == '"user-agent": "no UA"'
-
-    asyncio.run(main())
+async def use_proxy():
+    async with AsyncChromeDaemon(headless=True) as cd:
+        # create a new tab
+        async with cd.connect_tab(index=None) as tab:
+            await tab.goto("https://myip.ipip.net/", timeout=5)
+            print(await tab.html)
+        # Privacy Mode, proxyServer arg maybe not work on Chrome, for `Target.createBrowserContext` is the EXPERIMENTAL feature(but chromium is ok).
+        # https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext
+        # Linux and MacOS may work well.
+        async with cd.incognito_tab(proxyServer="http://127.0.0.1:8080") as tab:
+            await tab.goto("https://myip.ipip.net/", timeout=5)
+            print(await tab.html)
 
 
 if __name__ == "__main__":
     pass
-    # network_sniffer(120)
-    # html_headless_crawler('http://httpbin.org/html')
-    # custom_ua_headless_crawler()
+    # asyncio.run(network_sniffer())
+    # asyncio.run(html_headless_crawler())
+    # asyncio.run(use_proxy())
