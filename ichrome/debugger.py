@@ -56,10 +56,22 @@ class SyncLoop:
     @property
     def loop(self):
         if not self._loop:
-            self.__class__._loop = asyncio.get_event_loop()
+            try:
+                self.__class__._loop = asyncio.get_event_loop()
+            except RuntimeError:
+                self.__class__._loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.__class__._loop)
         return self._loop
 
     def run_sync(self, future):
+        if self.loop.is_running():
+            if not asyncio.iscoroutine(future):
+
+                async def _wrap(aw):
+                    return await aw
+
+                future = _wrap(future)
+            return asyncio.run_coroutine_threadsafe(future, self.loop).result()
         return self.loop.run_until_complete(future)
 
     def wrap_sync(self, function):
@@ -197,7 +209,7 @@ class Chrome(SyncLoop):
 
     def get_tab(self, index=0):
         r = self.run_sync(self._self.get_server("/json"))
-        rjsons = [rjson for rjson in r.json() if (rjson["type"] == "page")]
+        rjsons = [rjson for rjson in self.run_sync(r.json()) if (rjson["type"] == "page")]
         if index is None:
             return [Tab(self, **rjson) for rjson in rjsons]
         else:
