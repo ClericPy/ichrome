@@ -4,7 +4,7 @@ def start_server():
     import json
 
     from ..logs import logger
-    from ..routers.fastapi_routes import ChromeAPIRouter
+    from .routers.fastapi_routes import ChromeAPIRouter
     from ..pool import ChromeWorker
     from .config import Config
     app = FastAPI()

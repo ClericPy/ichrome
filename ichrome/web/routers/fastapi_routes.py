@@ -1,8 +1,8 @@
 import typing
 from urllib.parse import urlencode
 
-from ..logs import logger
-from ..pool import ChromeEngine
+from ...logs import logger
+from ...pool import ChromeEngine
 
 try:
     from fastapi.requests import Request
