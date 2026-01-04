@@ -109,23 +109,23 @@ print(
 
 class IncognitoArgs(BaseModel):
     url: str = "about:blank"
-    width: int = None
-    height: int = None
-    enableBeginFrameControl: bool = None
-    newWindow: bool = None
-    background: bool = None
+    width: typing.Optional[int] = None
+    height: typing.Optional[int] = None
+    enableBeginFrameControl: typing.Optional[bool] = None
+    newWindow: typing.Optional[bool] = None
+    background: typing.Optional[bool] = None
     disposeOnDetach: bool = True
-    proxyServer: str = None
-    proxyBypassList: str = None
-    originsWithUniversalNetworkAccess: typing.List[str] = None
-    flatten: bool = None
+    proxyServer: typing.Optional[str] = None
+    proxyBypassList: typing.Optional[str] = None
+    originsWithUniversalNetworkAccess: typing.Optional[typing.List[str]] = None
+    flatten: typing.Optional[bool] = None
 
 
 class TabOperation(BaseModel):
     tab_callback: str
     data: typing.Any = None
-    timeout: float = None
-    incognito_args: IncognitoArgs = None
+    timeout: typing.Optional[float] = None
+    incognito_args: typing.Optional[IncognitoArgs] = None
 
 
 class ChromeAPIRouter(APIRouter):
@@ -210,7 +210,9 @@ class ChromeAPIRouter(APIRouter):
     async def _chrome_on_shutdown(self):
         await self.chrome_engine.shutdown()
 
-    async def preview(self, url: str, wait_tag: str = None, timeout: float = None):
+    async def preview(
+        self, url: str, wait_tag: str = "", timeout: typing.Optional[float] = None
+    ):
         data = await self.chrome_engine.download(
             url, wait_tag=wait_tag, timeout=timeout
         )
@@ -222,9 +224,9 @@ class ChromeAPIRouter(APIRouter):
     async def download(
         self,
         url: str,
-        cssselector: str = None,
-        wait_tag: str = None,
-        timeout: typing.Union[float, int] = None,
+        cssselector: str = "",
+        wait_tag: str = "",
+        timeout: typing.Union[float, int, None] = None,
     ):
         result = await self.chrome_engine.download(
             url, cssselector=cssselector, wait_tag=wait_tag, timeout=timeout
@@ -235,12 +237,12 @@ class ChromeAPIRouter(APIRouter):
     async def screenshot(
         self,
         url: str,
-        cssselector: str = None,
-        scale: float = 1,
+        cssselector: str = "",
+        scale: float = 1.0,
         format: str = "png",
         quality: int = 100,
         fromSurface: bool = True,
-        timeout: typing.Union[float, int] = None,
+        timeout: typing.Union[float, int, None] = None,
         captureBeyondViewport: bool = False,
     ):
         result = await self.chrome_engine.screenshot(
@@ -276,10 +278,10 @@ class ChromeAPIRouter(APIRouter):
     async def js(
         self,
         url: str,
-        js: str = None,
+        js: str = "",
         value_path="result.result",
-        wait_tag: str = None,
-        timeout: typing.Union[float, int] = None,
+        wait_tag: str = "",
+        timeout: typing.Union[float, int, None] = None,
     ):
         result = await self.chrome_engine.js(
             url, js=js, value_path=value_path, wait_tag=wait_tag, timeout=timeout

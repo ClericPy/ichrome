@@ -32,16 +32,17 @@ def show_best(proxy=None):
         return f"{system.lower()}-{machine.lower()}"
 
     def get_json(url, f):
-        import requests
+        from morebuiltins.request import req
+        import json
 
         try:
-            r = requests.get(
+            r = req.get(
                 url,
                 timeout=3,
                 headers={"User-Agent": ""},
                 proxies={"all": proxy},
             )
-            f.set_result(r.json())
+            f.set_result(json.loads(getattr(r, "text", "{}")))
         except Exception as e:
             f.set_exception(e)
 
@@ -373,6 +374,9 @@ Other operations:
         kwargs["headless"] = getattr(args, "headless", True)
         port = kwargs.get("port") or 9222
         main_user_dir = ChromeDaemon._ensure_user_dir(kwargs["user_data_dir"])
+        if main_user_dir is None:
+            print("user_data_dir is None, cannot clear cache", flush=True)
+            return
         port_user_dir = main_user_dir / f"chrome_{port}"
         print(f"Clearing cache(port={port}): {get_readable_dir_size(port_user_dir)}")
         asyncio.run(clear_cache_handler(**kwargs))

@@ -14,7 +14,7 @@ from json import loads as _json_loads
 from pathlib import Path
 from typing import List, Literal, Optional, Set, Tuple, Union
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 from morebuiltins.request import req
 from morebuiltins.utils import read_time, ttime
 
@@ -154,7 +154,7 @@ class ChromeDaemon(object):
 
     def __init__(
         self,
-        chrome_path=None,
+        chrome_path: Optional[str]=None,
         host="127.0.0.1",
         port=9222,
         headless=False,
@@ -195,7 +195,7 @@ class ChromeDaemon(object):
         self.proc = None
         self.host = host
         self.port = port
-        self.chrome_path = chrome_path or os.getenv("CHROME_PATH")
+        self.chrome_path: Optional[str] = chrome_path or os.getenv("CHROME_PATH")
         self.UA = user_agent
         self.headless = headless
         self.proxy = proxy
@@ -215,7 +215,7 @@ class ChromeDaemon(object):
         )
         self._use_port_dir = False
         self.stdout_stderr = stdout_stderr
-        self.opened_files = [None, None]
+        self.opened_files: list = [None, None]
         self.init()
 
     @classmethod
@@ -350,8 +350,9 @@ class ChromeDaemon(object):
             # clear whole ichrome dir if port is None
             cls.clear_dir_with_shutil(main_user_dir)
         else:
-            # clear port dir if port is not None
-            cls.clear_dir_with_shutil(main_user_dir / f"chrome_{port}")
+            if main_user_dir:
+                # clear port dir if port is not None
+                cls.clear_dir_with_shutil(main_user_dir / f"chrome_{port}")
 
     def _clear_user_dir(self):
         # Deprecated
@@ -360,14 +361,15 @@ class ChromeDaemon(object):
     def _clear_user_data_dir(self):
         self.clear_dir_with_shutil(self.user_data_dir)
         if self._use_port_dir:
-            main_user_dir = self.user_data_dir.parent
-            if main_user_dir.is_dir():
-                for sub_file_or_dir in main_user_dir.iterdir():
-                    if sub_file_or_dir.exists():
-                        break
-                else:
-                    # remove null main_user_dir
-                    main_user_dir.rmdir()
+            if self.user_data_dir:
+                main_user_dir = self.user_data_dir.parent
+                if main_user_dir.is_dir():
+                    for sub_file_or_dir in main_user_dir.iterdir():
+                        if sub_file_or_dir.exists():
+                            break
+                    else:
+                        # remove null main_user_dir
+                        main_user_dir.rmdir()
 
     def clear_user_data_dir(self):
         # clear self user dir
@@ -442,7 +444,7 @@ class ChromeDaemon(object):
                 time.sleep(0.5)
                 continue
             else:
-                if r.ok:
+                if getattr(r, "ok", False):
                     self.ready = True
                     return True
         return False
@@ -569,7 +571,7 @@ class ChromeDaemon(object):
                 break
             try:
                 r = req.head(self.server, timeout=self._timeout)
-                if r.ok:
+                if getattr(r, "ok", False):
                     self.ready = True
                     break
             except Exception:
@@ -583,6 +585,9 @@ class ChromeDaemon(object):
 
     def check_chrome_ready(self):
         if self.ok:
+            if not self.proc:
+                logger.debug(f"launch_chrome failed: {self}, no proc found.")
+                return False
             logger.debug(f"launch_chrome success: {self}, args: {self.proc.args}")
             return True
         else:
@@ -687,6 +692,8 @@ class ChromeDaemon(object):
                 deaths += 1
                 continue
             try:
+                if not self.proc:
+                    raise ChromeRuntimeError(f"{self} daemon found no proc.")
                 return_code = self.proc.wait(timeout=interval)
                 deaths += 1
             except subprocess.TimeoutExpired:
@@ -915,6 +922,8 @@ class AsyncChromeDaemon(ChromeDaemon):
         await async_run(self._wrap_user_data_dir)
         if not self.chrome_path:
             self.chrome_path = await async_run(self._get_default_path)
+        if self.chrome_path is None:
+            raise ChromeRuntimeError("Executable chrome file was not found.")
         _chrome_path = Path(self.chrome_path)
         if _chrome_path.is_file():
             CHROME_PROCESS_NAMES.add(_chrome_path.name)
@@ -955,10 +964,11 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def _check_chrome_connection(self):
         async with ClientSession() as session:
             start = time.time()
+            timeout = ClientTimeout(total=self._timeout)
             for _ in range(20):
                 try:
-                    r = await session.head(self.server, timeout=self._timeout)
-                    return r.ok
+                    r = await session.head(self.server, timeout=timeout)
+                    return getattr(r, "ok", False)
                 except Exception:
                     if time.time() - start > self.MAX_WAIT_CHECKING_SECONDS:
                         break
@@ -1004,6 +1014,9 @@ class AsyncChromeDaemon(ChromeDaemon):
     async def check_chrome_ready(self):
         "check if the chrome api is available"
         if self.proc_ok and await self.check_connection():
+            if not self.proc:
+                logger.debug(f"launch_chrome failed: {self}, no proc found.")
+                return False
             logger.debug(f"launch_chrome success: {self}, args: {self.proc.args}")
             return True
         else:
@@ -1055,6 +1068,8 @@ class AsyncChromeDaemon(ChromeDaemon):
                 deaths += 1
                 continue
             try:
+                if not self.proc:
+                    raise ChromeRuntimeError(f"{self} daemon found no proc.")
                 return_code = await async_run(self.proc.wait, interval)
                 if self._shutdown_reason:
                     break
@@ -1116,7 +1131,7 @@ class AsyncChromeDaemon(ChromeDaemon):
         self,
         index: Union[None, int, str] = 0,
         auto_close: bool = False,
-        flatten: bool = None,
+        flatten: Union[bool, None] = None,
     ):
         """More easier way to init a connected Tab with `async with`.
 
@@ -1135,7 +1150,7 @@ class AsyncChromeDaemon(ChromeDaemon):
             port=self.port,
             index=index,
             auto_close=auto_close,
-            flatten=flatten,
+            flatten=bool(flatten),
         )
 
     async def close_browser(self):
@@ -1153,9 +1168,9 @@ class AsyncChromeDaemon(ChromeDaemon):
     def create_context(
         self,
         disposeOnDetach: bool = True,
-        proxyServer: str = None,
-        proxyBypassList: str = None,
-        originsWithUniversalNetworkAccess: List[str] = None,
+        proxyServer: Optional[str] = None,
+        proxyBypassList: Optional[str] = None,
+        originsWithUniversalNetworkAccess: Optional[List[str]] = None,
     ) -> BrowserContext:
         "create a new browser context, which can be set new proxy, same like the incognito mode"
         return BrowserContext(
@@ -1169,16 +1184,16 @@ class AsyncChromeDaemon(ChromeDaemon):
     def incognito_tab(
         self,
         url: str = "about:blank",
-        width: int = None,
-        height: int = None,
-        enableBeginFrameControl: bool = None,
-        newWindow: bool = None,
-        background: bool = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        enableBeginFrameControl: Optional[bool] = None,
+        newWindow: Optional[bool] = None,
+        background: Optional[bool] = None,
         disposeOnDetach: bool = True,
-        proxyServer: str = None,
-        proxyBypassList: str = None,
-        originsWithUniversalNetworkAccess: List[str] = None,
-        flatten: bool = None,
+        proxyServer: Optional[str] = None,
+        proxyBypassList: Optional[str] = None,
+        originsWithUniversalNetworkAccess: Optional[List[str]] = None,
+        flatten: Optional[bool] = None,
     ):
         "create a new tab with incognito mode, this is really a good choice"
         chrome = AsyncChrome(host=self.host, port=self.port, timeout=self._timeout)
