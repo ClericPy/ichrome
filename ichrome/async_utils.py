@@ -22,11 +22,12 @@ from typing import (
     Optional,
     Set,
     Union,
+    cast,
 )
 from urllib.parse import quote_plus, urljoin
 from weakref import WeakValueDictionary
 
-from aiohttp import ClientResponse, ClientSession
+from aiohttp import ClientResponse, ClientSession, ClientTimeout
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.client_exceptions import ClientError
 from aiohttp.http import WebSocketError, WSMsgType
@@ -85,20 +86,23 @@ class _SingleTabConnectionManager:
         chrome: "AsyncChrome",
         index: Union[None, int, str] = 0,
         auto_close: bool = False,
-        target_kwargs: dict = None,
-        flatten: bool = None,
+        target_kwargs: Optional[dict] = None,
+        flatten: Optional[bool] = None,
     ):
         self.chrome = chrome
         self.index = index
-        self.tab: "AsyncTab" = None
-        self.target_kwargs: dict = target_kwargs
+        self.tab: Optional["AsyncTab"] = None
+        self.target_kwargs: dict = target_kwargs or {}
         self._auto_close = auto_close
         self.flatten = AsyncTab._DEFAULT_FLATTEN if flatten is None else flatten
 
     async def __aenter__(self) -> "AsyncTab":
         if self.target_kwargs:
-            data = await self.chrome.browser.send(
-                "Target.createTarget", kwargs=self.target_kwargs
+            data: dict = cast(
+                dict,
+                await self.chrome.browser.send(
+                    "Target.createTarget", kwargs=self.target_kwargs
+                ),
             )
             tab_id = data["result"]["targetId"]
             self.tab = await self.chrome.get_tab(tab_id)
@@ -133,7 +137,7 @@ class _SingleTabConnectionManagerDaemon(_SingleTabConnectionManager):
         port,
         index: Union[None, int, str] = 0,
         auto_close: bool = False,
-        timeout: int = None,
+        timeout: Optional[int] = None,
         flatten: bool = False,
     ):
         self.chrome = AsyncChrome(host=host, port=port, timeout=timeout)
@@ -154,7 +158,7 @@ class _WSConnection:
     def __init__(self, tab: "AsyncTab"):
         self.tab = tab
         self._closed = None
-        self._recv_task: Future = None
+        self._recv_task: Optional[Future] = None
         self._auto_close = False
 
     def __str__(self):
@@ -166,6 +170,8 @@ class _WSConnection:
 
     @property
     def browser(self):
+        if self.tab.chrome is None:
+            raise ChromeRuntimeError("tab.chrome is None.")
         return self.tab.chrome.browser
 
     async def __aenter__(self) -> "AsyncTab":
@@ -177,6 +183,8 @@ class _WSConnection:
             data = await self.browser.send(
                 "Target.attachToTarget", targetId=self.tab.tab_id, flatten=True
             )
+            if data is None:
+                raise TabConnectionError(f"Attach to tab failed, {self.tab}")
             self.tab._session_id = data["result"]["sessionId"]
             self.browser._sessions[self.tab._session_id] = self.tab
         else:
@@ -200,11 +208,6 @@ class _WSConnection:
         await self.tab.get_info()
         return self.tab
 
-    async def _heartbeat_daemon(self):
-        while not self.tab.ws.closed:
-            await asyncio.sleep(self.tab.heartbeat)
-        raise KeyboardInterrupt(f"Tab missed connection before closed, {self.tab}")
-
     async def _start_tasks(self):
         if not self.tab.flatten:
             self._recv_task = asyncio.ensure_future(self.tab._recv_daemon())
@@ -224,7 +227,7 @@ class _WSConnection:
             if self.tab.flatten:
                 self._closed = True
                 if self.tab._session_id:
-                    self.tab._session_id = None
+                    setattr(self.tab, "_session_id", None)
                     try:
                         await self.browser.send(
                             "Target.detachFromTarget", sessionId=self.tab._session_id
@@ -346,20 +349,20 @@ class AsyncTab(GetValueMixin):
 
     def __init__(
         self,
-        tab_id: str = None,
-        title: str = None,
-        url: str = None,
-        type: str = None,
-        description: str = None,
-        webSocketDebuggerUrl: str = None,
-        devtoolsFrontendUrl: str = None,
-        json: str = None,
-        chrome: "AsyncChrome" = None,
-        timeout: Union[Any, float, int]=NotSet,
-        ws_kwargs: dict = None,
-        default_recv_callback: Callable = None,
-        _recv_daemon_break_callback: Callable = None,
-        flatten: bool = None,
+        tab_id: str = "",
+        title: str = "",
+        url: str = "",
+        type: str = "",
+        description: str = "",
+        webSocketDebuggerUrl: str = "",
+        devtoolsFrontendUrl: str = "",
+        json: str = "",
+        chrome: Optional["AsyncChrome"] = None,
+        timeout: Union[Any, float, int] = NotSet,
+        ws_kwargs: Optional[dict] = None,
+        default_recv_callback: Optional[Callable] = None,
+        _recv_daemon_break_callback: Optional[Callable] = None,
+        flatten: Optional[bool] = None,
         **kwargs,
     ):
         """Init AsyncTab instance.
@@ -385,7 +388,7 @@ class AsyncTab(GetValueMixin):
             webSocketDebuggerUrl (str, optional): ws URL to connect. Defaults to None.
             devtoolsFrontendUrl (str, optional): devtools UI URL. Defaults to None.
             json (str, optional): raw Tab JSON. Defaults to None.
-            chrome (AsyncChrome, optional): the AsyncChrome object which the Tab belongs to. Defaults to None.
+            chrome (AsyncChrome): the AsyncChrome object which the Tab belongs to. Defaults to None.
             timeout (_type_, optional): default recv timeout, defaults to AsyncTab._DEFAULT_RECV_TIMEOUT. Defaults to NotSet.
             ws_kwargs (dict, optional): kwargs for ws connection. Defaults to AsyncTab._DEFAULT_WS_KWARGS.
             default_recv_callback (Callable, optional): called for each data received, sync/async function only accept 1 arg of data comes from ws recv. Defaults to None.
@@ -397,6 +400,8 @@ class AsyncTab(GetValueMixin):
         tab_id = tab_id or kwargs.pop("id")
         if not tab_id:
             raise ChromeValueError(f"tab_id should not be null, {tab_id}")
+        if chrome is None:
+            raise ChromeValueError("chrome should not be None.")
         self.id = self.tab_id = tab_id
         self._title = title
         self._url = url
@@ -439,9 +444,9 @@ class AsyncTab(GetValueMixin):
         self._enabled_domains: Set[str] = set()
         self._default_recv_callback: List[Callable] = []
         self._sessions: WeakValueDictionary = WeakValueDictionary()
-        self._session_id: str = None
+        self._session_id: str = ""
         # init after connected
-        self._target_info: dict = None
+        self._target_info: Optional[dict] = None
         # sessions for flatten mode
         self.flatten: bool = self._DEFAULT_FLATTEN if flatten is None else flatten
         if self.flatten:
@@ -474,12 +479,12 @@ class AsyncTab(GetValueMixin):
     async def new_tab(
         self,
         url: str = "about:blank",
-        width: int = None,
-        height: int = None,
-        enableBeginFrameControl: bool = None,
-        newWindow: bool = None,
-        background: bool = None,
-        timeout: Union[Any, float, int]=NotSet,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        enableBeginFrameControl: Optional[bool] = None,
+        newWindow: Optional[bool] = None,
+        background: Optional[bool] = None,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> "AsyncTab":
         """Create a new tab with the same browser context(not connected).
 
@@ -519,15 +524,19 @@ class AsyncTab(GetValueMixin):
         )
         kwargs: dict = {k: v for k, v in _kwargs.items() if v is not None}
         data = await self.send("Target.createTarget", kwargs=kwargs, timeout=timeout)
+        if data is None:
+            raise ChromeRuntimeError(f"Create new tab failed, {self}")
         tab_id = data["result"]["targetId"]
         tab = await self.chrome.get_tab(tab_id)
+        if tab is None:
+            raise ChromeRuntimeError(f"Get new tab failed, {tab_id}")
         tab.flatten = self.flatten
         return tab
 
     async def close_browser(self, timeout=0):
         asyncio.create_task(self.send("Browser.close", timeout=timeout))
 
-    async def get_info(self, target_id: str = None, timeout=NotSet) -> dict:
+    async def get_info(self, target_id: Optional[str] = None, timeout=NotSet) -> dict:
         if target_id is None:
             if self.tab_id == "browser" and self.type == "browser":
                 return {"type": "browser"}
@@ -539,14 +548,15 @@ class AsyncTab(GetValueMixin):
                 "Target.getTargetInfo", targetId=target_id, timeout=timeout
             )
             try:
-                result = data["result"]["targetInfo"]
-                self.BACKWARD_COMPATIBLES["Target.getTargetInfo"] = True
+                if data:
+                    result = data["result"]["targetInfo"]
+                    self.BACKWARD_COMPATIBLES["Target.getTargetInfo"] = True
             except KeyError:
                 logger.debug(f"[get_info] {self!r} KeyError => {data}")
-                error = self.get_data_value(data, "error.message", "")
-                if "'Target.TargetInfo' wasn't found" in error:
+                error_str = str(self.get_data_value(data, "error.message", ""))
+                if "'Target.TargetInfo' wasn't found" in error_str:
                     self.BACKWARD_COMPATIBLES["Target.getTargetInfo"] = False
-                elif "No target with given id found" in error:
+                elif "No target with given id found" in error_str:
                     self.BACKWARD_COMPATIBLES["Target.getTargetInfo"] = True
         if not result:
             # Target.getTargetInfo not support, use Target.getTargets
@@ -573,10 +583,11 @@ class AsyncTab(GetValueMixin):
         }]"""
         data = await self.send("Target.getTargets", timeout=timeout)
         try:
-            return data["result"]["targetInfos"]
+            if data:
+                return data["result"]["targetInfos"]
         except KeyError:
             logger.debug(f"[get_targets] {self!r} error => {data}")
-            return []
+        return []
 
     @property
     def url(self) -> Awaitable[str]:
@@ -628,9 +639,9 @@ class AsyncTab(GetValueMixin):
     async def send(
         self,
         method: str,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
         callback_function: Optional[Callable] = None,
-        kwargs: Dict[str, Any] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
         auto_enable=True,
         force=None,
         **_kwargs,
@@ -667,7 +678,8 @@ class AsyncTab(GetValueMixin):
                 return await f
             else:
                 # timeout == 0, no need wait for response.
-                return await self.ws.send_json(request)
+                await self.ws.send_json(request)
+                return None
         except (ClientError, WebSocketError, TypeError) as err:
             err_msg = f"{self} [send] msg {request} failed for {err}"
             logger.error(err_msg)
@@ -676,8 +688,8 @@ class AsyncTab(GetValueMixin):
     async def recv(
         self,
         event_dict: dict,
-        timeout: Union[Any, float, int]=NotSet,
-        callback_function: Callable = None,
+        timeout: Union[Any, float, int] = NotSet,
+        callback_function: Optional[Callable] = None,
     ) -> Union[dict, None]:
         """Wait for a event_dict or not wait by setting timeout=0. Events will be filt by `id` or `method` or the whole json.
 
@@ -705,7 +717,7 @@ class AsyncTab(GetValueMixin):
         domain: str,
         force: bool = False,
         timeout=None,
-        kwargs: dict = None,
+        kwargs: Optional[dict] = None,
         **_kwargs,
     ):
         """domain: Network or Page and so on, will send `{domain}.enable`. Automatically check for duplicated sendings if not force."""
@@ -771,7 +783,7 @@ class AsyncTab(GetValueMixin):
         url: Optional[str] = "",
         domain: Optional[str] = "",
         path: Optional[str] = "",
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """[Network.deleteCookies], deleteCookies by name, with url / domain / path."""
         if not any((url, domain)):
@@ -786,13 +798,13 @@ class AsyncTab(GetValueMixin):
         )
 
     async def get_cookies_dict(
-        self, urls: Union[List[str], str] = None, timeout=NotSet
+        self, urls: Union[List[str], str, None] = None, timeout=NotSet
     ) -> Dict[str, str]:
         cookies = await self.get_cookies(urls=urls, timeout=timeout)
         return {cookie["name"]: cookie.get("value", "") for cookie in cookies}
 
     async def get_cookies(
-        self, urls: Union[List[str], str] = None, timeout=NotSet
+        self, urls: Union[List[str], str, None] = None, timeout=NotSet
     ) -> List:
         """[Network.getCookies], get cookies of urls."""
         if urls:
@@ -802,7 +814,7 @@ class AsyncTab(GetValueMixin):
             result = await self.send("Network.getCookies", urls=urls, timeout=timeout)
         else:
             result = await self.send("Network.getCookies", timeout=timeout)
-        return self.get_data_value(result, "result.cookies", [])
+        return self.get_data_value(result, "result.cookies") or []
 
     async def set_cookies(self, cookies: List, ensure_keys=False, timeout=NotSet):
         """[Network.setCookies]"""
@@ -839,7 +851,7 @@ class AsyncTab(GetValueMixin):
         httpOnly: Optional[bool] = False,
         sameSite: Optional[str] = "",
         expires: Optional[int] = None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
         **_,
     ):
         """[Network.setCookie]
@@ -905,7 +917,7 @@ class AsyncTab(GetValueMixin):
         """`await tab.html`. return html from `document.documentElement.outerHTML`"""
         return self.get_html()
 
-    async def set_html(self, html: str, frame_id: str = None, timeout=NotSet):
+    async def set_html(self, html: str, frame_id: Optional[str] = None, timeout=NotSet):
         "JS: document.write, or Page.setDocumentContent if given frame_id"
         if frame_id is None:
             frame_id = await self.get_page_frame_id(timeout=timeout)
@@ -1040,7 +1052,7 @@ class AsyncTab(GetValueMixin):
         {'method': 'Runtime.consoleAPICalled', 'params': {'type': 'log', 'args': [{'type': 'number', 'value': 1, 'description': '1234'}], 'executionContextId': 4, 'timestamp': 1592924176778.166, 'stackTrace': {'callFrames': [{'functionName': '', 'scriptId': '385', 'url': '', 'lineNumber': 0, 'columnNumber': 8}]}}}
         {'method': 'Runtime.consoleAPICalled', 'params': {'type': 'log', 'args': [{'type': 'string', 'value': 'string'}], 'executionContextId': 4, 'timestamp': 1592924187756.2349, 'stackTrace': {'callFrames': [{'functionName': '', 'scriptId': '404', 'url': '', 'lineNumber': 0, 'columnNumber': 8}]}}}
         """
-        result = await self.wait_event(
+        result: Any = await self.wait_event(
             "Runtime.consoleAPICalled", timeout=timeout, filter_function=filter_function
         )
         try:
@@ -1054,7 +1066,7 @@ class AsyncTab(GetValueMixin):
         filter_function: Optional[Callable] = None,
         callback_function: Optional[Callable] = None,
         response_body: bool = True,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """
         Handler context for tab.wait_response.
@@ -1083,7 +1095,7 @@ class AsyncTab(GetValueMixin):
         filter_function: Optional[Callable] = None,
         callback_function: Optional[Callable] = None,
         response_body: bool = True,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """wait a special response filted by function, then run the callback_function.
 
@@ -1157,10 +1169,10 @@ class AsyncTab(GetValueMixin):
     def iter_events(
         self,
         events: Union[List[str], Dict[str, Callable]],
-        timeout: Union[float, int] = None,
+        timeout: Union[float, int, None] = None,
         maxsize=0,
-        kwargs: Any = None,
-        callback: Callable = None,
+        kwargs: Optional[Any] = None,
+        callback: Optional[Callable] = None,
     ) -> "EventBuffer":
         """Iter events with a async context.
         ::
@@ -1217,13 +1229,13 @@ class AsyncTab(GetValueMixin):
 
     def iter_fetch(
         self,
-        patterns: List[dict] = None,
+        patterns: Optional[List[dict]] = None,
         handleAuthRequests=False,
-        events: Union[List[str], Dict[str, Callable]] = None,
-        timeout: Union[float, int] = None,
+        events: Union[List[str], Dict[str, Callable], None] = None,
+        timeout: Union[float, int, None] = None,
         maxsize=0,
-        kwargs: Any = None,
-        callback: Callable = None,
+        kwargs: Optional[Any] = None,
+        callback: Optional[Callable] = None,
     ) -> "FetchBuffer":
         """
         Fetch.RequestPattern:
@@ -1363,7 +1375,7 @@ class AsyncTab(GetValueMixin):
         user="",
         password="",
         test_url="https://api.github.com/",
-        callback: Callable = None,
+        callback: Optional[Callable] = None,
         iter_count=2,
     ):
         """pass user/password for auth proxy.
@@ -1393,7 +1405,7 @@ class AsyncTab(GetValueMixin):
                 for _ in range(iter_count):
                     if ok:
                         break
-                    event: dict = await f
+                    event: dict = cast(dict, await f)
                     if event["method"] == "Fetch.requestPaused":
                         await f.continueRequest(event)
                     elif event["method"] == "Fetch.authRequired":
@@ -1408,14 +1420,14 @@ class AsyncTab(GetValueMixin):
                             )
                             ok = True
             finally:
-                await task
+                await cast(asyncio.Task, task)
                 return ok
 
     async def get_response(
         self,
         request_dict: Union[None, dict, str],
-        timeout: Union[Any, float, int]=NotSet,
-        wait_loading: bool = None,
+        timeout: Union[Any, float, int] = NotSet,
+        wait_loading: Optional[bool] = None,
     ) -> Union[dict, None]:
         """return Network.getResponseBody raw response.
         return demo:
@@ -1443,7 +1455,10 @@ class AsyncTab(GetValueMixin):
         )
 
     async def get_response_body(
-        self, request_dict: Union[None, dict, str], timeout: Union[Any, float, int]=NotSet, wait_loading=None
+        self,
+        request_dict: Union[None, dict, str],
+        timeout: Union[Any, float, int] = NotSet,
+        wait_loading=None,
     ) -> Union[dict, None]:
         """get result.body from self.get_response."""
         result = await self.get_response(
@@ -1466,8 +1481,8 @@ class AsyncTab(GetValueMixin):
     async def reload(
         self,
         ignoreCache: bool = False,
-        scriptToEvaluateOnLoad: str = None,
-        timeout: Union[Any, float, int]=NotSet,
+        scriptToEvaluateOnLoad: Optional[str] = None,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """Reload the page.
 
@@ -1499,7 +1514,7 @@ class AsyncTab(GetValueMixin):
         userAgent: str,
         acceptLanguage: Optional[str] = "",
         platform: Optional[str] = "",
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         "[Network.setUserAgentOverride], reset the User-Agent of this tab"
         logger.debug(f"[set_ua] {self!r} userAgent => {userAgent}")
@@ -1520,7 +1535,10 @@ class AsyncTab(GetValueMixin):
         return self.check_error("goto_history", result, entryId=entryId)
 
     async def get_history_entry(
-        self, index: int = None, relative_index: int = None, timeout=NotSet
+        self,
+        index: Optional[int] = None,
+        relative_index: Optional[int] = None,
+        timeout=NotSet,
     ):
         "get history entries of this page"
         result = await self.get_history_list(timeout=timeout)
@@ -1543,7 +1561,9 @@ class AsyncTab(GetValueMixin):
         "go to forward history"
         return await self.goto_history_relative(relative_index=1, timeout=timeout)
 
-    async def goto_history_relative(self, relative_index: int = None, timeout=NotSet):
+    async def goto_history_relative(
+        self, relative_index: Optional[int] = None, timeout=NotSet
+    ):
         "go to the relative history"
         try:
             entry = await self.get_history_entry(
@@ -1561,7 +1581,7 @@ class AsyncTab(GetValueMixin):
         return example:
             {'currentIndex': 0, 'entries': [{'id': 1, 'url': 'about:blank', 'userTypedURL': 'about:blank', 'title': '', 'transitionType': 'auto_toplevel'}, {'id': 7, 'url': 'http://3.p.cn/', 'userTypedURL': 'http://3.p.cn/', 'title': 'Not Found', 'transitionType': 'typed'}, {'id': 9, 'url': 'http://p.3.cn/', 'userTypedURL': 'http://p.3.cn/', 'title': '', 'transitionType': 'typed'}]}}"""
         result = await self.send("Page.getNavigationHistory", timeout=timeout)
-        return self.get_data_value(result, value_path="result", default={})
+        return self.get_data_value(result, value_path="result") or {}
 
     async def reset_history(self, timeout=NotSet) -> bool:
         "[Page.resetNavigationHistory], clear up history immediately"
@@ -1584,7 +1604,7 @@ class AsyncTab(GetValueMixin):
         self,
         url: Optional[str] = None,
         referrer: Optional[str] = None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
         timeout_stop_loading: bool = False,
     ) -> bool:
         "alias for self.set_url"
@@ -1599,7 +1619,7 @@ class AsyncTab(GetValueMixin):
         self,
         url: Optional[str] = None,
         referrer: Optional[str] = None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
         timeout_stop_loading: bool = False,
     ) -> bool:
         """
@@ -1634,7 +1654,11 @@ class AsyncTab(GetValueMixin):
         return bool(data and loaded_ok)
 
     async def js(
-        self, javascript: str, value_path="result.result", kwargs=None, timeout=NotSet
+        self,
+        javascript: str,
+        value_path="result.result",
+        kwargs=None,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """
         Evaluate JavaScript on the page.
@@ -1655,7 +1679,7 @@ class AsyncTab(GetValueMixin):
         javascript: str,
         value_path="result.result.value",
         kwargs=None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """javascript will be filled into function template.
 
@@ -1683,7 +1707,7 @@ class AsyncTab(GetValueMixin):
         cssselector: str,
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         "wait the tag appeared and click it"
         tag = await self.wait_tag(
@@ -1700,7 +1724,7 @@ class AsyncTab(GetValueMixin):
         cssselector: str,
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> Union[None, Tag, TagNotFound]:
         """Wait until the tag is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tag.
@@ -1727,7 +1751,7 @@ class AsyncTab(GetValueMixin):
         cssselector: str,
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> Union[List[Tag], Tag, TagNotFound]:
         """Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
         cssselector: css querying the Tags.
@@ -1762,7 +1786,7 @@ class AsyncTab(GetValueMixin):
         flags: str = "g",
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> list:
         """while loop until await tab.findall got somethine."""
         result = []
@@ -1791,7 +1815,7 @@ class AsyncTab(GetValueMixin):
             "innerText",
             "outerText",
         ] = "outerHTML",
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         "find the string in html(select with given css)"
         result = await self.findall(
@@ -1813,7 +1837,7 @@ class AsyncTab(GetValueMixin):
             "outerText",
         ] = "outerHTML",
         flags: str = "g",
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> list:
         """Similar to python re.findall.
 
@@ -1876,7 +1900,7 @@ JSON.stringify(result)
             "innerText",
             "outerText",
         ] = "outerHTML",
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> bool:
         """alias for Tab.includes"""
         return await self.includes(
@@ -1894,7 +1918,7 @@ JSON.stringify(result)
             "innerText",
             "outerText",
         ] = "outerHTML",
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> bool:
         """String.prototype.includes.
 
@@ -1906,7 +1930,7 @@ JSON.stringify(result)
             whether the outerHTML contains substring.
         """
         js = f"document.querySelector(`{cssselector}`).{attribute}.includes(`{text}`)"
-        return await self.get_value(js, jsonify=True, timeout=timeout)
+        return bool(await self.get_value(js, jsonify=True, timeout=timeout))
 
     async def wait_includes(
         self,
@@ -1921,7 +1945,7 @@ JSON.stringify(result)
         ] = "outerHTML",
         max_wait_time: Optional[float] = None,
         interval: float = 1,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> bool:
         """while loop until element contains the substring."""
         exist = False
@@ -1936,19 +1960,28 @@ JSON.stringify(result)
         return exist
 
     async def querySelector(
-        self, cssselector: str, action: Union[None, str] = None, timeout=NotSet
+        self,
+        cssselector: str,
+        action: Union[None, str] = None,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> Union[Tag, TagNotFound]:
         "deprecated. query a tag with css"
-        return await self.querySelectorAll(
+        result = await self.querySelectorAll(
             cssselector=cssselector, index=0, action=action, timeout=timeout
         )
+        if isinstance(result, list):
+            if result:
+                return result[0]
+            else:
+                return TagNotFound()
+        return result
 
     async def querySelectorAll(
         self,
         cssselector: str,
         index: Union[None, int, str] = None,
         action: Union[None, str] = None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ) -> Union[List[Tag], Tag, TagNotFound]:
         """deprecated. CDP DOM domain is quite heavy both computationally and memory wise, use js instead. return List[Tag], Tag, TagNotFound.
         Tag hasattr: tagName, innerHTML, outerHTML, textContent, attributes, result
@@ -2049,7 +2082,7 @@ JSON.stringify(result)""" % (
         html: str,
         cssselector: str = "body",
         position: str = "beforeend",
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """Insert HTML source code into document. Often used for injecting CSS element.
 
@@ -2067,7 +2100,7 @@ JSON.stringify(result)""" % (
         html: str,
         cssselector: str = "body",
         position: str = "beforeend",
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """An alias name for tab.insertAdjacentHTML."""
         return await self.insertAdjacentHTML(
@@ -2094,7 +2127,11 @@ JSON.stringify(result)""" % (
             return None
 
     async def click(
-        self, cssselector: str, index: int = 0, action: str = "click()", timeout=NotSet
+        self,
+        cssselector: str,
+        index: int = 0,
+        action: str = "click()",
+        timeout: Union[Any, float, int] = NotSet,
     ) -> Union[List[Tag], Tag, TagNotFound]:
         """Click some tag with javascript
         await tab.click("#sc_hdu>li>a") # click first node's link.
@@ -2105,7 +2142,11 @@ JSON.stringify(result)""" % (
         )
 
     async def get_element_clip(
-        self, cssselector: str, scale=1, timeout: Union[Any, float, int]=NotSet, captureBeyondViewport=False
+        self,
+        cssselector: str,
+        scale=1,
+        timeout: Union[Any, float, int] = NotSet,
+        captureBeyondViewport=False,
     ):
         """Element.getBoundingClientRect. If captureBeyondViewport is True, use scrollWidth & scrollHeight instead.
         {"x":241,"y":85.59375,"width":165,"height":36,"top":85.59375,"right":406,"bottom":121.59375,"left":241}
@@ -2130,16 +2171,22 @@ JSON.stringify(result)""" % (
                 pass
 
     async def snapshot_mhtml(
-        self, save_path=None, encoding="utf-8", timeout: Union[Any, float, int]=NotSet, **kwargs
+        self,
+        save_path=None,
+        encoding="utf-8",
+        timeout: Union[Any, float, int] = NotSet,
+        **kwargs,
     ):
         """[Page.captureSnapshot], as the mhtml page"""
-        result = await self.send(
-            "Page.captureSnapshot",
-            timeout=timeout,
-            callback_function=lambda r: self.get_data_value(
-                r, "result.data", default=""
-            ),
-            **kwargs,
+        result = str(
+            await self.send(
+                "Page.captureSnapshot",
+                timeout=timeout,
+                callback_function=lambda r: self.get_data_value(
+                    r, "result.data", default=""
+                ),
+                **kwargs,
+            )
         )
         if result and save_path:
 
@@ -2152,13 +2199,13 @@ JSON.stringify(result)""" % (
 
     async def screenshot_element(
         self,
-        cssselector: str = None,
+        cssselector: Union[None, str] = None,
         scale=1,
         format: str = "png",
         quality: int = 100,
         fromSurface: bool = True,
         save_path=None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
         captureBeyondViewport=False,
         **kwargs,
     ):
@@ -2184,10 +2231,10 @@ JSON.stringify(result)""" % (
         self,
         format: str = "png",
         quality: int = 100,
-        clip: dict = None,
+        clip: Union[None, dict] = None,
         fromSurface: bool = True,
         save_path=None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
         captureBeyondViewport=False,
         **kwargs,
     ):
@@ -2247,7 +2294,12 @@ JSON.stringify(result)""" % (
         )
 
     async def keyboard_send(
-        self, *, type="char", timeout: Union[Any, float, int]=NotSet, string=None, **kwargs
+        self,
+        *,
+        type="char",
+        timeout: Union[Any, float, int] = NotSet,
+        string=None,
+        **kwargs,
     ):
         """[Input.dispatchKeyEvent]
 
@@ -2284,7 +2336,7 @@ JSON.stringify(result)""" % (
         count=1,
         scale=1,
         multiplier=(0.5, 0.5),
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         "dispatchMouseEvent on selected element center"
         rect = await self.get_element_clip(cssselector, scale=scale, timeout=timeout)
@@ -2305,7 +2357,9 @@ JSON.stringify(result)""" % (
             x=x, y=y, button=button, count=1, timeout=timeout
         )
 
-    async def mouse_press(self, x, y, button="left", count=0, timeout=NotSet):
+    async def mouse_press(
+        self, x, y, button="left", count=0, timeout: Union[Any, float, int] = NotSet
+    ):
         "Input.dispatchMouseEvent + mousePressed"
         return await self.send(
             "Input.dispatchMouseEvent",
@@ -2317,7 +2371,9 @@ JSON.stringify(result)""" % (
             timeout=timeout,
         )
 
-    async def mouse_release(self, x, y, button="left", count=0, timeout=NotSet):
+    async def mouse_release(
+        self, x, y, button="left", count=0, timeout: Union[Any, float, int] = NotSet
+    ):
         "Input.dispatchMouseEvent + mouseReleased"
         return await self.send(
             "Input.dispatchMouseEvent",
@@ -2352,7 +2408,13 @@ JSON.stringify(result)""" % (
         return steps
 
     async def mouse_move(
-        self, target_x, target_y, start_x=None, start_y=None, duration=0, timeout=NotSet
+        self,
+        target_x,
+        target_y,
+        start_x=None,
+        start_y=None,
+        duration=0,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         "move mouse smoothly only if duration > 0."
         if start_x is None:
@@ -2390,7 +2452,13 @@ JSON.stringify(result)""" % (
         return (target_x, target_y)
 
     async def mouse_move_rel(
-        self, offset_x, offset_y, start_x, start_y, duration=0, timeout=NotSet
+        self,
+        offset_x,
+        offset_y,
+        start_x,
+        start_y,
+        duration=0,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """Move mouse with offset.
 
@@ -2426,7 +2494,7 @@ JSON.stringify(result)""" % (
         target_y,
         button="left",
         duration=0,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         await self.mouse_press(start_x, start_y, button=button, timeout=timeout)
         await self.mouse_move(target_x, target_y, duration=duration, timeout=timeout)
@@ -2441,7 +2509,7 @@ JSON.stringify(result)""" % (
         offset_y,
         button="left",
         duration=0,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         "drag mouse relatively"
         return await self.mouse_drag(
@@ -2639,8 +2707,8 @@ True
         self,
         filepaths: List[Union[str, Path]],
         cssselector: str = 'input[type="file"]',
-        root_id: str = None,
-        timeout: Union[Any, float, int]=NotSet,
+        root_id: Union[None, str] = None,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         """set file type input nodes with given filepaths.
         1. path of filepaths will be reset as absolute posix path.
@@ -2813,6 +2881,8 @@ True
         # print(self.browser is self)
         # print(self.browser == self)
         # quit()
+        if self.ws is None:
+            raise ChromeRuntimeError("_recv_daemon ws is None")
         async for msg in self.ws:
             if self._log_all_recv:
                 logger.debug(f"[recv] {self!r} {msg}")
@@ -2861,7 +2931,9 @@ True
                 default_recv_callback = self.default_recv_callback
             for callback in default_recv_callback:
                 asyncio.ensure_future(ensure_awaitable(callback(self, data_dict)))
-            buffer: asyncio.Queue = self._buffers.get(data_dict.get("method"))
+            buffer = cast(
+                Optional[asyncio.Queue], self._buffers.get(data_dict.get("method"))
+            )
             if buffer:
                 asyncio.ensure_future(buffer.put(data_dict))
             f = self._listener.pop_future(data_dict)
@@ -2893,15 +2965,18 @@ True
             if error:
                 raise error
             else:
-                return await _ensure_awaitable_callback_result(
-                    callback_function, result
+                return cast(
+                    Optional[dict],
+                    await _ensure_awaitable_callback_result(callback_function, result),
                 )
 
     @property
     def now(self) -> int:
         return int(time.time())
 
-    async def auto_enable(self, event_or_method, timeout=NotSet):
+    async def auto_enable(
+        self, event_or_method, timeout: Union[Any, float, int] = NotSet
+    ):
         "auto enable the domain"
         if isinstance(event_or_method, dict):
             method = event_or_method.get("method")
@@ -2928,11 +3003,15 @@ True
                 f"request type should be None or dict or str, but `{type(request_id)}` was given."
             )
 
-    async def get_value(self, name: str, timeout: Union[Any, float, int]=NotSet, jsonify: bool = False):
+    async def get_value(
+        self, name: str, timeout: Union[Any, float, int] = NotSet, jsonify: bool = False
+    ):
         """name or expression. jsonify will transport the data by JSON, such as the array."""
         return await self.get_variable(name, timeout=timeout, jsonify=jsonify)
 
-    async def get_variable(self, name: str, timeout: Union[Any, float, int]=NotSet, jsonify: bool = False):
+    async def get_variable(
+        self, name: str, timeout: Union[Any, float, int] = NotSet, jsonify: bool = False
+    ):
         """variable or expression. jsonify will transport the data by JSON, such as the array."""
         # using JSON to keep value type
         if jsonify:
@@ -2961,7 +3040,7 @@ True
         latitude: Optional[int] = None,
         longitude: Optional[int] = None,
         accuracy: Optional[int] = None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         logger.debug(
             f"[set_geolocation_override] {self!r} latitude => {latitude}, longitude => {longitude}, accuracy => {accuracy}"
@@ -2989,7 +3068,9 @@ True
 class OffsetMoveWalker:
     __slots__ = ("path", "start_x", "start_y", "tab", "timeout")
 
-    def __init__(self, start_x, start_y, tab: AsyncTab, timeout=NotSet):
+    def __init__(
+        self, start_x, start_y, tab: AsyncTab, timeout: Union[Any, float, int] = NotSet
+    ):
         self.tab = tab
         self.timeout = timeout
         self.start_x = start_x
@@ -3063,7 +3144,7 @@ class Listener:
         for item in dict_obj.items():
             key = item[0]
             try:
-                value = json.dumps(item[1], sort_keys=1)
+                value = json.dumps(item[1], sort_keys=True)
             except TypeError:
                 value = str(item[1])
             result.append((key, value))
@@ -3172,8 +3253,9 @@ class AsyncChrome(GetValueMixin):
         if self._req:
             await self._req.close()
         if self.status == "connected":
-            await self._browser.ws_connection.__aexit__(None, None, None)
-            self._browser = None
+            if self._browser:
+                await self._browser.ws_connection.__aexit__(None, None, None)
+                self._browser = None
 
     async def close_browser(self):
         tab0 = await self.get_tab(0)
@@ -3237,8 +3319,8 @@ class AsyncChrome(GetValueMixin):
 
     async def check_http_ready(self):
         try:
-            resp: ClientResponse = await self.req.head(
-                self.server, timeout=self.timeout
+            resp = await self.req.head(
+                self.server, timeout=ClientTimeout(total=self.timeout)
             )
             return resp.ok
         except Exception:
@@ -3261,7 +3343,9 @@ class AsyncChrome(GetValueMixin):
         # maybe return failure request
         url = urljoin(self.server, api)
         try:
-            resp = await self.req.request(method=method, url=url, timeout=self.timeout)
+            resp = await self.req.request(
+                method=method, url=url, timeout=ClientTimeout(total=self.timeout)
+            )
             return resp
         except Exception as e:
             self.status = repr(e)
@@ -3329,17 +3413,17 @@ class AsyncChrome(GetValueMixin):
     async def do_tab(
         self, tab_id: Union[AsyncTab, str], action: str
     ) -> Union[str, bool]:
-        ok = False
+        ok = "False"
         if isinstance(tab_id, AsyncTab):
             tab_id = tab_id.tab_id
         r = await self.get_server(f"/json/{action}/{tab_id}")
         if r:
             if action == "close":
-                ok = (await r.text()) == "Target is closing"
+                ok = str((await r.text()) == "Target is closing")
             elif action == "activate":
-                ok = (await r.text()) == "Target activated"
+                ok = str((await r.text()) == "Target activated")
             else:
-                ok == (await r.text())
+                ok = str(await r.text())
         logger.debug(f"[{action}_tab] <Tab: {tab_id}>: {ok}")
         return ok
 
@@ -3360,7 +3444,7 @@ class AsyncChrome(GetValueMixin):
         self,
         index: Union[None, int, str] = 0,
         auto_close: bool = False,
-        flatten: bool = None,
+        flatten: Optional[bool] = None,
     ):
         """More easier way to init a connected Tab with `async with`.
 
@@ -3391,9 +3475,11 @@ class AsyncChrome(GetValueMixin):
             tabs_todo = tabs
         return _TabConnectionManager(tabs_todo)
 
-    def get_memory(self, attr="uss", unit="MB"):
+    def get_memory(self, attr="uss", unit="MB", rounded=2):
         """Only support local Daemon. `uss` is slower than `rss` but useful."""
-        return get_memory_by_port(port=self.port, attr=attr, unit=unit, host=self.host)
+        return get_memory_by_port(
+            port=self.port, attr=attr, unit=unit, host=self.host, rounded=rounded
+        )
 
     def __repr__(self):
         return f"<Chrome({self.status}): {self.port}>"
@@ -3404,9 +3490,9 @@ class AsyncChrome(GetValueMixin):
     def create_context(
         self,
         disposeOnDetach: bool = True,
-        proxyServer: str = None,
-        proxyBypassList: str = None,
-        originsWithUniversalNetworkAccess: List[str] = None,
+        proxyServer: Optional[str] = None,
+        proxyBypassList: Optional[str] = None,
+        originsWithUniversalNetworkAccess: Optional[List[str]] = None,
     ) -> "BrowserContext":
         "create a new Incognito BrowserContext"
         return BrowserContext(
@@ -3456,7 +3542,7 @@ class JavaScriptSnippets(object):
         style=None,
         max_lines: int = 10,
         expires: Union[float, None] = None,
-        timeout: Union[Any, float, int]=NotSet,
+        timeout: Union[Any, float, int] = NotSet,
     ):
         if style is None:
             style = "position: absolute;max-width: 50%;top: 0.8em; font-size:1.2em; line-height:1.5em; word-break: break-word; right: 0;color: #FF6666; background-color: #ffff99;padding: 1em;z-index:999;display:block;"
@@ -3493,7 +3579,7 @@ span.remove()"""
 class WaitContext(object):
     def __init__(self, coro: Coroutine, _auto_cancel=True):
         self._coro = coro
-        self._task: asyncio.Task = None
+        self._task: Optional[asyncio.Task] = None
         self._auto_cancel = _auto_cancel
 
     def __await__(self):
@@ -3516,11 +3602,11 @@ class EventBuffer(asyncio.Queue):
         self,
         events: Union[List[str], Dict[str, Callable]],
         tab: AsyncTab,
-        timeout: Union[float, int] = None,
+        timeout: Union[float, int, None] = None,
         maxsize: int = 0,
-        kwargs: Any = None,
-        callback: Callable = None,
-        context_callbacks: List[Callable] = None,
+        kwargs: Optional[Any] = None,
+        callback: Optional[Callable] = None,
+        context_callbacks: Optional[List[Callable]] = None,
     ):
         """Event buffer with callback function.
 
@@ -3553,7 +3639,7 @@ class EventBuffer(asyncio.Queue):
         self._shutdown = False
         super().__init__(maxsize=maxsize)
 
-    def get_timeout(self) -> float:
+    def get_timeout(self) -> Union[float, None]:
         if self.timeout:
             return self.start_time + self.timeout - time.time()
         else:
@@ -3655,15 +3741,15 @@ class FetchBuffer(EventBuffer):
 
     def __init__(
         self,
-        events: Union[List[str], Dict[str, Callable]],
+        events: Union[List[str], Dict[str, Callable], None],
         tab: AsyncTab,
-        patterns: List[dict] = None,
+        patterns: Optional[List[dict]] = None,
         handleAuthRequests=False,
-        timeout: Union[float, int] = None,
+        timeout: Union[float, int, None] = None,
         maxsize: int = 0,
-        kwargs: Any = None,
-        callback: Callable = None,
-        context_callbacks: List[Callable] = None,
+        kwargs: Optional[Any] = None,
+        callback: Optional[Callable] = None,
+        context_callbacks: Optional[List[Callable]] = None,
     ):
         self.patterns = patterns or [{"urlPattern": "*"}]
         self.handleAuthRequests = handleAuthRequests
@@ -3712,7 +3798,9 @@ class FetchBuffer(EventBuffer):
             return data["params"]["requestId"]
         raise TypeError
 
-    async def get_response(self, event: dict, timeout=None):
+    async def get_response(
+        self, event: dict, timeout: Union[Any, float, int, None] = NotSet
+    ) -> Any:
         networkId = self.tab.get_data_value(event, "params.networkId")
         if networkId:
             async with self.tab.wait_response_context(
@@ -3722,7 +3810,7 @@ class FetchBuffer(EventBuffer):
                 timeout=timeout,
             ) as r:
                 await self.continueRequest(event)
-                return await r
+                return await cast(Awaitable[Any], r)
 
     def match_event(self, event: dict, RequestPattern: dict):
         url = self.tab.get_data_value(event, "params.request.url", "")
@@ -3743,11 +3831,11 @@ class FetchBuffer(EventBuffer):
         self,
         requestId: Union[str, dict],
         responseCode: int,
-        responseHeaders: List[Dict[str, str]] = None,
-        binaryResponseHeaders: str = None,
-        body: Union[str, bytes] = None,
-        responsePhrase: str = None,
-        kwargs: dict = None,
+        responseHeaders: Optional[List[Dict[str, str]]] = None,
+        binaryResponseHeaders: Optional[str] = None,
+        body: Union[str, bytes, None] = None,
+        responsePhrase: Optional[str] = None,
+        kwargs: Optional[dict] = None,
         **_kwargs,
     ):
         """Fetch.fulfillRequest. Provides response to the request.
@@ -3779,11 +3867,11 @@ class FetchBuffer(EventBuffer):
     async def continueRequest(
         self,
         requestId: Union[str, dict],
-        url: str = None,
-        method: str = None,
-        postData: str = None,
-        headers: List[Dict[str, str]] = None,
-        kwargs: dict = None,
+        url: Optional[str] = None,
+        method: Optional[str] = None,
+        postData: Optional[str] = None,
+        headers: Optional[List[Dict[str, str]]] = None,
+        kwargs: Optional[dict] = None,
         **_kwargs,
     ):
         """Fetch.continueRequest. Continues the request, optionally modifying some of its parameters.
@@ -3810,9 +3898,9 @@ class FetchBuffer(EventBuffer):
         self,
         requestId: Union[str, dict],
         response: str,
-        username: str = None,
-        password: str = None,
-        kwargs: dict = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        kwargs: Optional[dict] = None,
         **_kwargs,
     ):
         """response: Allowed Values: Default, CancelAuth, ProvideCredentials"""
@@ -3836,7 +3924,7 @@ class FetchBuffer(EventBuffer):
         self,
         requestId: Union[str, dict],
         errorReason: str,
-        kwargs: dict = None,
+        kwargs: Optional[dict] = None,
         **_kwargs,
     ):
         """Fetch.failRequest. Stop the request.
@@ -3877,15 +3965,15 @@ class BrowserContext:
 
     def new_tab(
         self,
-        url: str = "about:blank",
-        width: int = None,
-        height: int = None,
-        browserContextId: str = None,
-        enableBeginFrameControl: bool = None,
-        newWindow: bool = None,
-        background: bool = None,
+        url: Optional[str] = "about:blank",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        browserContextId: Optional[str] = None,
+        enableBeginFrameControl: Optional[bool] = None,
+        newWindow: Optional[bool] = None,
+        background: Optional[bool] = None,
         auto_close: bool = False,
-        flatten: bool = None,
+        flatten: Optional[bool] = None,
     ) -> _SingleTabConnectionManager:
         browserContextId = browserContextId or self.browserContextId
         if not browserContextId:
@@ -3919,6 +4007,8 @@ class BrowserContext:
         )
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
         data = await self.browser.send("Target.createBrowserContext", kwargs=kwargs)
+        if not data:
+            raise ChromeRuntimeError("fail to create BrowserContext")
         self.browserContextId = data["result"]["browserContextId"]
         return self
 
@@ -3965,7 +4055,7 @@ class IncognitoTabContext:
             proxyBypassList=proxyBypassList,
             originsWithUniversalNetworkAccess=originsWithUniversalNetworkAccess,
         )
-        self.connection: _SingleTabConnectionManager = None
+        self.connection: Optional[_SingleTabConnectionManager] = None
 
     async def __aenter__(self) -> AsyncTab:
         await self.browser_context.__aenter__()

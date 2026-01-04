@@ -7,7 +7,7 @@ import re
 import time
 from inspect import isawaitable
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import psutil
 from morebuiltins.utils import read_size
@@ -99,7 +99,9 @@ def get_proc_by_regex(regex, proc_names=None, host_regex=None):
     return procs
 
 
-def get_proc(port=9222, proc_names=None, host=None) -> List[psutil.Process]:
+def get_proc(
+    port: Optional[int] = 9222, proc_names=None, host=None
+) -> List[psutil.Process]:
     "find procs with given port and proc_names and host"
     regex = f"--remote-debugging-port={port or ''}"
     host_regex = f"--remote-debugging-address={host}" if host else None
@@ -107,7 +109,9 @@ def get_proc(port=9222, proc_names=None, host=None) -> List[psutil.Process]:
     return get_proc_by_regex(regex, proc_names=proc_names, host_regex=host_regex)
 
 
-def get_memory_by_port(port=9222, attr="uss", unit="MB", host=None, proc_names=None):
+def get_memory_by_port(
+    port=9222, attr="uss", unit="MB", host=None, proc_names=None, rounded=2
+):
     """get memory usage of chrome proc found with port and host.Only support local Daemon. `uss` is slower than `rss` but useful."""
     procs = get_proc(port=port, host=host, proc_names=proc_names)
     if procs:
@@ -116,7 +120,7 @@ def get_memory_by_port(port=9222, attr="uss", unit="MB", host=None, proc_names=N
             result = sum((proc.memory_full_info().uss for proc in procs))
         else:
             result = sum((getattr(proc.memory_info(), attr) for proc in procs))
-        return result / u.get(unit, 1)
+        return round(result / u.get(unit, 1), rounded)
     else:
         return 0
 
