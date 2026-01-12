@@ -70,11 +70,11 @@ API_DOCS = {
                 "capture_beyond_viewport": "bool (default: False)",
                 "timeout": "float (default: 5.0)",
             },
-            "demo_url": "http://127.0.0.1:8080/snapshot?url=http://example.com",
+            "demo_url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com",
             "examples": [
                 {
                     "method": "GET",
-                    "url": "http://127.0.0.1:8080/snapshot?url=http://example.com",
+                    "url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com",
                 },
                 {
                     "method": "POST",
@@ -94,11 +94,11 @@ API_DOCS = {
                 "wait_tag": "str (optional)",
                 "timeout": "float (default: 5.0)",
             },
-            "demo_url": "http://127.0.0.1:8080/js?url=http://example.com&js=document.body.innerText",
+            "demo_url": "http://127.0.0.1:8080/js?url=https://www.bing.com&js=document.body.innerText",
             "examples": [
                 {
                     "method": "GET",
-                    "url": "http://127.0.0.1:8080/js?url=http://example.com&js=document.body.innerText",
+                    "url": "http://127.0.0.1:8080/js?url=https://www.bing.com&js=document.body.innerText",
                 },
                 {
                     "method": "POST",
