@@ -10,16 +10,21 @@ Examples:
 
 import argparse
 import asyncio
+import json
 
 from aiohttp import web
 
-from .core import create_app
 from ..logs import logger
 from ..pool import ChromeEngine
+from .core import API_DOCS, create_app
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ichrome http server")
+    parser = argparse.ArgumentParser(
+        description="ichrome http server",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"API Documentation:\n{json.dumps(API_DOCS, indent=2)}",
+    )
     parser.add_argument("--host", default="0.0.0.0", help="server host")
     parser.add_argument("--port", type=int, default=8080, help="server port")
     parser.add_argument("--workers", type=int, default=1, help="chrome workers amount")
@@ -39,7 +44,10 @@ def main():
             runner = web.AppRunner(app)
             await runner.setup()
             site = web.TCPSite(runner, args.host, args.port)
-            logger.info(f"HTTP server starting on http://{args.host}:{args.port}")
+            logger.info(
+                f"HTTP server starting on http://{args.host}:{args.port}, "
+                f"visit http://{args.host}:{args.port}/docs for API documentation and examples."
+            )
             await site.start()
             try:
                 while True:
