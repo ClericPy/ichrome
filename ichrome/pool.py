@@ -404,8 +404,12 @@ class ChromeEngine:
         return await self.start_workers()
 
     def shorten_data(self, data):
-        repr_data = repr(data)
-        return f"{repr_data[: self.SHORTEN_DATA_LENGTH]}{'...' if len(repr_data) > self.SHORTEN_DATA_LENGTH else ''}"
+        if isinstance(data, dict):
+            repr_data = repr({k: self.shorten_data(v) for k, v in data.items()})
+            return repr_data
+        else:
+            repr_data = repr(data)
+            return f"{repr_data[: self.SHORTEN_DATA_LENGTH]}{'...' if len(repr_data) > self.SHORTEN_DATA_LENGTH else ''}"
 
     async def do(
         self,
