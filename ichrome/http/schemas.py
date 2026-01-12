@@ -102,3 +102,53 @@ class SnapshotArgs(Validator):
             "captureBeyondViewport": self.capture_beyond_viewport,
             "as_base64": False,  # No longer supports base64
         }
+
+
+@dataclass
+class DoArgs(Validator):
+    """Parameters for custom tab callback."""
+
+    tab_callback: str
+    data: Any = None
+    timeout: float = 5.0
+    incognito_args: dict = field(default_factory=dict)
+
+    def to_engine_params(self) -> Dict[str, Any]:
+        """Convert to ChromeEngine do parameters.
+        Note: tab_callback needs to be executed from source string.
+        """
+        ns: Dict[str, Any] = {}
+        exec(self.tab_callback, ns)
+        callback_func = ns.get("tab_callback") or ns.get("callback")
+        if not callback_func:
+            raise ValueError(
+                "Neither 'callback' nor 'tab_callback' function (async def callback(tab, data, timeout):) found in source code."
+            )
+
+        return {
+            "data": self.data,
+            "tab_callback": callback_func,
+            "timeout": self.timeout,
+            "incognito_args": self.incognito_args if self.incognito_args else None,
+        }
+
+
+@dataclass
+class JsArgs(Validator):
+    """Parameters for executing JavaScript."""
+
+    url: str
+    js: str
+    value_path: str = "result.result"
+    wait_tag: str = ""
+    timeout: float = 5.0
+
+    def to_engine_params(self) -> Dict[str, Any]:
+        """Convert to ChromeEngine js parameters."""
+        return {
+            "url": self.url,
+            "js": self.js,
+            "value_path": self.value_path,
+            "wait_tag": self.wait_tag,
+            "timeout": self.timeout,
+        }

@@ -18,7 +18,14 @@ from morebuiltins.utils import format_error
 
 from ..logs import logger
 from ..pool import ChromeEngine
-from .schemas import DownloadArgs, PreviewArgs, Response, SnapshotArgs
+from .schemas import (
+    DoArgs,
+    DownloadArgs,
+    JsArgs,
+    PreviewArgs,
+    Response,
+    SnapshotArgs,
+)
 
 # API documentation metadata
 API_DOCS = {
@@ -106,6 +113,56 @@ API_DOCS = {
             ],
         },
         {
+            "route": "/js",
+            "methods": ["GET", "POST"],
+            "description": "Execute JavaScript on page",
+            "parameters": {
+                "url": "str (required)",
+                "js": "str (required, javascript code)",
+                "value_path": "str (optional, result path)",
+                "wait_tag": "str (optional)",
+                "timeout": "float (default: 5.0)",
+            },
+            "demo_url": "http://127.0.0.1:8080/js?url=http://example.com&js=document.body.innerText",
+            "examples": [
+                {
+                    "method": "GET",
+                    "url": "http://127.0.0.1:8080/js?url=http://example.com&js=document.body.innerText",
+                },
+                {
+                    "method": "POST",
+                    "url": "http://127.0.0.1:8080/js",
+                    "body": {
+                        "url": "http://example.com",
+                        "js": "document.body.innerHTML",
+                        "value_path": "result.result.value",
+                    },
+                },
+            ],
+        },
+        {
+            "route": "/do",
+            "methods": ["POST"],
+            "description": "Execute custom callback function on tab (supports 'callback' or 'tab_callback' name)",
+            "parameters": {
+                "tab_callback": "str (required, python source. Define 'async def callback(tab, data, timeout):' or 'async def tab_callback(tab, data, timeout):')",
+                "data": "any (optional, passed to callback)",
+                "timeout": "float (default: 5.0)",
+                "incognito_args": "dict (optional)",
+            },
+            "demo_url": "http://127.0.0.1:8080/do",
+            "examples": [
+                {
+                    "method": "POST",
+                    "url": "http://127.0.0.1:8080/do",
+                    "body": {
+                        "tab_callback": "async def callback(tab, data, timeout): await tab.goto(data['url']); return await tab.title",
+                        "data": {"url": "http://example.com"},
+                    },
+                }
+            ],
+        },
+        {
             "route": "/docs",
             "methods": ["GET"],
             "description": "API Documentation",
@@ -165,6 +222,30 @@ class HttpController:
             logger.error(f"Snapshot error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
 
+    async def js(self, request: web.Request) -> web.Response:
+        """Handle js request."""
+        params = await self._get_params(request)
+        try:
+            args = JsArgs(**params)
+            engine_params = args.to_engine_params()
+            result = await self.engine.js(**engine_params)
+            return web.json_response(Response(code=0, data=result).to_dict())
+        except Exception as e:
+            logger.error(f"JS error: {format_error(e, filter=None)}")
+            return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
+
+    async def do(self, request: web.Request) -> web.Response:
+        """Handle do request."""
+        params = await self._get_params(request)
+        try:
+            args = DoArgs(**params)
+            engine_params = args.to_engine_params()
+            result = await self.engine.do(**engine_params)
+            return web.json_response(Response(code=0, data=result).to_dict())
+        except Exception as e:
+            logger.error(f"Do error: {format_error(e, filter=None)}")
+            return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
+
     async def docs(self, request: web.Request) -> web.Response:
         """Handle docs documentation request."""
         return web.json_response(Response(code=0, data=API_DOCS).to_dict())
@@ -176,5 +257,7 @@ async def create_app(engine: ChromeEngine):
     app.router.add_route("*", "/download", controller.download)
     app.router.add_route("*", "/preview", controller.preview)
     app.router.add_route("*", "/snapshot", controller.snapshot)
+    app.router.add_route("*", "/js", controller.js)
+    app.router.add_route("POST", "/do", controller.do)
     app.router.add_route("GET", "/docs", controller.docs)
     return app
