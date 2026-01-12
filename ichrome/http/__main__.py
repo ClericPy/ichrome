@@ -23,7 +23,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="ichrome http server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"API Documentation:\n{json.dumps(API_DOCS, indent=2)}",
+        epilog=f"API Documentation:\n{json.dumps(API_DOCS, indent=2, ensure_ascii=False)}",
     )
     parser.add_argument("--host", default="0.0.0.0", help="server host")
     parser.add_argument("--port", type=int, default=8080, help="server port")

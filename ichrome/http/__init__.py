@@ -21,10 +21,8 @@ Examples:
         curl "http://127.0.0.1:8080/docs"
 """
 
-from .core import (
-    HttpController,
-    create_app,
-)
+from .controller import HttpController
+from .core import create_app
 from .schemas import (
     DownloadArgs,
     PreviewArgs,
