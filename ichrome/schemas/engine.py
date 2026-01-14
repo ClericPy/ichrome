@@ -41,9 +41,7 @@ class ScreenshotDTO(DTOBase):
     format: str = "png"
     quality: int = 100
     fromSurface: bool = True
-    save_path: typing.Optional[str] = None
     captureBeyondViewport: bool = False
-    as_base64: bool = True
 
 
 @dataclass
@@ -57,14 +55,6 @@ class DownloadDTO(DTOBase):
     user_agent: str = ""
     extra_headers: typing.Optional[typing.Dict[str, str]] = None
     incognito_args: typing.Optional[typing.Dict[str, typing.Any]] = None
-
-
-@dataclass
-class PreviewDTO(DTOBase):
-    """Parameters for previewing page HTML."""
-
-    url: str
-    wait_tag: str = ""
 
 
 @dataclass

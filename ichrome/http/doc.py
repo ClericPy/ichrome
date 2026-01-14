@@ -35,28 +35,6 @@ API_DOCS = {
             ],
         },
         {
-            "route": "/preview",
-            "methods": ["GET", "POST"],
-            "description": "Preview page HTML (returns text/html directly)",
-            "parameters": {
-                "url": "str (required)",
-                "wait_tag": "str (optional)",
-                "timeout": "float (default: 5.0)",
-            },
-            "demo_url": "http://127.0.0.1:8080/preview?url=http://example.com",
-            "examples": [
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/preview?url=http://example.com",
-                },
-                {
-                    "method": "POST",
-                    "url": "http://127.0.0.1:8080/preview",
-                    "body": {"url": "http://example.com"},
-                },
-            ],
-        },
-        {
             "route": "/snapshot",
             "methods": ["GET", "POST"],
             "description": "Take screenshot (returns image bytes directly)",

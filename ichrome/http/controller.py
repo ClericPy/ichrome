@@ -4,7 +4,7 @@ from aiohttp import web
 from morebuiltins.utils import format_error
 
 from ..logs import logger
-from ..pool import ChromeEngine, DownloadDTO, JsDTO, PreviewDTO, ScreenshotDTO
+from ..pool import ChromeEngine, DownloadDTO, JsDTO, ScreenshotDTO
 from ..schemas.http import Response
 from .doc import API_DOCS
 
@@ -31,17 +31,6 @@ class HttpController:
             return web.json_response(Response(code=0, data=result).to_dict())
         except Exception as e:
             logger.error(f"Download error: {format_error(e, filter=None)}")
-            return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
-
-    async def preview(self, request: web.Request) -> web.Response:
-        """Handle preview request."""
-        params = await self._get_params(request)
-        try:
-            dto = PreviewDTO.from_dict(params)
-            result = await self.engine.preview(dto=dto)
-            return web.Response(body=result, content_type="text/html")
-        except Exception as e:
-            logger.error(f"Preview error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
 
     async def snapshot(self, request: web.Request) -> web.Response:

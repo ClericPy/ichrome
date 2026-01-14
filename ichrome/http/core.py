@@ -18,7 +18,6 @@ async def create_app(engine: ChromeEngine):
     app = web.Application()
     controller = HttpController(engine)
     app.router.add_route("*", "/download", controller.download)
-    app.router.add_route("*", "/preview", controller.preview)
     app.router.add_route("*", "/snapshot", controller.snapshot)
     app.router.add_route("*", "/js", controller.js)
     app.router.add_route("GET", "/docs", controller.docs)

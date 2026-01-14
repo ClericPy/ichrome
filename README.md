@@ -91,4 +91,3 @@ asyncio.run(test())
    1. `ichrome.web` module is removed, use ichrome.http instead.
    2. refactor the `ChromeEngine` method parameters.
       1. add `wait` condition before engine.do
-      2. use `dataclass` instead of dict for `tab_callback` data.

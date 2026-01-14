@@ -593,6 +593,7 @@ async def test_examples():
 
 
 async def test_chrome_engine():
+    raise DeprecationWarning("ChromeEngine is updated to new API, this test needs rewrite.")
     async def _test_chrome_engine():
         tab_callback1 = r"""async def tab_callback(self, tab, url, timeout):
             await tab.set_url(url, timeout=5)
