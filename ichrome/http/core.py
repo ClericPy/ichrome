@@ -21,6 +21,5 @@ async def create_app(engine: ChromeEngine):
     app.router.add_route("*", "/preview", controller.preview)
     app.router.add_route("*", "/snapshot", controller.snapshot)
     app.router.add_route("*", "/js", controller.js)
-    app.router.add_route("POST", "/do", controller.do)
     app.router.add_route("GET", "/docs", controller.docs)
     return app

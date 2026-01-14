@@ -41,7 +41,6 @@ async def test():
 asyncio.run(test())
 ```
 
-### [Read Docs](https://clericpy.github.io/ichrome/)
 
 # Why?
 
@@ -86,3 +85,10 @@ asyncio.run(test())
     - `AsyncTab._DEFAULT_FLATTEN = True`
 - The install script of chromium
 - debug mode for sync usage with `ichrome.debugger` >4.0.0 (EXPERIMENTAL)
+
+# Breaking Changes
+1. v6.0.0
+   1. `ichrome.web` module is removed, use ichrome.http instead.
+   2. refactor the `ChromeEngine` method parameters.
+      1. add `wait` condition before engine.do
+      2. use `dataclass` instead of dict for `tab_callback` data.

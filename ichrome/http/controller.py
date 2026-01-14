@@ -4,16 +4,9 @@ from aiohttp import web
 from morebuiltins.utils import format_error
 
 from ..logs import logger
-from ..pool import ChromeEngine
+from ..pool import ChromeEngine, DownloadDTO, JsDTO, PreviewDTO, ScreenshotDTO
+from ..schemas.http import Response
 from .doc import API_DOCS
-from .schemas import (
-    DoArgs,
-    DownloadArgs,
-    JsArgs,
-    PreviewArgs,
-    Response,
-    SnapshotArgs,
-)
 
 
 class HttpController:
@@ -33,9 +26,8 @@ class HttpController:
         """Handle download request."""
         params = await self._get_params(request)
         try:
-            args = DownloadArgs(**params)
-            engine_params = args.to_engine_params()
-            result = await self.engine.download(**engine_params)
+            dto = DownloadDTO.from_dict(params)
+            result = await self.engine.download(dto=dto)
             return web.json_response(Response(code=0, data=result).to_dict())
         except Exception as e:
             logger.error(f"Download error: {format_error(e, filter=None)}")
@@ -45,9 +37,8 @@ class HttpController:
         """Handle preview request."""
         params = await self._get_params(request)
         try:
-            args = PreviewArgs(**params)
-            engine_params = args.to_engine_params()
-            result = await self.engine.preview(**engine_params)
+            dto = PreviewDTO.from_dict(params)
+            result = await self.engine.preview(dto=dto)
             return web.Response(body=result, content_type="text/html")
         except Exception as e:
             logger.error(f"Preview error: {format_error(e, filter=None)}")
@@ -57,10 +48,9 @@ class HttpController:
         """Handle snapshot request."""
         params = await self._get_params(request)
         try:
-            args = SnapshotArgs(**params)
-            engine_params = args.to_engine_params()
-            result = await self.engine.screenshot(**engine_params)
-            content_type = f"image/{args.image_format}"
+            dto = ScreenshotDTO.from_dict(params)
+            result = await self.engine.screenshot(dto=dto)
+            content_type = f"image/{dto.format}"
             return web.Response(body=result, content_type=content_type)
         except Exception as e:
             logger.error(f"Snapshot error: {format_error(e, filter=None)}")
@@ -70,24 +60,11 @@ class HttpController:
         """Handle js request."""
         params = await self._get_params(request)
         try:
-            args = JsArgs(**params)
-            engine_params = args.to_engine_params()
-            result = await self.engine.js(**engine_params)
+            dto = JsDTO.from_dict(params)
+            result = await self.engine.js(dto=dto)
             return web.json_response(Response(code=0, data=result).to_dict())
         except Exception as e:
             logger.error(f"JS error: {format_error(e, filter=None)}")
-            return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
-
-    async def do(self, request: web.Request) -> web.Response:
-        """Handle do request."""
-        params = await self._get_params(request)
-        try:
-            args = DoArgs(**params)
-            engine_params = args.to_engine_params()
-            result = await self.engine.do(**engine_params)
-            return web.json_response(Response(code=0, data=result).to_dict())
-        except Exception as e:
-            logger.error(f"Do error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
 
     async def docs(self, request: web.Request) -> web.Response:

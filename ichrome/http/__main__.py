@@ -5,7 +5,7 @@ Main entry point for ichrome.http module.
 This allows running the HTTP server via: python -m ichrome.http
 
 Examples:
-    python -m ichrome.http --host 0.0.0.0 --port 8080 --workers 1
+    python -m ichrome.http --host 127.0.0.1 --port 8080 --workers 1
 """
 
 import argparse
@@ -18,7 +18,7 @@ from aiohttp import web
 from ..logs import logger
 from ..pool import ChromeEngine
 from .core import API_DOCS, create_app
-from .schemas import ChromeConfig, ServerConfig
+from ..schemas.http import ChromeConfig, ServerConfig
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     )
     # Server Config
     server_group = parser.add_argument_group("Server Configuration")
-    server_group.add_argument("--host", default="0.0.0.0", help="server host")
+    server_group.add_argument("--host", default="127.0.0.1", help="server host")
     server_group.add_argument("--port", type=int, default=8080, help="server port")
 
     # Chrome Config

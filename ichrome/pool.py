@@ -9,6 +9,7 @@ from . import AsyncChromeDaemon, AsyncTab
 from .base import ensure_awaitable
 from .exceptions import ChromeException
 from .logs import logger
+from .schemas.engine import DownloadDTO, JsDTO, PreviewDTO, ScreenshotDTO
 
 
 class ChromeTask(asyncio.Future):
@@ -22,7 +23,7 @@ class ChromeTask(asyncio.Future):
 
     def __init__(
         self,
-        data,
+        data: typing.Any,
         tab_callback: typing.Optional[typing.Callable] = None,
         timeout=None,
         tab_index=None,
@@ -411,14 +412,31 @@ class ChromeEngine:
             repr_data = str(data)
             return f"{repr_data[: self.SHORTEN_DATA_LENGTH]}{'...' if len(repr_data) > self.SHORTEN_DATA_LENGTH else ''}"
 
+    async def shutdown(self):
+        if self._shutdown:
+            return
+        for _ in self.workers:
+            await self.q.put(ChromeTask(ChromeTask.STOP_SIG, None))
+        self._shutdown = True
+        self.release()
+        for worker in self.workers.values():
+            await worker.shutdown()
+        return self
+
+    async def __aenter__(self):
+        return await self.start()
+
+    async def __aexit__(self, *_):
+        return await self.shutdown()
+
     async def do(
         self,
-        data,
-        tab_callback,
+        data: typing.Any,
+        tab_callback: typing.Optional[typing.Callable] = None,
         timeout: typing.Optional[float] = None,
         tab_index=None,
         port: typing.Optional[int] = None,
-        incognito_args: typing.Optional[dict] = None,
+        incognito_args: typing.Optional[typing.Dict[str, typing.Any]] = None,
     ):
         if self._shutdown:
             raise RuntimeError(f"{self.__class__.__name__} has been shutdown.")
@@ -438,29 +456,15 @@ class ChromeEngine:
             f"[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}"
         )
         try:
-            return await asyncio.wait_for(future, timeout=future.timeout)
+            return await asyncio.wait_for(
+                future,
+                timeout=future.timeout * 0.99 if future.timeout is not None else None,
+            )
         except asyncio.TimeoutError:
             return None
         finally:
             logger.info(f"[finished]({self.todos}) {future}")
             del future
-
-    async def shutdown(self):
-        if self._shutdown:
-            return
-        for _ in self.workers:
-            await self.q.put(ChromeTask(ChromeTask.STOP_SIG, None))
-        self._shutdown = True
-        self.release()
-        for worker in self.workers.values():
-            await worker.shutdown()
-        return self
-
-    async def __aenter__(self):
-        return await self.start()
-
-    async def __aexit__(self, *_):
-        return await self.shutdown()
 
     def release(self):
         while not self.q.empty():
@@ -474,80 +478,50 @@ class ChromeEngine:
 
     async def screenshot(
         self,
-        url: str,
-        cssselector: typing.Optional[str] = None,
-        scale: float = 1.0,
-        format: str = "png",
-        quality: int = 100,
-        fromSurface: bool = True,
-        save_path=None,
-        timeout=None,
-        as_base64=True,
-        captureBeyondViewport=False,
+        dto: ScreenshotDTO,
+        timeout: typing.Optional[float] = None,
     ) -> typing.Union[str, bytes]:
-        data = dict(
-            url=url,
-            cssselector=cssselector,
-            scale=scale,
-            format=format,
-            quality=quality,
-            fromSurface=fromSurface,
-            save_path=save_path,
-            captureBeyondViewport=captureBeyondViewport,
-        )
         image = typing.cast(
             str,
             await self.do(
-                data=data,
+                data=dto,
                 tab_callback=CommonUtils.screenshot,
                 timeout=timeout,
                 tab_index=None,
             ),
         )
-        if as_base64 or not image:
+        if dto.as_base64 or not image:
             return image
         else:
             return b64decode(image)
 
     async def download(
         self,
-        url: str,
-        cssselector: str = "",
-        wait_tag: str = "",
-        cookies: typing.Optional[dict] = None,
-        user_agent: str = "",
-        extra_headers: typing.Optional[dict] = None,
+        dto: DownloadDTO,
         timeout: typing.Optional[float] = None,
-        incognito_args: typing.Optional[dict] = None,
-    ) -> typing.Optional[dict]:
-        data = dict(
-            url=url,
-            cssselector=cssselector,
-            wait_tag=wait_tag,
-            cookies=cookies,
-            extra_headers=extra_headers,
-            user_agent=user_agent,
-        )
+    ) -> typing.Optional[typing.Dict[str, typing.Any]]:
         result = typing.cast(
-            typing.Optional[dict],
+            typing.Optional[typing.Dict[str, typing.Any]],
             await self.do(
-                data=data,
+                data=dto,
                 tab_callback=CommonUtils.download,
                 timeout=timeout,
                 tab_index=None,
-                incognito_args=incognito_args,
+                incognito_args=dto.incognito_args,
             ),
         )
         return result
 
     async def preview(
         self,
-        url: str,
-        wait_tag: str = "",
+        dto: PreviewDTO,
         timeout: typing.Optional[float] = None,
     ) -> bytes:
-        "Not recommended for use. Use (await self.download(url, wait_tag=wait_tag, timeout=timeout))['html'] instead."
-        data = await self.download(url, wait_tag=wait_tag, timeout=timeout)
+        download_dto = DownloadDTO(
+            url=dto.url,
+            wait_tag=dto.wait_tag,
+        )
+        data = await self.download(dto=download_dto, timeout=timeout)
         if data:
             return data["html"].encode(data.get("encoding") or "utf-8")
         else:
@@ -555,17 +529,16 @@ class ChromeEngine:
 
     async def js(
         self,
-        url: str,
-        js: str,
-        value_path="result.result",
-        wait_tag: str = "",
+        dto: JsDTO,
         timeout: typing.Optional[float] = None,
-    ) -> typing.Optional[bytes]:
-        data = dict(url=url, js=js, value_path=value_path, wait_tag=wait_tag)
+    ) -> typing.Optional[str]:
         return typing.cast(
-            typing.Optional[bytes],
+            typing.Optional[str],
             await self.do(
-                data=data, tab_callback=CommonUtils.js, timeout=timeout, tab_index=None
+                data=dto,
+                tab_callback=CommonUtils.js,
+                timeout=timeout,
+                tab_index=None,
             ),
         )
 
@@ -609,30 +582,39 @@ class _TabWorker:
 class CommonUtils:
     """Some frequently-used callback functions."""
 
-    async def screenshot(self, tab: AsyncTab, data, timeout):
-        await tab.set_url(data.pop("url"), timeout=timeout)
-        return await tab.screenshot_element(timeout=timeout, **data)
+    async def screenshot(self, tab: AsyncTab, data: ScreenshotDTO, timeout):
+        await tab.set_url(data.url, timeout=timeout)
+        return await asyncio.wait_for(
+            tab.screenshot(
+                css_selector=data.cssselector,
+                scale=data.scale,
+                format=data.format,
+                quality=data.quality,
+                fromSurface=data.fromSurface,
+                save_path=data.save_path,
+                captureBeyondViewport=data.captureBeyondViewport,
+            ),
+            timeout=timeout,
+        )
 
-    async def download(self, tab: AsyncTab, data, timeout):
+    async def download(self, tab: AsyncTab, data: DownloadDTO, timeout):
         start_time = time.time()
-        result = {"url": data["url"]}
-        cookies = data.get("cookies") or {}
+        result = {"url": data.url}
+        cookies = data.cookies or {}
         for name, value in cookies.items():
-            await tab.set_cookie(name=name, value=value, url=data["url"])
-        user_agent = data.get("user_agent")
-        if user_agent:
-            await tab.set_ua(user_agent)
-        extra_headers = data.get("extra_headers")
-        if extra_headers:
-            await tab.set_headers(extra_headers)
-        await tab.set_url(data["url"], timeout=timeout)
-        if data["wait_tag"]:
+            await tab.set_cookie(name=name, value=value, url=data.url)
+        if data.user_agent:
+            await tab.set_ua(data.user_agent)
+        if data.extra_headers:
+            await tab.set_headers(data.extra_headers)
+        await tab.set_url(data.url, timeout=timeout)
+        if data.wait_tag:
             timeout = timeout - (time.time() - start_time)
             if timeout > 0:
-                await tab.wait_tag(data["wait_tag"], max_wait_time=timeout)
-        if data["cssselector"]:
+                await tab.wait_tag(data.wait_tag, max_wait_time=timeout)
+        if data.cssselector:
             result["html"] = None
-            tags: typing.Any = await tab.querySelectorAll(data["cssselector"])
+            tags: typing.Any = await tab.querySelectorAll(data.cssselector)
             result["tags"] = [tag.outerHTML for tag in tags]
         else:
             result["html"] = await tab.current_html
@@ -647,6 +629,6 @@ class CommonUtils:
             result["encoding"] = encoding
         return result
 
-    async def js(self, tab: AsyncTab, data, timeout):
-        await tab.set_url(data["url"], timeout=timeout)
-        return await tab.js(javascript=data["js"], value_path=data["value_path"])
+    async def js(self, tab: AsyncTab, data: JsDTO, timeout):
+        await tab.set_url(data.url, timeout=timeout)
+        return await tab.js(javascript=data.js, value_path=data.value_path)
