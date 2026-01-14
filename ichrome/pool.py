@@ -9,7 +9,7 @@ from . import AsyncChromeDaemon, AsyncTab
 from .base import ensure_awaitable
 from .exceptions import ChromeException
 from .logs import logger
-from .schemas.engine import DownloadDTO, JsDTO, ScreenshotDTO
+from .schemas.engine import DownloadDTO, DownloadResult, JsDTO, ScreenshotDTO
 
 
 class CallbackProtocol(typing.Protocol):
@@ -484,9 +484,9 @@ class ChromeEngine:
         self,
         dto: DownloadDTO,
         timeout: typing.Optional[float] = None,
-    ) -> typing.Optional[typing.Dict[str, typing.Any]]:
+    ) -> DownloadResult:
         result = typing.cast(
-            typing.Optional[typing.Dict[str, typing.Any]],
+            DownloadResult,
             await self.do(
                 data=dto,
                 tab_callback=DownloadCallback(),
@@ -579,9 +579,11 @@ class ScreenshotCallback(CallbackProtocol):
 
 class DownloadCallback(CallbackProtocol):
     @staticmethod
-    async def __call__(tab: AsyncTab, data: DownloadDTO, task: ChromeTask) -> dict:
+    async def __call__(
+        tab: AsyncTab, data: DownloadDTO, task: ChromeTask
+    ) -> DownloadResult:
+        result = DownloadResult(url=data.url)
         timeout = task.timeout * 0.99
-        result: dict = {"url": data.url}
         cookies = data.cookies or {}
         for name, value in cookies.items():
             await tab.set_cookie(name=name, value=value, url=data.url)
@@ -595,12 +597,10 @@ class DownloadCallback(CallbackProtocol):
             if timeout > 0:
                 await tab.wait_tag(data.wait_tag, max_wait_time=timeout)
         if data.cssselector:
-            result["html"] = ""
             tags: typing.Any = await tab.querySelectorAll(data.cssselector)
-            result["tags"] = [tag.outerHTML for tag in tags]
+            result.tags = [tag.outerHTML for tag in tags]
         else:
-            result["html"] = (await tab.current_html) or ""
-            result["tags"] = []
+            result.html = (await tab.current_html) or ""
         try:
             temp = typing.cast(
                 list,
@@ -610,11 +610,10 @@ class DownloadCallback(CallbackProtocol):
                 ),
             )
             if temp:
-                title, encoding = temp
-                result["title"] = title
-                result["encoding"] = encoding
+                result.title, result.encoding = temp
         except Exception:
             pass
+        result.current_url = await tab.current_url
         return result
 
 

@@ -1,3 +1,4 @@
+from base64 import b64encode
 from typing import Any, Dict
 
 from aiohttp import web
@@ -25,10 +26,18 @@ class HttpController:
     async def download(self, request: web.Request) -> web.Response:
         """Handle download request."""
         params = await self._get_params(request)
+        to_json = params.get("to_json", "false").lower() in {"1", "true", "yes", "on"}
         try:
             dto = DownloadDTO.from_dict(params)
             result = await self.engine.download(dto=dto)
-            return web.json_response(Response(code=0, data=result).to_dict())
+            if to_json:
+                return web.json_response(
+                    Response(code=0, data=result.to_dict()).to_dict()
+                )
+            else:
+                return web.Response(
+                    body=result.html.encode("utf-8"), content_type="text/html"
+                )
         except Exception as e:
             logger.error(f"Download error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
@@ -36,11 +45,19 @@ class HttpController:
     async def snapshot(self, request: web.Request) -> web.Response:
         """Handle snapshot request."""
         params = await self._get_params(request)
+        to_json = params.get("to_json", "false").lower() in {"1", "true", "yes", "on"}
         try:
             dto = ScreenshotDTO.from_dict(params)
             result = await self.engine.screenshot(dto=dto)
-            content_type = f"image/{dto.format}"
-            return web.Response(body=result, content_type=content_type)
+            if to_json:
+                return web.json_response(
+                    Response(
+                        code=0, data={"image_bytes": b64encode(result).decode("utf-8")}
+                    ).to_dict()
+                )
+            else:
+                content_type = f"image/{dto.format}"
+                return web.Response(body=result, content_type=content_type)
         except Exception as e:
             logger.error(f"Snapshot error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
@@ -48,10 +65,14 @@ class HttpController:
     async def js(self, request: web.Request) -> web.Response:
         """Handle js request."""
         params = await self._get_params(request)
+        to_json = params.get("to_json", "false").lower() in {"1", "true", "yes", "on"}
         try:
             dto = JsDTO.from_dict(params)
             result = await self.engine.js(dto=dto)
-            return web.json_response(Response(code=0, data=result).to_dict())
+            if to_json:
+                return web.json_response(Response(code=0, data=result).to_dict())
+            else:
+                return web.Response(body=str(result).encode("utf-8"), content_type="text/plain")
         except Exception as e:
             logger.error(f"JS error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)

@@ -1,6 +1,6 @@
 import json
 import typing
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 
 
 @dataclass
@@ -55,6 +55,28 @@ class DownloadDTO(DTOBase):
     user_agent: str = ""
     extra_headers: typing.Optional[typing.Dict[str, str]] = None
     incognito_args: typing.Optional[typing.Dict[str, typing.Any]] = None
+
+
+@dataclass
+class DownloadResult:
+    """Result of a download operation."""
+
+    url: str = ""
+    title: str = ""
+    encoding: str = ""
+    current_url: str = ""
+    html: str = ""
+    tags: list = field(default_factory=list)
+
+    def to_dict(self):
+        return {
+            "url": self.url,
+            "title": self.title,
+            "encoding": self.encoding,
+            "current_url": self.current_url,
+            "html": self.html,
+            "tags": self.tags,
+        }
 
 
 @dataclass
