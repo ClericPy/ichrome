@@ -70,11 +70,11 @@ API_DOCS = {
                 "capture_beyond_viewport": "bool (default: False)",
                 "timeout": "float (default: 5.0)",
             },
-            "demo_url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com",
+            "demo_url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images",
             "examples": [
                 {
                     "method": "GET",
-                    "url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com",
+                    "url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images",
                 },
                 {
                     "method": "POST",

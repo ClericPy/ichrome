@@ -72,12 +72,11 @@ asyncio.run(test())
   - Commonly used functions
   - `Incognito Mode`
 - `ChromeEngine` as the progress pool
-  - support HTTP `api` router with [FastAPI](https://github.com/tiangolo/fastapi) (Deprecated since v6.0.0)
-    - launch the chrome pool with `python -m ichrome.web`
-      - `python -m ichrome.web --help` for usage
   - support HTTP `api` router with [aiohttp](https://docs.aiohttp.org/en/stable/)
-    - launch the chrome pool with `python -m ichrome.http`
-      - `python -m ichrome.http --help` for usage
+    - `python -m ichrome.http` or `uvx ichrome.http`
+    - `python -m ichrome.http --help` for usage
+  - ~~`python -m ichrome.web` (Removed since v6.0.0)~~
+
 - `Flatten` mode with `sessionId`
   - Create only **1** WebSocket connection
   - New in version 2.9.0

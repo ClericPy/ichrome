@@ -408,7 +408,7 @@ class ChromeEngine:
             repr_data = repr({k: self.shorten_data(v) for k, v in data.items()})
             return repr_data
         else:
-            repr_data = repr(data)
+            repr_data = str(data)
             return f"{repr_data[: self.SHORTEN_DATA_LENGTH]}{'...' if len(repr_data) > self.SHORTEN_DATA_LENGTH else ''}"
 
     async def do(
@@ -493,7 +493,7 @@ class ChromeEngine:
             quality=quality,
             fromSurface=fromSurface,
             save_path=save_path,
-            captureBeyondViewport=bool(captureBeyondViewport),
+            captureBeyondViewport=captureBeyondViewport,
         )
         image = typing.cast(
             str,

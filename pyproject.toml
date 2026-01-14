@@ -43,4 +43,4 @@ Source = "https://github.com/ClericPy/ichrome"
 
 [project.scripts]
 ichrome = "ichrome.__main__:main"
-"ichrome.web" = "ichrome.web.__main__:main"
+"ichrome.http" = "ichrome.http.__main__:main"
