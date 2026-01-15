@@ -1,3 +1,4 @@
+import json
 from base64 import b64encode
 from typing import Any, Dict
 
@@ -83,9 +84,7 @@ class HttpController:
             if to_json:
                 return web.json_response(Response(code=0, data=result).to_dict())
             else:
-                return web.Response(
-                    body=str(result).encode("utf-8"), content_type="text/plain"
-                )
+                return web.Response(body=json.dumps(result), content_type="text/plain")
         except Exception as e:
             logger.error(f"JS error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)

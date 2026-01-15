@@ -12,7 +12,7 @@ from getpass import getuser
 from inspect import isawaitable
 from json import loads as _json_loads
 from pathlib import Path
-from typing import List, Literal, Optional, Set, Tuple, Union
+from typing import Any, Callable, List, Literal, Optional, Set, Tuple, Union
 
 from aiohttp import ClientSession, ClientTimeout
 from morebuiltins.request import req
@@ -154,7 +154,7 @@ class ChromeDaemon(object):
 
     def __init__(
         self,
-        chrome_path: Optional[str]=None,
+        chrome_path: Optional[str] = None,
         host="127.0.0.1",
         port=9222,
         headless=False,
@@ -663,8 +663,17 @@ class ChromeDaemon(object):
                     continue
 
     @classmethod
+    def get_exist_chrome_path_list(cls):
+        import shutil
+
+        paths = list(set(cls._iter_chrome_path()))
+        paths = [os.path.abspath(shutil.which(p) or p) for p in paths]
+        paths.sort(key=lambda p: os.path.getmtime(p) if os.path.exists(p) else 0, reverse=True)
+        return paths
+
+    @classmethod
     def _get_default_path(cls):
-        for path in cls._iter_chrome_path():
+        for path in cls.get_exist_chrome_path_list():
             return path
         raise ChromeRuntimeError("Executable chrome file was not found.")
 

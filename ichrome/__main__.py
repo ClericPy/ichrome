@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import argparse
 import asyncio
+import os
 import re
 import sys
+import time
 from pathlib import Path
 
 from ichrome import ChromeDaemon, ChromeWorkers, __version__, logger
@@ -110,7 +112,28 @@ Other operations:
     4. crawl the URL, output the HTML DOM:
         python -m ichrome --crawl --timeout=2 http://myip.ipip.net/
 """
-    parser = argparse.ArgumentParser(usage=usage)
+
+    def show_help_and_chrome_paths():
+        parser.print_help()
+        print("\n" + "=" * 50)
+        print("Found Chrome paths:")
+        print("=" * 50)
+        chrome_paths = ChromeDaemon.get_exist_chrome_path_list()
+        if chrome_paths:
+            for i, path in enumerate(chrome_paths):
+                mtime_str = time.strftime(
+                    "%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(path))
+                )
+                print(f"  - {mtime_str} | {path}{' (default)' if i == 0 else ''}")
+        else:
+            print("  (No Chrome installation found)")
+        print("=" * 50, flush=True)
+        return
+
+    parser = argparse.ArgumentParser(usage=usage, add_help=False)
+    parser.add_argument(
+        "-h", "--help", help="show this help message and exit", action="store_true"
+    )
     parser.add_argument(
         "-v", "-V", "--version", help="ichrome version info", action="store_true"
     )
@@ -289,6 +312,9 @@ Other operations:
     )
     args, extra_config = parser.parse_known_args()
 
+    if args.help:
+        show_help_and_chrome_paths()
+        return
     if args.version:
         print(__version__)
         return
