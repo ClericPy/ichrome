@@ -14,11 +14,20 @@ from .doc import API_DOCS
 __all__ = ["API_DOCS", "create_app"]
 
 
-async def create_app(engine: ChromeEngine):
+async def create_app(engine: ChromeEngine, api_prefix: str = "/"):
     app = web.Application()
-    controller = HttpController(engine)
-    app.router.add_route("*", "/download", controller.download)
-    app.router.add_route("*", "/snapshot", controller.snapshot)
-    app.router.add_route("*", "/js", controller.js)
-    app.router.add_route("GET", "/docs", controller.docs)
+    controller = HttpController(engine, api_prefix=api_prefix)
+    prefix = "/" + api_prefix.strip("/")
+    if prefix == "/":
+        prefix = ""
+
+    routes = [
+        ("*", "/download", controller.download),
+        ("*", "/snapshot", controller.snapshot),
+        ("*", "/js", controller.js),
+        ("*", "/do", controller.do),
+        ("GET", "/docs", controller.docs),
+    ]
+    for method, path, handler in routes:
+        app.router.add_route(method, prefix + path, handler)
     return app

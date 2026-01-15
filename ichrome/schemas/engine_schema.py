@@ -86,4 +86,3 @@ class JsDTO(DTOBase):
     url: str
     js: str
     value_path: str = "result.result"
-    wait_tag: str = ""

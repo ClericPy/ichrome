@@ -9,7 +9,7 @@ from . import AsyncChromeDaemon, AsyncTab
 from .base import ensure_awaitable
 from .exceptions import ChromeException
 from .logs import logger
-from .schemas.engine import DownloadDTO, DownloadResult, JsDTO, ScreenshotDTO
+from .schemas.engine_schema import DownloadDTO, DownloadResult, JsDTO, ScreenshotDTO
 
 
 class CallbackProtocol(typing.Protocol):
@@ -497,13 +497,9 @@ class ChromeEngine:
         )
         return result
 
-    async def js(
-        self,
-        dto: JsDTO,
-        timeout: typing.Optional[float] = None,
-    ) -> typing.Optional[str]:
+    async def js(self, dto: JsDTO, timeout: typing.Optional[float] = None) -> dict:
         return typing.cast(
-            typing.Optional[str],
+            dict,
             await self.do(
                 data=dto,
                 tab_callback=JSCallback(),
@@ -560,8 +556,8 @@ class ScreenshotCallback(CallbackProtocol):
         await tab.set_url(data.url, timeout=timeout)
         timeout = task.timeout * 0.99
         result = await asyncio.wait_for(
-            tab.screenshot(
-                css_selector=data.cssselector,
+            tab.screenshot_element(
+                cssselector=data.cssselector,
                 scale=data.scale,
                 format=data.format,
                 quality=data.quality,

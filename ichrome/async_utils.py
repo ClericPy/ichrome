@@ -2144,7 +2144,7 @@ JSON.stringify(result)""" % (
     async def get_element_clip(
         self,
         cssselector: str,
-        scale=1,
+        scale: float = 1.0,
         timeout: Union[Any, float, int] = NotSet,
         captureBeyondViewport=False,
     ):
@@ -2200,7 +2200,7 @@ JSON.stringify(result)""" % (
     async def screenshot_element(
         self,
         cssselector: Union[None, str] = None,
-        scale=1,
+        scale: float = 1.0,
         format: str = "png",
         quality: int = 100,
         fromSurface: bool = True,
@@ -2334,7 +2334,7 @@ JSON.stringify(result)""" % (
         cssselector: str,
         button="left",
         count=1,
-        scale=1,
+        scale: float = 1.0,
         multiplier=(0.5, 0.5),
         timeout: Union[Any, float, int] = NotSet,
     ):

@@ -18,7 +18,7 @@ from aiohttp import web
 from ..logs import logger
 from ..pool import ChromeEngine
 from .core import API_DOCS, create_app
-from ..schemas.http import ChromeConfig, ServerConfig
+from ..schemas.http_schema import ChromeConfig, ServerConfig
 
 
 def main():
@@ -147,13 +147,13 @@ def main():
 
     async def run_server():
         async with ChromeEngine(**chrome_config.to_engine_params()) as engine:
-            app = await create_app(engine)
+            app = await create_app(engine, api_prefix=server_config.api_prefix)
             runner = web.AppRunner(app)
             await runner.setup()
             site = web.TCPSite(runner, server_config.host, server_config.port)
             logger.info(
                 f"HTTP server starting on http://{server_config.host}:{server_config.port}, "
-                f"visit http://{server_config.host}:{server_config.port}/docs for API documentation and examples."
+                f"visit http://{server_config.host}:{server_config.port}{server_config.api_prefix.rstrip('/')}/docs for API documentation and examples."
             )
             await site.start()
             try:

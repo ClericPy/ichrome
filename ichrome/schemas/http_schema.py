@@ -34,6 +34,7 @@ class ServerConfig(Validator):
 
     host: str = "0.0.0.0"
     port: int = 8080
+    api_prefix: str = "/ichrome/"
 
     def update(self, data: Dict[str, Any]):
         """Update fields from a dictionary."""
