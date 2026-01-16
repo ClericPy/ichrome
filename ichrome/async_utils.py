@@ -2170,13 +2170,62 @@ JSON.stringify(result)""" % (
             except (TypeError, KeyError, json.JSONDecodeError):
                 pass
 
+    async def print_pdf(
+        self,
+        landscape: Optional[bool] = None,
+        displayHeaderFooter: Optional[bool] = None,
+        printBackground: Optional[bool] = True,
+        scale: float = 1.0,
+        paperWidth: Optional[float] = 8.5,
+        paperHeight: Optional[float] = 11.0,
+        marginTop: Optional[float] = 0.4,
+        marginBottom: Optional[float] = 0.4,
+        marginLeft: Optional[float] = 0.4,
+        marginRight: Optional[float] = 0.4,
+        pageRanges: Optional[str] = None,
+        headerTemplate: Optional[str] = None,
+        footerTemplate: Optional[str] = None,
+        preferCSSPageSize: Optional[bool] = None,
+        generateTaggedPDF: Optional[bool] = None,
+        generateDocumentOutline: Optional[bool] = None,
+    ) -> bytes:
+        """[Page.printToPDF], return the base64-encoded pdf data.
+        https://chromedevtools.github.io/devtools-protocol/tot/Page/#method-printToPDF
+        Sometimes scale set to 0.75 or 0.8 will get better pdf results.
+        """
+        kwargs = dict(
+            landscape=landscape,
+            displayHeaderFooter=displayHeaderFooter,
+            printBackground=printBackground,
+            scale=scale,
+            paperWidth=paperWidth,
+            paperHeight=paperHeight,
+            marginTop=marginTop,
+            marginBottom=marginBottom,
+            marginLeft=marginLeft,
+            marginRight=marginRight,
+            pageRanges=pageRanges,
+            headerTemplate=headerTemplate,
+            footerTemplate=footerTemplate,
+            preferCSSPageSize=preferCSSPageSize,
+            generateTaggedPDF=generateTaggedPDF,
+            generateDocumentOutline=generateDocumentOutline,
+            transferMode="ReturnAsBase64",
+        )
+        kwargs = {k: v for k, v in locals().items() if k != "self" and v is not None}
+        result = await self.send("Page.printToPDF", kwargs=kwargs)
+        pdf_data = self.get_data_value(result, value_path="result.data", default="")
+        if pdf_data:
+            return b64decode(pdf_data)
+        return b""
+
     async def snapshot_mhtml(
         self,
         save_path=None,
         encoding="utf-8",
         timeout: Union[Any, float, int] = NotSet,
         **kwargs,
-    ):
+    ) -> str:
         """[Page.captureSnapshot], as the mhtml page"""
         result = str(
             await self.send(
