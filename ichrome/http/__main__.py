@@ -17,7 +17,7 @@ from aiohttp import web
 
 from ..logs import logger
 from ..pool import ChromeEngine
-from .core import API_DOCS, create_app
+from .app import API_DOCS, create_app
 from ..schemas.http_schema import ChromeConfig, ServerConfig
 
 

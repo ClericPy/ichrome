@@ -98,7 +98,6 @@ class HttpController:
                 tab_callback=params.get("tab_callback") or params.get("callback"),
                 data=params.get("data"),
                 timeout=params.get("timeout"),
-                incognito_args=params.get("incognito_args"),
             )
             return web.json_response(Response(code=0, data=result).to_dict())
         except Exception as e:

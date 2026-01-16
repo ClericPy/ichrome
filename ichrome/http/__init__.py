@@ -19,7 +19,7 @@ Examples:
 """
 
 from .controller import HttpController
-from .core import create_app
+from .app import create_app
 
 
 __all__ = ["HttpController", "create_app"]

@@ -19,7 +19,6 @@ API_DOCS = {
                 "cookies": "dict (optional)",
                 "user_agent": "str (optional)",
                 "extra_headers": "dict (optional)",
-                "incognito_args": "dict (optional)",
             },
             "demo_url": "http://127.0.0.1:8080/download?url=https://www.bing.com/images",
             "examples": [
@@ -112,7 +111,6 @@ API_DOCS = {
                 "tab_callback": "str (required, python source. Define 'async def callback(tab, data, timeout):' or 'async def tab_callback(tab, data, timeout):')",
                 "data": "any (optional, passed to callback)",
                 "timeout": "float (default: 5.0)",
-                "incognito_args": "dict (optional)",
             },
             "demo_url": "http://127.0.0.1:8080/do",
             "examples": [

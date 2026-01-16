@@ -492,7 +492,6 @@ class ChromeEngine:
                 tab_callback=DownloadCallback(),
                 timeout=timeout,
                 tab_index=None,
-                incognito_args=dto.incognito_args,
             ),
         )
         return result
