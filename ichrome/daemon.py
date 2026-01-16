@@ -12,7 +12,7 @@ from getpass import getuser
 from inspect import isawaitable
 from json import loads as _json_loads
 from pathlib import Path
-from typing import Any, Callable, List, Literal, Optional, Set, Tuple, Union
+from typing import List, Literal, Optional, Set, Tuple, Union
 
 from aiohttp import ClientSession, ClientTimeout
 from morebuiltins.request import req
@@ -126,7 +126,7 @@ class ChromeDaemon(object):
     IGNORE_USER_DIR_FLAGS = {"null", "None", "/dev/null", "''", '""'}
     MAX_WAIT_CHECKING_SECONDS = 15
     DEFAULT_USER_DIR_PATH = Path.home() / "ichrome_user_data"
-    DEFAULT_EXTRA_CONFIG = ["--disable-gpu", "--no-first-run"]
+    DEFAULT_EXTRA_CONFIG = ["--disable-gpu", "--no-first-run", "--window-size=1920,1080"]
     DEFAULT_POPEN_ARGS = {"start_new_session": True}
     LAUNCHED_PIDS: Set[int] = set()
     WIN32_PATHS = [
@@ -668,7 +668,9 @@ class ChromeDaemon(object):
 
         paths = list(set(cls._iter_chrome_path()))
         paths = [os.path.abspath(shutil.which(p) or p) for p in paths]
-        paths.sort(key=lambda p: os.path.getmtime(p) if os.path.exists(p) else 0, reverse=True)
+        paths.sort(
+            key=lambda p: os.path.getmtime(p) if os.path.exists(p) else 0, reverse=True
+        )
         return paths
 
     @classmethod
