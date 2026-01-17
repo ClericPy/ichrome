@@ -222,6 +222,19 @@ class ChromeWorker:
                         break
                 logger.info(f"[offline] {self} is offline.")
 
+    async def prepare_tab(self, tab: AsyncTab, data: typing.Optional[dict]):
+        if not data:
+            return
+        cookies = data.get("cookies", {})
+        if cookies:
+            for name, value in cookies.items():
+                # may need set url param for cross-site cookies TODO
+                await tab.set_cookie(name=name, value=value)
+        if data.get("user_agent"):
+            await tab.set_ua(data["user_agent"])
+        if data.get("headers"):
+            await tab.set_headers(data["headers"])
+
     async def future_consumer(self, index=None):
         while not self._shutdown:
             run_too_long = (
@@ -257,6 +270,7 @@ class ChromeWorker:
                     async with self.chrome_daemon.incognito_tab(
                         **future.tab_config
                     ) as tab:
+                        await self.prepare_tab(tab, future.tab_config)
                         if isinstance(future.data, _TabWorker):
                             await self.handle_tab_worker_future(tab, future)
                         else:
@@ -269,6 +283,7 @@ class ChromeWorker:
                         auto_close=auto_close,
                         flatten=self._flatten,
                     ) as tab:
+                        await self.prepare_tab(tab, future.tab_config)
                         if isinstance(future.data, _TabWorker):
                             await self.handle_tab_worker_future(tab, future)
                         else:
@@ -583,13 +598,6 @@ class DownloadCallback(CallbackProtocol):
     ) -> DownloadResult:
         result = DownloadResult(url=data.url)
         timeout = task.timeout * 0.99
-        cookies = data.cookies or {}
-        for name, value in cookies.items():
-            await tab.set_cookie(name=name, value=value, url=data.url)
-        if data.user_agent:
-            await tab.set_ua(data.user_agent)
-        if data.extra_headers:
-            await tab.set_headers(data.extra_headers)
         await tab.set_url(data.url, timeout=timeout)
         if data.wait_tag:
             timeout = task.timeout * 0.99

@@ -72,9 +72,6 @@ class DownloadDTO(DTOBase):
     url: str
     cssselector: str = ""
     wait_tag: str = ""
-    cookies: typing.Optional[typing.Dict[str, str]] = None
-    user_agent: str = ""
-    extra_headers: typing.Optional[typing.Dict[str, str]] = None
 
 
 @dataclass
@@ -120,3 +117,6 @@ class TabConfigDTO(DTOBase):
     proxyServer: typing.Optional[str] = None
     proxyBypassList: typing.Optional[str] = None
     originsWithUniversalNetworkAccess: typing.Optional[typing.List[str]] = None
+    cookies: typing.Optional[typing.Dict[str, str]] = None
+    user_agent: str = ""
+    headers: typing.Optional[typing.Dict[str, str]] = None

@@ -1,10 +1,35 @@
 # API documentation metadata
 API_DOCS = {
-    "description": "ichrome HTTP API via aiohttp",
+    "description": (
+        "ichrome HTTP API via aiohttp.<br><br>"
+        "<b>Nested Parameters:</b> Use dots in keys to pass parameters to nested DTOs (like TabConfigDTO).<br>"
+        "For example, <code>tab_config.width=1280&tab_config.height=720</code> or <code>config.proxyServer=http://127.0.0.1:1080</code>.<br>"
+        "Supported prefixes for TabConfigDTO: <code>tab_config</code>, <code>config</code>, <code>conf</code>."
+    ),
     "response_schema": {
         "code": "int (0 for success, 1 for error)",
         "data": "any (result data on success)",
         "msg": "str (error message on error)",
+    },
+    "dtos": {
+        "TabConfigDTO": {
+            "description": "Configuration for creating or attaching to a tab.",
+            "parameters": {
+                "url": "str (default: 'about:blank')",
+                "width": "int (optional, window width)",
+                "height": "int (optional, window height)",
+                "enableBeginFrameControl": "bool (optional)",
+                "newWindow": "bool (optional)",
+                "background": "bool (optional)",
+                "disposeOnDetach": "bool (default: True)",
+                "proxyServer": "str (optional, e.g. 'http://address:port')",
+                "proxyBypassList": "str (optional)",
+                "originsWithUniversalNetworkAccess": "list[str] (optional)",
+                "cookies": "dict (optional)",
+                "user_agent": "str (optional)",
+                "headers": "dict (optional)",
+            },
+        }
     },
     "endpoints": [
         {
@@ -16,9 +41,7 @@ API_DOCS = {
                 "cssselector": "str (optional, element to extract)",
                 "wait_tag": "str (optional, wait before returning)",
                 "timeout": "float (default: 5.0)",
-                "cookies": "dict (optional)",
-                "user_agent": "str (optional)",
-                "extra_headers": "dict (optional)",
+                "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
             },
             "demo_url": "http://127.0.0.1:8080/download?url=https://www.bing.com/images",
             "examples": [
@@ -35,6 +58,10 @@ API_DOCS = {
                     "url": "http://127.0.0.1:8080/download",
                     "body": {"url": "http://example.com", "timeout": 10},
                 },
+                {
+                    "method": "GET",
+                    "url": "http://127.0.0.1:8080/download?url=http://example.com&config.width=1280&config.height=720",
+                },
             ],
         },
         {
@@ -50,6 +77,7 @@ API_DOCS = {
                 "from_surface": "bool (default: True)",
                 "capture_beyond_viewport": "bool (default: False)",
                 "timeout": "float (default: 5.0)",
+                "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
             },
             "demo_url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images",
             "examples": [
@@ -81,6 +109,7 @@ API_DOCS = {
                 "js": "str (required, javascript code)",
                 "value_path": "str (optional, result path)",
                 "timeout": "float (default: 5.0)",
+                "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
             },
             "demo_url": "http://127.0.0.1:8080/js?url=https://www.bing.com/images&js=document.title",
             "examples": [
@@ -111,6 +140,7 @@ API_DOCS = {
                 "tab_callback": "str (required, python source. Define 'async def callback(tab, data, timeout):' or 'async def tab_callback(tab, data, timeout):')",
                 "data": "any (optional, passed to callback)",
                 "timeout": "float (default: 5.0)",
+                "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
             },
             "demo_url": "http://127.0.0.1:8080/do",
             "examples": [
@@ -245,6 +275,9 @@ def get_html_docs(api_prefix="/"):
     <h2>Endpoints (Prefix: <code>{prefix_display}</code>)</h2>
     {endpoints_html}
 
+    <h2>Data Transfer Objects (DTOs)</h2>
+    {dtos_html}
+
 </body>
 </html>
     """
@@ -254,6 +287,30 @@ def get_html_docs(api_prefix="/"):
         f"<tr><td><code>{k}</code></td><td>{v}</td></tr>"
         for k, v in API_DOCS["response_schema"].items()
     )
+
+    dtos_html = ""
+    for dto_name, dto_info in API_DOCS.get("dtos", {}).items():
+        dto_params_rows = "".join(
+            f"<tr><td><code>{k}</code></td><td>{v}</td></tr>"
+            for k, v in dto_info["parameters"].items()
+        )
+        dtos_html += f"""
+        <div class="endpoint">
+            <h3>{dto_name}</h3>
+            <div class="description">{dto_info["description"]}</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Type / Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {dto_params_rows}
+                </tbody>
+            </table>
+        </div>
+        """
 
     endpoints_html = ""
     for ep in API_DOCS["endpoints"]:
@@ -342,5 +399,6 @@ def get_html_docs(api_prefix="/"):
         description=description,
         response_schema_rows=response_schema_rows,
         endpoints_html=endpoints_html,
+        dtos_html=dtos_html,
         prefix_display=prefix or "/",
     )
