@@ -23,7 +23,7 @@ async def create_app(engine: ChromeEngine, api_prefix: str = "/"):
 
     routes = [
         ("*", "/download", controller.download),
-        ("*", "/snapshot", controller.snapshot),
+        ("*", "/screenshot", controller.screenshot),
         ("*", "/js", controller.js),
         ("*", "/do", controller.do),
         ("GET", "/docs", controller.docs),

@@ -65,6 +65,7 @@ class ScreenshotDTO(DTOBase):
     url: str
     cssselector: typing.Optional[str] = None
     scale: float = 1.0
+    # "png" or "jpeg"
     format: str = "png"
     quality: int = 100
     fromSurface: bool = True
@@ -129,3 +130,8 @@ class TabPrepareDTO(DTOBase):
     cookies: typing.Optional[typing.Dict[str, str]] = None
     ua: str = ""
     headers: typing.Optional[typing.Dict[str, str]] = None
+    # split by |, for multiple urls. support wildcard *: *.example.com/*|*.bing.com/* => ["*.example.com/*", "*.bing.com/*]
+    block_urls: typing.Optional[str] = None
+    add_js_onload: typing.Optional[str] = None
+    # split by |; for multiple conditions. e.g., "#id|.class|div > span"
+    wait_condition: typing.Optional[str] = None

@@ -1,174 +1,4 @@
-# API documentation metadata
-API_DOCS = {
-    "description": (
-        "ichrome HTTP API via aiohttp.<br><br>"
-        "<b>Nested Parameters:</b> Use dots in keys to pass parameters to nested DTOs.<br>"
-        "For example, <code>tab_config.width=1280&tab_config.height=720</code> or <code>tab_prepare.ua=ExampleUA</code>.<br>"
-        "Supported prefixes for TabConfigDTO: <code>tab_config</code>.<br>"
-        "Supported prefixes for TabPrepareDTO: <code>tab_prepare</code>."
-    ),
-    "response_schema": {
-        "code": "int (0 for success, 1 for error)",
-        "data": "any (result data on success)",
-        "msg": "str (error message on error)",
-    },
-    "dtos": {
-        "TabConfigDTO": {
-            "description": "Configuration for creating or attaching to a tab.",
-            "parameters": {
-                "url": "str (default: 'about:blank')",
-                "width": "int (optional, window width)",
-                "height": "int (optional, window height)",
-                "enableBeginFrameControl": "bool (optional)",
-                "newWindow": "bool (optional)",
-                "background": "bool (optional)",
-                "disposeOnDetach": "bool (default: True)",
-                "proxyServer": "str (optional, e.g. 'http://address:port')",
-                "proxyBypassList": "str (optional)",
-                "originsWithUniversalNetworkAccess": "list[str] (optional)",
-            },
-        },
-        "TabPrepareDTO": {
-            "description": "Preparation for a tab before executing commands.",
-            "parameters": {
-                "ua": "str (optional)",
-                "headers": "dict (optional)",
-                "cookies": "dict (optional)",
-            },
-        },
-    },
-    "endpoints": [
-        {
-            "route": "/download",
-            "methods": ["GET", "POST"],
-            "description": "Download page source or specific element HTML",
-            "parameters": {
-                "url": "str (required)",
-                "cssselector": "str (optional, element to extract)",
-                "timeout": "float (default: 5.0)",
-                "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
-                "tab_prepare": "dict | dotted keys (optional, e.g., tab_prepare.ua=UA)",
-            },
-            "demo_url": "http://127.0.0.1:8080/ichrome/download?url=https://httpbin.org/get&tab_prepare.ua=CustomUA",
-            "examples": [
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/download?url=http://example.com",
-                },
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/download?url=https://www.bing.com/images&cssselector=head+title",
-                },
-                {
-                    "method": "POST",
-                    "url": "http://127.0.0.1:8080/download",
-                    "body": {"url": "http://example.com", "timeout": 10},
-                },
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/download?url=http://example.com&tab_config.width=1280&tab_config.height=720",
-                },
-            ],
-        },
-        {
-            "route": "/snapshot",
-            "methods": ["GET", "POST"],
-            "description": "Take screenshot (returns image bytes directly)",
-            "parameters": {
-                "url": "str (required)",
-                "cssselector": "str (optional)",
-                "scale": "float (default: 1.0)",
-                "image_format": "str (png/jpeg, default: png)",
-                "quality": "int (1-100, default: 100)",
-                "from_surface": "bool (default: True)",
-                "capture_beyond_viewport": "bool (default: False)",
-                "timeout": "float (default: 5.0)",
-                "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
-                "tab_prepare": "dict | dotted keys (optional, e.g., tab_prepare.ua=UA)",
-            },
-            "demo_url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images",
-            "examples": [
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images",
-                },
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images&image_format=jpeg",
-                },
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images&scale=0.5&quality=50",
-                },
-                {
-                    "method": "POST",
-                    "url": "http://127.0.0.1:8080/snapshot",
-                    "body": {"url": "http://example.com", "image_format": "jpeg"},
-                },
-            ],
-        },
-        {
-            "route": "/js",
-            "methods": ["GET", "POST"],
-            "description": "Execute JavaScript on page",
-            "parameters": {
-                "url": "str (required)",
-                "js": "str (required, javascript code)",
-                "value_path": "str (optional, result path)",
-                "timeout": "float (default: 5.0)",
-                "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
-            },
-            "demo_url": "http://127.0.0.1:8080/js?url=https://www.bing.com/images&js=document.title",
-            "examples": [
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/js?url=https://www.bing.com/images&js=document.body.innerText",
-                },
-                {
-                    "method": "GET",
-                    "url": "http://127.0.0.1:8080/js?url=https://www.bing.com/images&js=window.location.href",
-                },
-                {
-                    "method": "POST",
-                    "url": "http://127.0.0.1:8080/js",
-                    "body": {
-                        "url": "http://example.com",
-                        "js": "document.body.innerHTML",
-                        "value_path": "result.result.value",
-                    },
-                },
-            ],
-        },
-        {
-            "route": "/do",
-            "methods": ["POST"],
-            "description": "Execute custom callback function on tab (supports 'callback' or 'tab_callback' name)",
-            "parameters": {
-                "tab_callback": "str (required, python source. Define 'async def callback(tab, data, timeout):' or 'async def tab_callback(tab, data, timeout):')",
-                "data": "any (optional, passed to callback)",
-                "timeout": "float (default: 5.0)",
-                "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
-            },
-            "demo_url": "http://127.0.0.1:8080/do",
-            "examples": [
-                {
-                    "method": "POST",
-                    "url": "http://127.0.0.1:8080/do",
-                    "body": {
-                        "tab_callback": "async def callback(tab, data, timeout): await tab.goto(data['url']); return await tab.title",
-                        "data": {"url": "http://example.com"},
-                    },
-                }
-            ],
-        },
-        {
-            "route": "/docs",
-            "methods": ["GET"],
-            "description": "API Documentation",
-            "demo_url": "http://127.0.0.1:8080/docs",
-        },
-    ],
-}
+from .doc_meta import API_DOCS
 
 
 def get_html_docs(api_prefix="/"):
@@ -257,6 +87,54 @@ def get_html_docs(api_prefix="/"):
             display: block;
             margin-top: 10px;
             font-weight: bold;
+        }}
+        .feature-badge {{
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-left: 8px;
+            vertical-align: middle;
+        }}
+        .featured {{
+            border: 2px solid #ffc107;
+            background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+            position: relative;
+        }}
+        .featured::before {{
+            content: "⭐";
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 1.5em;
+            background: #ffc107;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }}
+        .badge-download {{
+            background-color: #28a745;
+            color: #fff;
+        }}
+        .badge-screenshot {{
+            background-color: #17a2b8;
+            color: #fff;
+        }}
+        .badge-js {{
+            background-color: #fd7e14;
+            color: #fff;
+        }}
+        .badge-html {{
+            background-color: #6f42c1;
+            color: #fff;
+        }}
+        .badge-pdf {{
+            background-color: #dc3545;
+            color: #fff;
         }}
     </style>
 </head>
@@ -358,7 +236,7 @@ def get_html_docs(api_prefix="/"):
                         clickable_url = prefix + ep["route"] + query
                     except Exception:
                         clickable_url = original_url
-                    
+
                     examples_html += f"""
                     <div style="margin-bottom: 10px;">
                         <span class="method method-GET">GET</span>
@@ -369,10 +247,37 @@ def get_html_docs(api_prefix="/"):
                     ex_json = json.dumps(ex, indent=4)
                     examples_html += f"<pre><code>{ex_json}</code></pre>"
 
+        # Determine if this endpoint should be featured
+        featured_class = ""
+        feature_badge = ""
+        route_lower = ep["route"].lower()
+
+        if "download" in route_lower or "save" in route_lower:
+            featured_class = "featured"
+            feature_badge = (
+                '<span class="feature-badge badge-download">📥 Download</span>'
+            )
+        elif "screenshot" in route_lower:
+            featured_class = "featured"
+            feature_badge = (
+                '<span class="feature-badge badge-screenshot">📷 Screenshot</span>'
+            )
+        elif (
+            "js" in route_lower or "javascript" in route_lower or "eval" in route_lower
+        ):
+            featured_class = "featured"
+            feature_badge = '<span class="feature-badge badge-js">⚡ JS</span>'
+        elif "html" in route_lower:
+            featured_class = "featured"
+            feature_badge = '<span class="feature-badge badge-html">🌐 HTML</span>'
+        elif "pdf" in route_lower:
+            featured_class = "featured"
+            feature_badge = '<span class="feature-badge badge-pdf">📄 PDF</span>'
+
         demo_url_html = ""
         full_route = prefix + ep["route"]
         demo_url_html += f'<div class="demo-link">Endpoint: <span class="route">{full_route}</span></div>'
-        
+
         if "demo_url" in ep:
             d_url = ep["demo_url"]
             try:
@@ -380,21 +285,21 @@ def get_html_docs(api_prefix="/"):
                 query = d_url.split(ep["route"], 1)[1]
                 clickable = prefix + ep["route"] + query
                 demo_url_html += f'<div class="demo-link">Quick Demo: <a href="{clickable}" target="_blank">{clickable}</a></div>'
-                
+
                 # Add to_json=1 version
                 sep = "&" if "?" in clickable else "?"
                 json_clickable = f"{clickable}{sep}to_json=1"
                 demo_url_html += f'<div class="demo-link">Quick Demo (JSON): <a href="{json_clickable}" target="_blank">{json_clickable}</a></div>'
             except Exception:
                 pass
-        
+
         # Add a "Try it out" link if it's a documentation-friendly GET route
         if ep["route"] == "/docs":
-             demo_url_html += f'<div class="demo-link"><a href="{full_route}?to_json=1" target="_blank">View JSON API metadata</a></div>'
+            demo_url_html += f'<div class="demo-link"><a href="{full_route}?to_json=1" target="_blank">View JSON API metadata</a></div>'
 
         endpoints_html += f"""
-        <div class="endpoint">
-            <div>{methods_html} <span class="route">{full_route}</span></div>
+        <div class="endpoint {featured_class}">
+            <div>{methods_html} <span class="route">{full_route}</span>{feature_badge}</div>
             <div class="description">{ep["description"]}</div>
             {params_rows}
             {examples_html}

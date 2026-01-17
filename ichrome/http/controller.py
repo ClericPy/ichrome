@@ -97,8 +97,8 @@ class HttpController:
             logger.error(f"Download error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
 
-    async def snapshot(self, request: web.Request) -> web.Response:
-        """Handle snapshot request."""
+    async def screenshot(self, request: web.Request) -> web.Response:
+        """Handle screenshot request."""
         to_json, dto_params, other_dtos = await self._get_params(request)
         try:
             dto = ScreenshotDTO.from_dict(dto_params)
@@ -113,7 +113,7 @@ class HttpController:
                 content_type = f"image/{dto.format}"
                 return web.Response(body=result, content_type=content_type)
         except Exception as e:
-            logger.error(f"Snapshot error: {format_error(e, filter=None)}")
+            logger.error(f"Screenshot error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
 
     async def js(self, request: web.Request) -> web.Response:
