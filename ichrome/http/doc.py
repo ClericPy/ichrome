@@ -317,16 +317,16 @@ def get_html_docs(api_prefix="/"):
                 clickable = prefix + ep["route"] + query
                 demo_url_html += f'<div class="demo-link">Quick Demo: <a href="{clickable}" target="_blank">{clickable}</a></div>'
                 
-                # Add as_json=1 version
+                # Add to_json=1 version
                 sep = "&" if "?" in clickable else "?"
-                json_clickable = f"{clickable}{sep}as_json=1"
+                json_clickable = f"{clickable}{sep}to_json=1"
                 demo_url_html += f'<div class="demo-link">Quick Demo (JSON): <a href="{json_clickable}" target="_blank">{json_clickable}</a></div>'
             except Exception:
                 pass
         
         # Add a "Try it out" link if it's a documentation-friendly GET route
         if ep["route"] == "/docs":
-             demo_url_html += f'<div class="demo-link"><a href="{full_route}?json=1" target="_blank">View JSON API metadata</a></div>'
+             demo_url_html += f'<div class="demo-link"><a href="{full_route}?to_json=1" target="_blank">View JSON API metadata</a></div>'
 
         endpoints_html += f"""
         <div class="endpoint">

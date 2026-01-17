@@ -43,7 +43,7 @@ class ChromeTask(asyncio.Future):
         timeout=None,
         tab_index=None,
         port: typing.Optional[int] = None,
-        incognito_args: typing.Optional[dict] = None,
+        tab_config: typing.Optional[dict] = None,
     ):
         super().__init__()
         self.id = self.get_id()
@@ -53,10 +53,10 @@ class ChromeTask(asyncio.Future):
         self.expire_time = time.time() + self._timeout
         self.tab_callback = tab_callback
         self.port = port
-        if incognito_args is None:
-            self.incognito_args: dict = ChromeEngine.DEFAULT_INCOGNITO_ARGS
+        if tab_config is None:
+            self.tab_config: dict = ChromeEngine.DEFAULT_TAB_CONFIG
         else:
-            self.incognito_args = incognito_args
+            self.tab_config = tab_config
         self._running_task: typing.Optional[asyncio.Task] = None
         self._tries = 0
 
@@ -252,10 +252,10 @@ class ChromeWorker:
                 continue
             await self._chrome_daemon_ready.wait()
             if await self.chrome_daemon._check_chrome_connection():
-                if isinstance(future.incognito_args, dict):
+                if isinstance(future.tab_config, dict):
                     # incognito mode
                     async with self.chrome_daemon.incognito_tab(
-                        **future.incognito_args
+                        **future.tab_config
                     ) as tab:
                         if isinstance(future.data, _TabWorker):
                             await self.handle_tab_worker_future(tab, future)
@@ -353,8 +353,8 @@ class ChromeEngine:
     ERRORS_NOT_HANDLED = (KeyboardInterrupt,)
     SHORTEN_DATA_LENGTH = 150
     FLATTEN = True
-    # Use incognico mode by default, or you can se ChromeEngine.DEFAULT_INCOGNITO_ARGS = None to use normal mode
-    DEFAULT_INCOGNITO_ARGS: dict = {}
+    # Use incognico mode by default, or you can se ChromeEngine.DEFAULT_TAB_CONFIG = None to use normal mode
+    DEFAULT_TAB_CONFIG: dict = {}
 
     def __init__(
         self,
@@ -412,6 +412,16 @@ class ChromeEngine:
             repr_data = str(data)
             return f"{repr_data[: self.SHORTEN_DATA_LENGTH]}{'...' if len(repr_data) > self.SHORTEN_DATA_LENGTH else ''}"
 
+    def release(self):
+        while not self.q.empty():
+            try:
+                future = self.q.get_nowait()
+                if future.data is not ChromeTask.STOP_SIG and not future.done():
+                    future.cancel()
+                del future
+            except asyncio.QueueEmpty:
+                break
+
     async def shutdown(self):
         if self._shutdown:
             return
@@ -436,26 +446,26 @@ class ChromeEngine:
         timeout: typing.Optional[float] = None,
         tab_index=None,
         port: typing.Optional[int] = None,
-        incognito_args: typing.Optional[typing.Union[dict, TabConfigDTO]] = None,
+        tab_config: typing.Optional[typing.Union[dict, TabConfigDTO]] = None,
     ):
         if self._shutdown:
             raise RuntimeError(f"{self.__class__.__name__} has been shutdown.")
-        if isinstance(incognito_args, TabConfigDTO):
-            incognito_args = asdict(incognito_args)
+        if isinstance(tab_config, TabConfigDTO):
+            tab_config = asdict(tab_config)
         future = ChromeTask(
             data,
             tab_callback,
             timeout=timeout,
             tab_index=tab_index,
             port=port,
-            incognito_args=incognito_args,
+            tab_config=tab_config,
         )
         if port:
             await self.workers[port].port_queue.put(future)
         else:
             await self.q.put(future)
         logger.info(
-            f"[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}"
+            f"[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}, tab_config={tab_config}"
         )
         try:
             return await asyncio.wait_for(future, timeout=future.timeout)
@@ -464,16 +474,6 @@ class ChromeEngine:
         finally:
             logger.info(f"[finished]({self.todos}) {future}")
             del future
-
-    def release(self):
-        while not self.q.empty():
-            try:
-                future = self.q.get_nowait()
-                if future.data is not ChromeTask.STOP_SIG and not future.done():
-                    future.cancel()
-                del future
-            except asyncio.QueueEmpty:
-                break
 
     async def screenshot(
         self,
@@ -488,7 +488,7 @@ class ChromeEngine:
                 tab_callback=ScreenshotCallback(),
                 timeout=timeout,
                 tab_index=None,
-                incognito_args=tab_config,
+                tab_config=tab_config,
             ),
         )
         return image
@@ -506,7 +506,7 @@ class ChromeEngine:
                 tab_callback=DownloadCallback(),
                 timeout=timeout,
                 tab_index=None,
-                incognito_args=tab_config,
+                tab_config=tab_config,
             ),
         )
         return result
@@ -524,7 +524,7 @@ class ChromeEngine:
                 tab_callback=JSCallback(),
                 timeout=timeout,
                 tab_index=None,
-                incognito_args=tab_config,
+                tab_config=tab_config,
             ),
         )
 

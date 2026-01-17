@@ -4,7 +4,7 @@
 
 -----------
 
-> Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.7+.
+> Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.8+.
 
 ![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
 

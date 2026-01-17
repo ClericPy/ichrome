@@ -160,7 +160,10 @@ def main():
                 while True:
                     await asyncio.sleep(3600)
             finally:
-                await runner.cleanup()
+                try:
+                    await runner.cleanup()
+                except Exception:
+                    pass
 
     try:
         asyncio.run(run_server())

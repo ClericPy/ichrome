@@ -11,22 +11,43 @@ class DTOBase:
     def _ensure_bool_string(value: str) -> bool:
         return value.lower() in {"1", "true", "yes", "on"}
 
+    string_callbacks = {
+        int: int,
+        float: float,
+        bool: _ensure_bool_string,
+        dict: json.loads,
+        list: json.loads,
+    }
+
+    @staticmethod
+    def try_parse_string(value, expected_type) -> typing.Any:
+        """Try to parse string value to expected type."""
+        if expected_type is int:
+            return int(value)
+        elif expected_type is float:
+            return float(value)
+        elif expected_type is bool:
+            return DTOBase._ensure_bool_string(value)
+        elif expected_type is dict or expected_type is list:
+            return json.loads(value)
+        return value
+
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Self:
         field_types = {f.name: f.type for f in fields(cls)}
         init_data = {}
         for key, value in data.items():
             if key in field_types:
-                expected_type = field_types[key]
-                if expected_type is str and type(value) is str:
-                    if expected_type is int:
-                        value = int(value)
-                    elif expected_type is float:
-                        value = float(value)
-                    elif expected_type is bool:
-                        value = cls._ensure_bool_string(value)
-                    elif expected_type is dict or expected_type is list:
-                        value = json.loads(value)
+                field_type = field_types[key]
+                expected_types = typing.get_args(field_type) or (field_type,)
+                for expected_type in expected_types:
+                    # convert str to expected type
+                    if type(value) is str and expected_type in cls.string_callbacks:
+                        try:
+                            value = cls.try_parse_string(value, expected_type)
+                            break
+                        except Exception:
+                            continue
                 init_data[key] = value
         return cls(**init_data)
 
