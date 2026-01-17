@@ -41,22 +41,22 @@ class ChromeTask(asyncio.Future):
         data: typing.Any,
         tab_callback: typing.Optional[CallbackProtocol] = None,
         timeout=None,
-        tab_index=None,
         port: typing.Optional[int] = None,
-        tab_config: typing.Optional[dict] = None,
+        tab_config: typing.Optional[TabConfigDTO] = None,
+        tab_prepare: typing.Optional[dict] = None,
     ):
         super().__init__()
         self.id = self.get_id()
         self.data = data
-        self.tab_index = tab_index
         self._timeout = self.MAX_TIMEOUT if timeout is None else timeout
         self.expire_time = time.time() + self._timeout
         self.tab_callback = tab_callback
         self.port = port
         if tab_config is None:
-            self.tab_config: dict = ChromeEngine.DEFAULT_TAB_CONFIG
+            self.tab_config = ChromeEngine.DEFAULT_TAB_CONFIG
         else:
             self.tab_config = tab_config
+        self.tab_prepare = tab_prepare
         self._running_task: typing.Optional[asyncio.Task] = None
         self._tries = 0
 
@@ -117,7 +117,7 @@ class ChromeTask(asyncio.Future):
 
     def __str__(self):
         # ChromeTask(<7>, FINISHED)
-        return f"{self.__class__.__name__}(<{self.port}>, {self._state}, id={self.id}, tab={self.tab_index})"
+        return f"{self.__class__.__name__}(<{self.port}>, {self._state}, id={self.id})"
 
     def __repr__(self) -> str:
         return str(self)
@@ -222,18 +222,18 @@ class ChromeWorker:
                         break
                 logger.info(f"[offline] {self} is offline.")
 
-    async def prepare_tab(self, tab: AsyncTab, data: typing.Optional[dict]):
-        if not data:
-            return
-        cookies = data.get("cookies", {})
-        if cookies:
-            for name, value in cookies.items():
-                # may need set url param for cross-site cookies TODO
-                await tab.set_cookie(name=name, value=value)
-        if data.get("user_agent"):
-            await tab.set_ua(data["user_agent"])
-        if data.get("headers"):
-            await tab.set_headers(data["headers"])
+    # async def prepare_tab(self, tab: AsyncTab, data: typing.Optional[dict]):
+    #     if not data:
+    #         return
+    #     cookies = data.get("cookies", {})
+    #     if cookies:
+    #         for name, value in cookies.items():
+    #             # may need set url param for cross-site cookies TODO
+    #             await tab.set_cookie(name=name, value=value)
+    #     if data.get("user_agent"):
+    #         await tab.set_ua(data["user_agent"])
+    #     if data.get("headers"):
+    #         await tab.set_headers(data["headers"])
 
     async def future_consumer(self, index=None):
         while not self._shutdown:
@@ -270,20 +270,8 @@ class ChromeWorker:
                     async with self.chrome_daemon.incognito_tab(
                         **future.tab_config
                     ) as tab:
-                        await self.prepare_tab(tab, future.tab_config)
-                        if isinstance(future.data, _TabWorker):
-                            await self.handle_tab_worker_future(tab, future)
-                        else:
-                            await self.handle_default_future(tab, future)
-                else:
-                    # should not auto_close for int index (existing tab).
-                    auto_close = not isinstance(future.tab_index, int)
-                    async with self.chrome_daemon.connect_tab(
-                        index=future.tab_index,
-                        auto_close=auto_close,
-                        flatten=self._flatten,
-                    ) as tab:
-                        await self.prepare_tab(tab, future.tab_config)
+                        # if future.tab_config:
+                        #     await self.prepare_tab(tab, future.tab_config)
                         if isinstance(future.data, _TabWorker):
                             await self.handle_tab_worker_future(tab, future)
                         else:
@@ -369,7 +357,7 @@ class ChromeEngine:
     SHORTEN_DATA_LENGTH = 150
     FLATTEN = True
     # Use incognico mode by default, or you can se ChromeEngine.DEFAULT_TAB_CONFIG = None to use normal mode
-    DEFAULT_TAB_CONFIG: dict = {}
+    DEFAULT_TAB_CONFIG: typing.Optional[TabConfigDTO] = None
 
     def __init__(
         self,
@@ -459,7 +447,6 @@ class ChromeEngine:
         data: typing.Any,
         tab_callback: typing.Optional[typing.Callable] = None,
         timeout: typing.Optional[float] = None,
-        tab_index=None,
         port: typing.Optional[int] = None,
         tab_config: typing.Optional[typing.Union[dict, TabConfigDTO]] = None,
     ):
@@ -471,7 +458,6 @@ class ChromeEngine:
             data,
             tab_callback,
             timeout=timeout,
-            tab_index=tab_index,
             port=port,
             tab_config=tab_config,
         )
@@ -502,7 +488,6 @@ class ChromeEngine:
                 data=dto,
                 tab_callback=ScreenshotCallback(),
                 timeout=timeout,
-                tab_index=None,
                 tab_config=tab_config,
             ),
         )
@@ -520,7 +505,6 @@ class ChromeEngine:
                 data=dto,
                 tab_callback=DownloadCallback(),
                 timeout=timeout,
-                tab_index=None,
                 tab_config=tab_config,
             ),
         )
@@ -538,7 +522,6 @@ class ChromeEngine:
                 data=dto,
                 tab_callback=JSCallback(),
                 timeout=timeout,
-                tab_index=None,
                 tab_config=tab_config,
             ),
         )

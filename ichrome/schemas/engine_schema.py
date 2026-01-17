@@ -1,5 +1,6 @@
 import json
 import typing
+from ast import literal_eval
 from dataclasses import dataclass, field, fields
 
 
@@ -29,7 +30,12 @@ class DTOBase:
         elif expected_type is bool:
             return DTOBase._ensure_bool_string(value)
         elif expected_type is dict or expected_type is list:
-            return json.loads(value)
+            try:
+                # first try json.loads
+                return json.loads(value)
+            except json.JSONDecodeError:
+                # fallback to literal_eval
+                return literal_eval(value)
         return value
 
     @classmethod
@@ -117,6 +123,6 @@ class TabConfigDTO(DTOBase):
     proxyServer: typing.Optional[str] = None
     proxyBypassList: typing.Optional[str] = None
     originsWithUniversalNetworkAccess: typing.Optional[typing.List[str]] = None
-    cookies: typing.Optional[typing.Dict[str, str]] = None
-    user_agent: str = ""
-    headers: typing.Optional[typing.Dict[str, str]] = None
+    # cookies: typing.Optional[typing.Dict[str, str]] = None
+    # user_agent: str = ""
+    # headers: typing.Optional[typing.Dict[str, str]] = None
