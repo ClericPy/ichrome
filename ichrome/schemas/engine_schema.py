@@ -123,6 +123,10 @@ class TabConfigDTO(DTOBase):
     proxyServer: typing.Optional[str] = None
     proxyBypassList: typing.Optional[str] = None
     originsWithUniversalNetworkAccess: typing.Optional[typing.List[str]] = None
-    # cookies: typing.Optional[typing.Dict[str, str]] = None
-    # user_agent: str = ""
-    # headers: typing.Optional[typing.Dict[str, str]] = None
+
+
+@dataclass
+class TabPrepareDTO(DTOBase):
+    cookies: typing.Optional[typing.Dict[str, str]] = None
+    ua: str = ""
+    headers: typing.Optional[typing.Dict[str, str]] = None

@@ -2,9 +2,10 @@
 API_DOCS = {
     "description": (
         "ichrome HTTP API via aiohttp.<br><br>"
-        "<b>Nested Parameters:</b> Use dots in keys to pass parameters to nested DTOs (like TabConfigDTO).<br>"
-        "For example, <code>tab_config.width=1280&tab_config.height=720</code> or <code>config.proxyServer=http://127.0.0.1:1080</code>.<br>"
-        "Supported prefixes for TabConfigDTO: <code>tab_config</code>, <code>config</code>, <code>conf</code>."
+        "<b>Nested Parameters:</b> Use dots in keys to pass parameters to nested DTOs.<br>"
+        "For example, <code>config.width=1280&config.height=720</code> or <code>prepare.ua=ExampleUA</code>.<br>"
+        "Supported prefixes for TabConfigDTO: <code>tab_config</code>, <code>config</code>.<br>"
+        "Supported prefixes for TabPrepareDTO: <code>tab_prepare</code>, <code>prepare</code>."
     ),
     "response_schema": {
         "code": "int (0 for success, 1 for error)",
@@ -25,11 +26,16 @@ API_DOCS = {
                 "proxyServer": "str (optional, e.g. 'http://address:port')",
                 "proxyBypassList": "str (optional)",
                 "originsWithUniversalNetworkAccess": "list[str] (optional)",
-                "cookies": "dict (optional)",
-                "user_agent": "str (optional)",
-                "headers": "dict (optional)",
             },
-        }
+        },
+        "TabPrepareDTO": {
+            "description": "Preparation for a tab before executing commands.",
+            "parameters": {
+                "ua": "str (optional)",
+                "headers": "dict (optional)",
+                "cookies": "dict (optional)",
+            },
+        },
     },
     "endpoints": [
         {
@@ -42,8 +48,9 @@ API_DOCS = {
                 "wait_tag": "str (optional, wait before returning)",
                 "timeout": "float (default: 5.0)",
                 "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
+                "tab_prepare": "dict | dotted keys (optional, e.g., prepare.ua=UA)",
             },
-            "demo_url": "http://127.0.0.1:8080/download?url=https://www.bing.com/images",
+            "demo_url": "http://127.0.0.1:8080/ichrome/download?url=https://httpbin.org/get&tab_prepare.ua=abcdefg",
             "examples": [
                 {
                     "method": "GET",
@@ -78,6 +85,7 @@ API_DOCS = {
                 "capture_beyond_viewport": "bool (default: False)",
                 "timeout": "float (default: 5.0)",
                 "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
+                "tab_prepare": "dict | dotted keys (optional, e.g., prepare.ua=UA)",
             },
             "demo_url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images",
             "examples": [

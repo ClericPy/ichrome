@@ -6,7 +6,14 @@ from aiohttp import web
 from morebuiltins.utils import format_error
 
 from ..logs import logger
-from ..pool import ChromeEngine, DownloadDTO, JsDTO, ScreenshotDTO, TabConfigDTO
+from ..pool import (
+    ChromeEngine,
+    DownloadDTO,
+    JsDTO,
+    ScreenshotDTO,
+    TabConfigDTO,
+    TabPrepareDTO,
+)
 from ..schemas.engine_schema import DTOBase
 from ..schemas.http_schema import Response
 from .doc import API_DOCS, get_html_docs
@@ -14,7 +21,10 @@ from .doc import API_DOCS, get_html_docs
 
 class HttpController:
     # config -> TabConfigDTO
-    key_map = {"tab_config": TabConfigDTO}
+    key_map = {
+        "tab_config": TabConfigDTO,
+        "tab_prepare": TabPrepareDTO,
+    }
 
     def __init__(self, engine: ChromeEngine, api_prefix: str = "/"):
         self.engine = engine

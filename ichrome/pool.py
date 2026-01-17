@@ -16,6 +16,7 @@ from .schemas.engine_schema import (
     JsDTO,
     ScreenshotDTO,
     TabConfigDTO,
+    TabPrepareDTO,
 )
 
 
@@ -43,7 +44,7 @@ class ChromeTask(asyncio.Future):
         timeout=None,
         port: typing.Optional[int] = None,
         tab_config: typing.Optional[TabConfigDTO] = None,
-        tab_prepare: typing.Optional[dict] = None,
+        tab_prepare: typing.Optional[TabPrepareDTO] = None,
     ):
         super().__init__()
         self.id = self.get_id()
@@ -222,18 +223,15 @@ class ChromeWorker:
                         break
                 logger.info(f"[offline] {self} is offline.")
 
-    # async def prepare_tab(self, tab: AsyncTab, data: typing.Optional[dict]):
-    #     if not data:
-    #         return
-    #     cookies = data.get("cookies", {})
-    #     if cookies:
-    #         for name, value in cookies.items():
-    #             # may need set url param for cross-site cookies TODO
-    #             await tab.set_cookie(name=name, value=value)
-    #     if data.get("user_agent"):
-    #         await tab.set_ua(data["user_agent"])
-    #     if data.get("headers"):
-    #         await tab.set_headers(data["headers"])
+    async def prepare_tab(self, tab: AsyncTab, dto: TabPrepareDTO):
+        if dto.cookies:
+            for name, value in dto.cookies.items():
+                # may need set url param for cross-site cookies TODO
+                await tab.set_cookie(name=name, value=value)
+        if dto.ua:
+            await tab.set_ua(dto.ua)
+        if dto.headers:
+            await tab.set_headers(dto.headers)
 
     async def future_consumer(self, index=None):
         while not self._shutdown:
@@ -265,17 +263,15 @@ class ChromeWorker:
                 continue
             await self._chrome_daemon_ready.wait()
             if await self.chrome_daemon._check_chrome_connection():
-                if isinstance(future.tab_config, dict):
-                    # incognito mode
-                    async with self.chrome_daemon.incognito_tab(
-                        **future.tab_config
-                    ) as tab:
-                        # if future.tab_config:
-                        #     await self.prepare_tab(tab, future.tab_config)
-                        if isinstance(future.data, _TabWorker):
-                            await self.handle_tab_worker_future(tab, future)
-                        else:
-                            await self.handle_default_future(tab, future)
+                # incognito mode
+                _kwargs = asdict(future.tab_config) if future.tab_config else {}
+                async with self.chrome_daemon.incognito_tab(**_kwargs) as tab:
+                    if future.tab_prepare:
+                        await self.prepare_tab(tab, future.tab_prepare)
+                    if isinstance(future.data, _TabWorker):
+                        await self.handle_tab_worker_future(tab, future)
+                    else:
+                        await self.handle_default_future(tab, future)
             else:
                 self._chrome_daemon_ready.clear()
                 self.set_need_restart()
@@ -448,25 +444,25 @@ class ChromeEngine:
         tab_callback: typing.Optional[typing.Callable] = None,
         timeout: typing.Optional[float] = None,
         port: typing.Optional[int] = None,
-        tab_config: typing.Optional[typing.Union[dict, TabConfigDTO]] = None,
+        tab_config: typing.Optional[TabConfigDTO] = None,
+        tab_prepare: typing.Optional[TabPrepareDTO] = None,
     ):
         if self._shutdown:
             raise RuntimeError(f"{self.__class__.__name__} has been shutdown.")
-        if isinstance(tab_config, TabConfigDTO):
-            tab_config = asdict(tab_config)
         future = ChromeTask(
             data,
             tab_callback,
             timeout=timeout,
             port=port,
             tab_config=tab_config,
+            tab_prepare=tab_prepare,
         )
         if port:
             await self.workers[port].port_queue.put(future)
         else:
             await self.q.put(future)
         logger.info(
-            f"[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}, tab_config={tab_config}"
+            f"[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}, tab_config={tab_config}, tab_prepare={tab_prepare}"
         )
         try:
             return await asyncio.wait_for(future, timeout=future.timeout)
@@ -481,6 +477,7 @@ class ChromeEngine:
         dto: ScreenshotDTO,
         timeout: typing.Optional[float] = None,
         tab_config: typing.Optional[TabConfigDTO] = None,
+        tab_prepare: typing.Optional[TabPrepareDTO] = None,
     ) -> bytes:
         image = typing.cast(
             bytes,
@@ -489,6 +486,7 @@ class ChromeEngine:
                 tab_callback=ScreenshotCallback(),
                 timeout=timeout,
                 tab_config=tab_config,
+                tab_prepare=tab_prepare,
             ),
         )
         return image
@@ -498,6 +496,7 @@ class ChromeEngine:
         dto: DownloadDTO,
         timeout: typing.Optional[float] = None,
         tab_config: typing.Optional[TabConfigDTO] = None,
+        tab_prepare: typing.Optional[TabPrepareDTO] = None,
     ) -> DownloadResult:
         result = typing.cast(
             DownloadResult,
@@ -506,6 +505,7 @@ class ChromeEngine:
                 tab_callback=DownloadCallback(),
                 timeout=timeout,
                 tab_config=tab_config,
+                tab_prepare=tab_prepare,
             ),
         )
         return result
@@ -515,6 +515,7 @@ class ChromeEngine:
         dto: JsDTO,
         timeout: typing.Optional[float] = None,
         tab_config: typing.Optional[TabConfigDTO] = None,
+        tab_prepare: typing.Optional[TabPrepareDTO] = None,
     ) -> dict:
         return typing.cast(
             dict,
@@ -523,6 +524,7 @@ class ChromeEngine:
                 tab_callback=JSCallback(),
                 timeout=timeout,
                 tab_config=tab_config,
+                tab_prepare=tab_prepare,
             ),
         )
 
