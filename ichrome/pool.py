@@ -4,12 +4,19 @@ import time
 import typing
 from base64 import b64decode
 from copy import deepcopy
+from dataclasses import asdict
 
 from . import AsyncChromeDaemon, AsyncTab
 from .base import ensure_awaitable
 from .exceptions import ChromeException
 from .logs import logger
-from .schemas.engine_schema import DownloadDTO, DownloadResult, JsDTO, ScreenshotDTO
+from .schemas.engine_schema import (
+    DownloadDTO,
+    DownloadResult,
+    JsDTO,
+    ScreenshotDTO,
+    TabConfigDTO,
+)
 
 
 class CallbackProtocol(typing.Protocol):
@@ -429,10 +436,12 @@ class ChromeEngine:
         timeout: typing.Optional[float] = None,
         tab_index=None,
         port: typing.Optional[int] = None,
-        incognito_args: typing.Optional[typing.Dict[str, typing.Any]] = None,
+        incognito_args: typing.Optional[typing.Union[dict, TabConfigDTO]] = None,
     ):
         if self._shutdown:
             raise RuntimeError(f"{self.__class__.__name__} has been shutdown.")
+        if isinstance(incognito_args, TabConfigDTO):
+            incognito_args = asdict(incognito_args)
         future = ChromeTask(
             data,
             tab_callback,
@@ -467,7 +476,10 @@ class ChromeEngine:
                 break
 
     async def screenshot(
-        self, dto: ScreenshotDTO, timeout: typing.Optional[float] = None
+        self,
+        dto: ScreenshotDTO,
+        timeout: typing.Optional[float] = None,
+        tab_config: typing.Optional[TabConfigDTO] = None,
     ) -> bytes:
         image = typing.cast(
             bytes,
@@ -476,6 +488,7 @@ class ChromeEngine:
                 tab_callback=ScreenshotCallback(),
                 timeout=timeout,
                 tab_index=None,
+                incognito_args=tab_config,
             ),
         )
         return image
@@ -484,6 +497,7 @@ class ChromeEngine:
         self,
         dto: DownloadDTO,
         timeout: typing.Optional[float] = None,
+        tab_config: typing.Optional[TabConfigDTO] = None,
     ) -> DownloadResult:
         result = typing.cast(
             DownloadResult,
@@ -492,11 +506,17 @@ class ChromeEngine:
                 tab_callback=DownloadCallback(),
                 timeout=timeout,
                 tab_index=None,
+                incognito_args=tab_config,
             ),
         )
         return result
 
-    async def js(self, dto: JsDTO, timeout: typing.Optional[float] = None) -> dict:
+    async def js(
+        self,
+        dto: JsDTO,
+        timeout: typing.Optional[float] = None,
+        tab_config: typing.Optional[TabConfigDTO] = None,
+    ) -> dict:
         return typing.cast(
             dict,
             await self.do(
@@ -504,25 +524,9 @@ class ChromeEngine:
                 tab_callback=JSCallback(),
                 timeout=timeout,
                 tab_index=None,
+                incognito_args=tab_config,
             ),
         )
-
-    def connect_tab(
-        self,
-        tab_index=None,
-        timeout: typing.Optional[float] = None,
-        port: typing.Optional[int] = None,
-    ):
-        data = _TabWorker()
-        future = ChromeTask(data, timeout=timeout, tab_index=tab_index, port=port)
-        logger.info(
-            f"[enqueue]({self.todos}) {future}, timeout={timeout}, data={self.shorten_data(data)}"
-        )
-        if port is not None:
-            self.workers[port].port_queue.put_nowait(future)
-        else:
-            self.q.put_nowait(future)
-        return data
 
 
 class _TabWorker:

@@ -54,7 +54,6 @@ class DownloadDTO(DTOBase):
     cookies: typing.Optional[typing.Dict[str, str]] = None
     user_agent: str = ""
     extra_headers: typing.Optional[typing.Dict[str, str]] = None
-    incognito_args: typing.Optional[typing.Dict[str, typing.Any]] = None
 
 
 @dataclass
@@ -86,3 +85,17 @@ class JsDTO(DTOBase):
     url: str
     js: str
     value_path: str = "result.result"
+
+
+@dataclass
+class TabConfigDTO(DTOBase):
+    url: str = "about:blank"
+    width: typing.Optional[int] = None
+    height: typing.Optional[int] = None
+    enableBeginFrameControl: typing.Optional[bool] = None
+    newWindow: typing.Optional[bool] = None
+    background: typing.Optional[bool] = None
+    disposeOnDetach: bool = True
+    proxyServer: typing.Optional[str] = None
+    proxyBypassList: typing.Optional[str] = None
+    originsWithUniversalNetworkAccess: typing.Optional[typing.List[str]] = None
