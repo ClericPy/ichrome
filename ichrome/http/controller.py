@@ -1,6 +1,6 @@
 import json
 from base64 import b64encode
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Type
 
 from aiohttp import web
 from morebuiltins.utils import format_error
@@ -21,7 +21,7 @@ from .doc import API_DOCS, get_html_docs
 
 class HttpController:
     # config -> TabConfigDTO
-    key_map = {
+    key_map: Dict[str, Type[DTOBase]] = {
         "tab_config": TabConfigDTO,
         "tab_prepare": TabPrepareDTO,
     }

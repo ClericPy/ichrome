@@ -77,7 +77,6 @@ class DownloadDTO(DTOBase):
 
     url: str
     cssselector: str = ""
-    wait_tag: str = ""
 
 
 @dataclass

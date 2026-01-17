@@ -584,10 +584,6 @@ class DownloadCallback(CallbackProtocol):
         result = DownloadResult(url=data.url)
         timeout = task.timeout * 0.99
         await tab.set_url(data.url, timeout=timeout)
-        if data.wait_tag:
-            timeout = task.timeout * 0.99
-            if timeout > 0:
-                await tab.wait_tag(data.wait_tag, max_wait_time=timeout)
         if data.cssselector:
             tags: typing.Any = await tab.querySelectorAll(data.cssselector)
             result.tags = [tag.outerHTML for tag in tags]

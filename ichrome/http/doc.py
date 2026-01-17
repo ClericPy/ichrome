@@ -3,9 +3,9 @@ API_DOCS = {
     "description": (
         "ichrome HTTP API via aiohttp.<br><br>"
         "<b>Nested Parameters:</b> Use dots in keys to pass parameters to nested DTOs.<br>"
-        "For example, <code>config.width=1280&config.height=720</code> or <code>prepare.ua=ExampleUA</code>.<br>"
-        "Supported prefixes for TabConfigDTO: <code>tab_config</code>, <code>config</code>.<br>"
-        "Supported prefixes for TabPrepareDTO: <code>tab_prepare</code>, <code>prepare</code>."
+        "For example, <code>tab_config.width=1280&tab_config.height=720</code> or <code>tab_prepare.ua=ExampleUA</code>.<br>"
+        "Supported prefixes for TabConfigDTO: <code>tab_config</code>.<br>"
+        "Supported prefixes for TabPrepareDTO: <code>tab_prepare</code>."
     ),
     "response_schema": {
         "code": "int (0 for success, 1 for error)",
@@ -45,12 +45,11 @@ API_DOCS = {
             "parameters": {
                 "url": "str (required)",
                 "cssselector": "str (optional, element to extract)",
-                "wait_tag": "str (optional, wait before returning)",
                 "timeout": "float (default: 5.0)",
-                "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
-                "tab_prepare": "dict | dotted keys (optional, e.g., prepare.ua=UA)",
+                "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
+                "tab_prepare": "dict | dotted keys (optional, e.g., tab_prepare.ua=UA)",
             },
-            "demo_url": "http://127.0.0.1:8080/ichrome/download?url=https://httpbin.org/get&tab_prepare.ua=abcdefg",
+            "demo_url": "http://127.0.0.1:8080/ichrome/download?url=https://httpbin.org/get&tab_prepare.ua=CustomUA",
             "examples": [
                 {
                     "method": "GET",
@@ -67,7 +66,7 @@ API_DOCS = {
                 },
                 {
                     "method": "GET",
-                    "url": "http://127.0.0.1:8080/download?url=http://example.com&config.width=1280&config.height=720",
+                    "url": "http://127.0.0.1:8080/download?url=http://example.com&tab_config.width=1280&tab_config.height=720",
                 },
             ],
         },
@@ -84,8 +83,8 @@ API_DOCS = {
                 "from_surface": "bool (default: True)",
                 "capture_beyond_viewport": "bool (default: False)",
                 "timeout": "float (default: 5.0)",
-                "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
-                "tab_prepare": "dict | dotted keys (optional, e.g., prepare.ua=UA)",
+                "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
+                "tab_prepare": "dict | dotted keys (optional, e.g., tab_prepare.ua=UA)",
             },
             "demo_url": "http://127.0.0.1:8080/snapshot?url=https://www.bing.com/images",
             "examples": [
@@ -117,7 +116,7 @@ API_DOCS = {
                 "js": "str (required, javascript code)",
                 "value_path": "str (optional, result path)",
                 "timeout": "float (default: 5.0)",
-                "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
+                "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
             },
             "demo_url": "http://127.0.0.1:8080/js?url=https://www.bing.com/images&js=document.title",
             "examples": [
@@ -148,7 +147,7 @@ API_DOCS = {
                 "tab_callback": "str (required, python source. Define 'async def callback(tab, data, timeout):' or 'async def tab_callback(tab, data, timeout):')",
                 "data": "any (optional, passed to callback)",
                 "timeout": "float (default: 5.0)",
-                "tab_config": "dict | dotted keys (optional, e.g., config.width=1280)",
+                "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
             },
             "demo_url": "http://127.0.0.1:8080/do",
             "examples": [
