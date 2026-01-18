@@ -2005,6 +2005,24 @@ JSON.stringify(result)
             await asyncio.sleep(interval)
         return exist
 
+    async def wait_css(
+        self,
+        cssselector: str = "html",
+        max_wait_time: Optional[float] = None,
+        interval: float = 0.5,
+        timeout: Union[Any, float, int] = NotSet,
+    ) -> bool:
+        """while loop until element selected by cssselector exists."""
+        exist = False
+        TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
+        while TIMEOUT_AT > time.time():
+            tag = await self.querySelector(cssselector=cssselector, timeout=timeout)
+            if tag:
+                exist = True
+                break
+            await asyncio.sleep(interval)
+        return exist
+
     async def querySelector(
         self,
         cssselector: str,
