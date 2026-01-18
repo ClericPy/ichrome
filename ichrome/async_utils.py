@@ -1921,7 +1921,7 @@ JSON.stringify(result)
         timeout: Union[Any, float, int] = NotSet,
     ):
         js_code = f"(function() {{ return new RegExp({json.dumps(regex)}).test(document.querySelector(`{cssselector}`).{attribute}); }})();"
-        return bool(await self.get_value(js_code, jsonify=False, timeout=timeout))
+        return await self.js_true(js=js_code, timeout=timeout)
 
     async def wait_regex(
         self,
@@ -1976,7 +1976,7 @@ JSON.stringify(result)
             whether the outerHTML contains substring.
         """
         js = f"document.querySelector(`{cssselector}`).{attribute}.includes(`{text}`)"
-        return bool(await self.get_value(js, jsonify=True, timeout=timeout))
+        return await self.js_true(js, timeout=timeout)
 
     async def wait_includes(
         self,
@@ -2018,6 +2018,28 @@ JSON.stringify(result)
         while TIMEOUT_AT > time.time():
             tag = await self.querySelector(cssselector=cssselector, timeout=timeout)
             if tag:
+                exist = True
+                break
+            await asyncio.sleep(interval)
+        return exist
+
+    async def js_true(self, js: str, timeout: Union[Any, float, int] = NotSet) -> bool:
+        value = await self.get_value(js, jsonify=False, timeout=timeout)
+        return value is True
+
+    async def wait_js_true(
+        self,
+        js: str,
+        max_wait_time: Optional[float] = None,
+        interval: float = 0.5,
+        timeout: Union[Any, float, int] = NotSet,
+    ) -> bool:
+        """while loop until js value is True."""
+        exist = False
+        TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
+        while TIMEOUT_AT > time.time():
+            value = await self.js_true(js, timeout=timeout)
+            if value:
                 exist = True
                 break
             await asyncio.sleep(interval)
