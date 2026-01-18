@@ -1706,7 +1706,7 @@ class AsyncTab(GetValueMixin):
         self,
         cssselector: str,
         max_wait_time: Optional[float] = None,
-        interval: float = 1,
+        interval: float = 0.5,
         timeout: Union[Any, float, int] = NotSet,
     ):
         "wait the tag appeared and click it"
@@ -1723,7 +1723,7 @@ class AsyncTab(GetValueMixin):
         self,
         cssselector: str,
         max_wait_time: Optional[float] = None,
-        interval: float = 1,
+        interval: float = 0.5,
         timeout: Union[Any, float, int] = NotSet,
     ) -> Union[None, Tag, TagNotFound]:
         """Wait until the tag is ready or max_wait_time used up, sometimes it is more useful than wait loading.
@@ -1750,7 +1750,7 @@ class AsyncTab(GetValueMixin):
         self,
         cssselector: str,
         max_wait_time: Optional[float] = None,
-        interval: float = 1,
+        interval: float = 0.5,
         timeout: Union[Any, float, int] = NotSet,
     ) -> Union[List[Tag], Tag, TagNotFound]:
         """Wait until the tags is ready or max_wait_time used up, sometimes it is more useful than wait loading.
@@ -1785,7 +1785,7 @@ class AsyncTab(GetValueMixin):
         ] = "outerHTML",
         flags: str = "g",
         max_wait_time: Optional[float] = None,
-        interval: float = 1,
+        interval: float = 0.5,
         timeout: Union[Any, float, int] = NotSet,
     ) -> list:
         """while loop until await tab.findall got somethine."""
@@ -1907,6 +1907,52 @@ JSON.stringify(result)
             text=text, cssselector=cssselector, attribute=attribute, timeout=timeout
         )
 
+    async def regex(
+        self,
+        regex: str,
+        cssselector: str = "html",
+        attribute: Literal[
+            "outerHTML",
+            "innerHTML",
+            "textContent",
+            "innerText",
+            "outerText",
+        ] = "outerHTML",
+        timeout: Union[Any, float, int] = NotSet,
+    ):
+        js_code = f"(function() {{ return new RegExp({json.dumps(regex)}).test(document.querySelector(`{cssselector}`).{attribute}); }})();"
+        return bool(await self.get_value(js_code, jsonify=False, timeout=timeout))
+
+    async def wait_regex(
+        self,
+        regex: str,
+        cssselector: str = "html",
+        attribute: Literal[
+            "outerHTML",
+            "innerHTML",
+            "textContent",
+            "innerText",
+            "outerText",
+        ] = "outerHTML",
+        max_wait_time: Optional[float] = None,
+        interval: float = 0.5,
+        timeout: Union[Any, float, int] = NotSet,
+    ) -> bool:
+        """while loop until element contains the substring."""
+        exist = False
+        TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
+        while TIMEOUT_AT > time.time():
+            exist = await self.regex(
+                regex=regex,
+                cssselector=cssselector,
+                attribute=attribute,
+                timeout=timeout,
+            )
+            if exist:
+                return exist
+            await asyncio.sleep(interval)
+        return exist
+
     async def includes(
         self,
         text,
@@ -1944,7 +1990,7 @@ JSON.stringify(result)
             "outerText",
         ] = "outerHTML",
         max_wait_time: Optional[float] = None,
-        interval: float = 1,
+        interval: float = 0.5,
         timeout: Union[Any, float, int] = NotSet,
     ) -> bool:
         """while loop until element contains the substring."""
@@ -3112,6 +3158,28 @@ True
 
     async def run_js_snippets(self, method: str, *args, **kwargs):
         return await getattr(JavaScriptSnippets, method)(self, *args, **kwargs)
+
+    async def set_virtual_time_policy(
+        self,
+        policy: str = "advance",
+        budget: Optional[float] = None,
+        maxVirtualTimeTaskStarvationCount: Optional[int] = None,
+        initialVirtualTime: Optional[float] = None,
+        timeout: Union[Any, float, int] = NotSet,
+    ):
+        "Emulation.setVirtualTimePolicy. https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setVirtualTimePolicy"
+        kwargs: dict = {"policy": policy}
+        if budget is not None:
+            kwargs["budget"] = budget
+        if maxVirtualTimeTaskStarvationCount is not None:
+            kwargs["maxVirtualTimeTaskStarvationCount"] = (
+                maxVirtualTimeTaskStarvationCount
+            )
+        if initialVirtualTime is not None:
+            kwargs["initialVirtualTime"] = initialVirtualTime
+        return await self.send(
+            "Emulation.setVirtualTimePolicy", timeout=timeout, kwargs=kwargs
+        )
 
 
 class OffsetMoveWalker:
