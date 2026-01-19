@@ -4080,7 +4080,7 @@ class FetchBuffer(EventBuffer):
     async def failRequest(
         self,
         requestId: Union[str, dict],
-        errorReason: str,
+        errorReason: str = "Aborted",
         kwargs: Optional[dict] = None,
         **_kwargs,
     ):

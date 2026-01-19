@@ -236,10 +236,6 @@ class ChromeWorker:
             await tab.setBlockedURLs(dto.block_urls.split("|"))
         if dto.add_js_onload:
             await tab.add_js_onload(dto.add_js_onload)
-        if dto.wait_condition:
-            await tab.wait_condition(
-                dto.wait_condition.split("|"), max_wait_time=tab.timeout
-            )
 
     async def future_consumer(self, index=None):
         while not self._shutdown:
@@ -554,10 +550,6 @@ class _TabWorker:
 
     async def __aexit__(self, *_):
         self._done.set()
-
-
-class CommonCallbacks:
-    """Some frequently-used callback functions."""
 
 
 class ScreenshotCallback(CallbackProtocol):

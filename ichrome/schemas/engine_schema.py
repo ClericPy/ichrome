@@ -65,7 +65,6 @@ class ScreenshotDTO(DTOBase):
     url: str
     cssselector: typing.Optional[str] = None
     scale: float = 1.0
-    # "png" or "jpeg"
     format: str = "png"
     quality: int = 100
     fromSurface: bool = True
@@ -89,7 +88,7 @@ class DownloadResult:
     encoding: str = ""
     current_url: str = ""
     html: str = ""
-    tags: list = field(default_factory=list)
+    tags: typing.List[str] = field(default_factory=list)
 
     def to_dict(self):
         return {
@@ -130,8 +129,28 @@ class TabPrepareDTO(DTOBase):
     cookies: typing.Optional[typing.Dict[str, str]] = None
     ua: str = ""
     headers: typing.Optional[typing.Dict[str, str]] = None
-    # split by |, for multiple urls. support wildcard *: *.example.com/*|*.bing.com/* => ["*.example.com/*", "*.bing.com/*]
+    # split by |, for multiple patterns. support wildcard *: *.example.com/*|*.bing.com/* => ["*.example.com/*", "*.bing.com/*]
     block_urls: typing.Optional[str] = None
     add_js_onload: typing.Optional[str] = None
-    # split by |; for multiple conditions. e.g., "#id|.class|div > span"
-    wait_condition: typing.Optional[str] = None
+
+
+@dataclass
+class TabWaitDTO(DTOBase):
+    strategy: str = "all"  # all / any
+    loading: typing.Optional[float] = None
+    # CSS selector that should appear in the page; could be used with include/exclude/wait_regex together
+    css: typing.Optional[str] = None
+    # text
+    include: typing.Optional[str] = None
+    # text
+    exclude: typing.Optional[str] = None
+    # regex pattern
+    regex: typing.Optional[str] = None
+    # js_code that returns true
+    js_true: typing.Optional[str] = None
+    # sleep(seconds) after all conditions met
+    sleep: typing.Optional[float] = None
+    # wildcard pattern, e.g. *.api.com/v1/*
+    response: typing.Optional[str] = None
+    # wildcard pattern, e.g. *.api.com/v1/*
+    request: typing.Optional[str] = None
