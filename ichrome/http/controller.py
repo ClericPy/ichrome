@@ -1,6 +1,6 @@
 import json
 from base64 import b64encode
-from typing import Any, Dict, Tuple, Type
+from typing import Any, Dict, Optional, Tuple, Type
 
 from aiohttp import web
 from morebuiltins.utils import format_error
@@ -13,6 +13,7 @@ from ..pool import (
     ScreenshotDTO,
     TabConfigDTO,
     TabPrepareDTO,
+    TabWaitDTO,
 )
 from ..schemas.engine_schema import DTOBase
 from ..schemas.http_schema import Response
@@ -24,6 +25,7 @@ class HttpController:
     key_map: Dict[str, Type[DTOBase]] = {
         "tab_config": TabConfigDTO,
         "tab_prepare": TabPrepareDTO,
+        "tab_wait": TabWaitDTO,
     }
 
     def __init__(self, engine: ChromeEngine, api_prefix: str = "/"):
@@ -32,7 +34,7 @@ class HttpController:
 
     async def _get_params(
         self, request: web.Request
-    ) -> Tuple[bool, Dict[str, Any], Dict[str, Any]]:
+    ) -> Tuple[bool, Dict[str, Any], Dict[str, Any], Optional[float]]:
         """Extract parameters from GET query or POST JSON body."""
         if request.method == "POST":
             try:
@@ -45,7 +47,7 @@ class HttpController:
         dto_params = {}
         other_dtos: Dict[str, DTOBase] = {}
         nested_cache: Dict[str, Dict[str, Any]] = {}
-
+        timeout = None
         for k, v in data.items():
             if "." in k:
                 k1, k2 = k.split(".", 1)
@@ -63,12 +65,17 @@ class HttpController:
                         f"Expected dict for nested DTO '{k}', got {type(v)}"
                     )
                 continue
+            elif k == "timeout":
+                try:
+                    timeout = float(v)
+                except ValueError:
+                    pass
             dto_params[k] = v
         for nk, nv in nested_cache.items():
             dto_cls = self.key_map.get(nk)
             if dto_cls:
                 other_dtos[nk] = dto_cls.from_dict(nv)
-        return to_json, dto_params, other_dtos
+        return to_json, dto_params, other_dtos, timeout
 
     def _is_json_request(self, params: Dict[str, Any]) -> bool:
         """Check if the request asks for a JSON response."""
@@ -78,10 +85,12 @@ class HttpController:
 
     async def download(self, request: web.Request) -> web.Response:
         """Handle download request."""
-        to_json, dto_params, other_dtos = await self._get_params(request)
+        to_json, dto_params, other_dtos, timeout = await self._get_params(request)
         try:
             dto = DownloadDTO.from_dict(dto_params)
-            result = await self.engine.download(dto=dto, **other_dtos)
+            result = await self.engine.download(dto=dto, timeout=timeout, **other_dtos)
+            if not result:
+                raise ValueError("Download returned no result")
             if to_json:
                 return web.json_response(
                     Response(code=0, data=result.to_dict()).to_dict()
@@ -99,10 +108,14 @@ class HttpController:
 
     async def screenshot(self, request: web.Request) -> web.Response:
         """Handle screenshot request."""
-        to_json, dto_params, other_dtos = await self._get_params(request)
+        to_json, dto_params, other_dtos, timeout = await self._get_params(request)
         try:
             dto = ScreenshotDTO.from_dict(dto_params)
-            result = await self.engine.screenshot(dto=dto, **other_dtos)
+            result = await self.engine.screenshot(
+                dto=dto, timeout=timeout, **other_dtos
+            )
+            if not result:
+                raise ValueError("Screenshot returned no result")
             if to_json:
                 return web.json_response(
                     Response(
@@ -118,10 +131,10 @@ class HttpController:
 
     async def js(self, request: web.Request) -> web.Response:
         """Handle js request."""
-        to_json, dto_params, other_dtos = await self._get_params(request)
+        to_json, dto_params, other_dtos, timeout = await self._get_params(request)
         try:
             dto = JsDTO.from_dict(dto_params)
-            result = await self.engine.js(dto=dto, **other_dtos)
+            result = await self.engine.js(dto=dto, timeout=timeout, **other_dtos)
             if to_json:
                 return web.json_response(Response(code=0, data=result).to_dict())
             else:
@@ -132,14 +145,14 @@ class HttpController:
 
     async def do(self, request: web.Request) -> web.Response:
         """Handle do custom callback request."""
-        _, dto_params, other_dtos = await self._get_params(request)
+        _, dto_params, other_dtos, timeout = await self._get_params(request)
         try:
             # result is the returned value from callback
             result = await self.engine.do(
                 tab_callback=dto_params.get("tab_callback")
                 or dto_params.get("callback"),
                 data=dto_params.get("data"),
-                timeout=dto_params.get("timeout"),
+                timeout=timeout,
                 **other_dtos,
             )
             return web.json_response(Response(code=0, data=result).to_dict())

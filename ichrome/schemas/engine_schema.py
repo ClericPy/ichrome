@@ -1,12 +1,15 @@
 import json
 import typing
 from ast import literal_eval
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields
 
 
 @dataclass
 class DTOBase:
     """Only python basic types are supported: str, int, float, bool, dict, list."""
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({', '.join(f'{k}={v}' for k, v in asdict(self).items() if v is not None)})"
 
     @staticmethod
     def _ensure_bool_string(value: str) -> bool:
@@ -136,21 +139,27 @@ class TabPrepareDTO(DTOBase):
 
 @dataclass
 class TabWaitDTO(DTOBase):
-    strategy: str = "all"  # all / any
-    loading: typing.Optional[float] = None
+    # default is True
+    all_completed: typing.Optional[bool] = None
+    load: typing.Optional[float] = None
+    # 1. CSS related
     # CSS selector that should appear in the page; could be used with include/exclude/wait_regex together
     css: typing.Optional[str] = None
-    # text
-    include: typing.Optional[str] = None
-    # text
-    exclude: typing.Optional[str] = None
-    # regex pattern
+    # 1.1 text
+    includes: typing.Optional[str] = None
+    # 1.2 regex pattern
     regex: typing.Optional[str] = None
+    # 2. CSS non-related
     # js_code that returns true
     js_true: typing.Optional[str] = None
     # sleep(seconds) after all conditions met
     sleep: typing.Optional[float] = None
+    # request patterns
     # wildcard pattern, e.g. *.api.com/v1/*
-    response: typing.Optional[str] = None
+    request_pattern: typing.Optional[str] = None
     # wildcard pattern, e.g. *.api.com/v1/*
-    request: typing.Optional[str] = None
+    response_pattern: typing.Optional[str] = None
+
+    @property
+    def wait_all_completed(self):
+        return self.all_completed is True or self.all_completed is None

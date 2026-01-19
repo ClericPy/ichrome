@@ -2008,20 +2008,21 @@ JSON.stringify(result)
     async def wait_css(
         self,
         cssselector: str = "html",
+        filter_function: Optional[Callable] = None,
         max_wait_time: Optional[float] = None,
         interval: float = 0.5,
         timeout: Union[Any, float, int] = NotSet,
-    ) -> bool:
+    ) -> Union[Tag, TagNotFound]:
         """while loop until element selected by cssselector exists."""
-        exist = False
+        tag: Union[Tag, TagNotFound] = TagNotFound()
         TIMEOUT_AT = time.time() + self.ensure_timeout(max_wait_time)
         while TIMEOUT_AT > time.time():
             tag = await self.querySelector(cssselector=cssselector, timeout=timeout)
             if tag:
-                exist = True
-                break
+                if not filter_function or filter_function(tag):
+                    break
             await asyncio.sleep(interval)
-        return exist
+        return tag
 
     async def js_true(self, js: str, timeout: Union[Any, float, int] = NotSet) -> bool:
         value = await self.get_value(js, jsonify=False, timeout=timeout)

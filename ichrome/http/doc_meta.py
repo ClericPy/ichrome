@@ -5,7 +5,8 @@ API_DOCS = {
         "<b>Nested Parameters:</b> Use dots in keys to pass parameters to nested DTOs.<br>"
         "For example, <code>tab_config.width=1280&tab_config.height=720</code> or <code>tab_prepare.ua=ExampleUA</code>.<br>"
         "Supported prefixes for TabConfigDTO: <code>tab_config</code>.<br>"
-        "Supported prefixes for TabPrepareDTO: <code>tab_prepare</code>."
+        "Supported prefixes for TabPrepareDTO: <code>tab_prepare</code>.<br>"
+        "Supported prefixes for TabWaitDTO: <code>tab_wait</code>."
     ),
     "response_schema": {
         "code": "int (0 for success, 1 for error)",
@@ -36,6 +37,20 @@ API_DOCS = {
                 "cookies": "dict (optional)",
             },
         },
+        "TabWaitDTO": {
+            "description": "Wait strategy after page load.",
+            "parameters": {
+                "all_completed": "bool (optional, default: True)",
+                "load": "float (optional, wait loading seconds)",
+                "css": "str (optional, wait for css selector)",
+                "includes": "str (optional, wait for text inclusion within css element)",
+                "regex": "str (optional, wait for regex match within css element)",
+                "js_true": "str (optional, wait for js code to return true)",
+                "sleep": "float (optional, sleep seconds after conditions met)",
+                "request_pattern": "str (optional, wait for request wildcard pattern)",
+                "response_pattern": "str (optional, wait for response wildcard pattern)",
+            },
+        },
     },
     "endpoints": [
         {
@@ -48,8 +63,9 @@ API_DOCS = {
                 "timeout": "float (default: 5.0)",
                 "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
                 "tab_prepare": "dict | dotted keys (optional, e.g., tab_prepare.ua=UA)",
+                "tab_wait": "dict | dotted keys (optional, e.g., tab_wait.css=.main)",
             },
-            "demo_url": "http://127.0.0.1:8080/ichrome/download?url=https://httpbin.org/get&tab_prepare.ua=CustomUA",
+            "demo_url": "http://127.0.0.1:8080/ichrome/download?url=https://httpbin.org/get&tab_prepare.ua=CustomUA&tab_wait.load=2",
             "examples": [
                 {
                     "method": "GET",
@@ -68,6 +84,10 @@ API_DOCS = {
                     "method": "GET",
                     "url": "http://127.0.0.1:8080/download?url=http://example.com&tab_config.width=1280&tab_config.height=720",
                 },
+                {
+                    "method": "GET",
+                    "url": "http://127.0.0.1:8080/download?url=http://example.com&tab_wait.css=body&tab_wait.includes=Example",
+                },
             ],
         },
         {
@@ -85,6 +105,7 @@ API_DOCS = {
                 "timeout": "float (default: 5.0)",
                 "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
                 "tab_prepare": "dict | dotted keys (optional, e.g., tab_prepare.ua=UA)",
+                "tab_wait": "dict | dotted keys (optional, e.g., tab_wait.load=1)",
             },
             "demo_url": "http://127.0.0.1:8080/screenshot?url=https://www.bing.com/images",
             "examples": [
@@ -117,6 +138,7 @@ API_DOCS = {
                 "value_path": "str (optional, result path)",
                 "timeout": "float (default: 5.0)",
                 "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
+                "tab_wait": "dict | dotted keys (optional, e.g., tab_wait.load=1)",
             },
             "demo_url": "http://127.0.0.1:8080/js?url=https://www.bing.com/images&js=document.title",
             "examples": [
