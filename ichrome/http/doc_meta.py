@@ -166,8 +166,8 @@ API_DOCS = {
             "methods": ["POST"],
             "description": "Execute custom callback function on tab (supports 'callback' or 'tab_callback' name)",
             "parameters": {
-                "tab_callback": "str (required, python source. Define 'async def callback(tab, data, timeout):' or 'async def tab_callback(tab, data, timeout):')",
-                "data": "any (optional, passed to callback)",
+                "tab_callback": "str (required, python source. Define 'async def callback(tab, data, task):' or 'async def tab_callback(tab, data, task):')",
+                "data": "any (optional, passed to callback, support literal_eval or json.loads)",
                 "timeout": "float (default: 5.0)",
                 "tab_config": "dict | dotted keys (optional, e.g., tab_config.width=1280)",
             },
@@ -177,7 +177,9 @@ API_DOCS = {
                     "method": "POST",
                     "url": "http://127.0.0.1:8080/do",
                     "body": {
-                        "tab_callback": "async def callback(tab, data, timeout): await tab.goto(data['url']); return await tab.title",
+                        "tab_callback": r"""async def callback(tab, data, task):
+    await tab.goto(data['url'])
+    return await tab.html""",
                         "data": {"url": "http://example.com"},
                     },
                 }

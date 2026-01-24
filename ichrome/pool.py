@@ -37,7 +37,7 @@ class ChromeTask(asyncio.Future):
 
     _ID = 0
     MAX_TIMEOUT = 60 * 5
-    MAX_TRIES = 5
+    MAX_TRIES = 3
     EXEC_GLOBALS: typing.Dict[str, typing.Any] = {}
     STOP_SIG = object()
 
@@ -212,7 +212,7 @@ class ChromeTask(asyncio.Future):
         except ChromeException as error:
             raise error
         except Exception as error:
-            logger.error(f"{self} catch an error while running task, {error!r}")
+            logger.exception(f"{self} catch an error while running task, {error!r}")
             self.set_result(result)
 
     def set_result(self, result):

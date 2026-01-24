@@ -4,6 +4,7 @@ from .doc_meta import API_DOCS
 def get_html_docs(api_prefix="/"):
     """Generate HTML documentation from API_DOCS."""
     import json
+    import urllib.parse
 
     prefix = "/" + api_prefix.strip("/")
     if prefix == "/":
@@ -135,6 +136,65 @@ def get_html_docs(api_prefix="/"):
         .badge-pdf {{
             background-color: #dc3545;
             color: #fff;
+        }}
+        .try-it-out {{
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }}
+        .form-group {{
+            margin-bottom: 10px;
+        }}
+        .form-group label {{
+            display: inline-block;
+            width: 140px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }}
+        .form-group input[type="text"] {{
+            width: calc(100% - 160px);
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+        }}
+        .form-group textarea {{
+            width: calc(100% - 160px);
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            vertical-align: top;
+            min-height: 80px;
+            resize: vertical;
+        }}
+        .try-it-out h4 {{
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }}
+        .try-it-out button {{
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 5px;
+        }}
+        .try-it-out button:hover {{
+            background-color: #0056b3;
+        }}
+        .try-it-out .method-POST-btn {{
+            background-color: #49cc90;
+        }}
+        .try-it-out .method-POST-btn:hover {{
+            background-color: #3cb371;
         }}
     </style>
 </head>
@@ -297,6 +357,79 @@ def get_html_docs(api_prefix="/"):
         if ep["route"] == "/docs":
             demo_url_html += f'<div class="demo-link"><a href="{full_route}?to_json=1" target="_blank">View JSON API metadata</a></div>'
 
+        # Try it out form
+        form_inputs = []
+        if "parameters" in ep:
+            for k, v in ep["parameters"].items():
+                if k in ("tab_config", "tab_prepare", "tab_wait"):
+                    continue
+                # Use value from examples if possible
+                default_val = ""
+                if "examples" in ep:
+                    for ex in ep["examples"]:
+                        if k in ex.get("body", {}):
+                            default_val = ex["body"][k]
+                            break
+                        # Check query params in GET examples
+                        if (
+                            ex.get("method") == "GET"
+                            and "url" in ex
+                            and f"{k}=" in ex["url"]
+                        ):
+                            try:
+                                parsed = urllib.parse.urlparse(ex["url"])
+                                qs = urllib.parse.parse_qs(parsed.query)
+                                if k in qs:
+                                    default_val = qs[k][0]
+                                    break
+                            except Exception:
+                                continue
+
+                placeholder = v.split("(")[0].strip()
+                if k in ("tab_callback", "js") or "callback" in k:
+                    input_html = f'<textarea name="{k}" placeholder="{placeholder}">{default_val}</textarea>'
+                else:
+                    input_html = f'<input type="text" name="{k}" value="{default_val}" placeholder="{placeholder}">'
+
+                form_inputs.append(
+                    f"""
+                <div class="form-group">
+                    <label>{k}:</label>
+                    {input_html}
+                </div>
+                """
+                )
+
+        # Add to_json checkbox
+        form_inputs.append(
+            """
+                <div class="form-group">
+                    <label>to_json:</label>
+                    <input type="checkbox" name="to_json" value="1"> <span>(JSON response)</span>
+                </div>
+        """
+        )
+
+        buttons_html = "".join(
+            [
+                f'<button type="submit" class="method-{m}-btn" onclick="this.form.method=\'{m}\'">{m}</button> '
+                for m in ep["methods"]
+            ]
+        )
+
+        try_it_out_html = f"""
+        <div class="try-it-out">
+            <h4>⚡ Try it out</h4>
+            <form action="{full_route}" method="GET" target="_blank">
+                {''.join(form_inputs)}
+                <div class="form-group" style="margin-top: 15px;">
+                    <label></label>
+                    {buttons_html}
+                </div>
+            </form>
+        </div>
+        """
+
         endpoints_html += f"""
         <div class="endpoint {featured_class}">
             <div>{methods_html} <span class="route">{full_route}</span>{feature_badge}</div>
@@ -304,6 +437,7 @@ def get_html_docs(api_prefix="/"):
             {params_rows}
             {examples_html}
             {demo_url_html}
+            {try_it_out_html}
         </div>
         """
 

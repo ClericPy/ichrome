@@ -1,4 +1,6 @@
+import asyncio
 import json
+from ast import literal_eval
 from base64 import b64encode
 from typing import Any, Dict, Optional, Tuple, Type
 
@@ -37,9 +39,14 @@ class HttpController:
     ) -> Tuple[bool, Dict[str, Any], Dict[str, Any], Optional[float]]:
         """Extract parameters from GET query or POST JSON body."""
         if request.method == "POST":
-            try:
-                data = await request.json()
-            except Exception:
+            if request.content_type == "application/json":
+                try:
+                    data = await request.json()
+                except Exception:
+                    data = dict(request.query)
+            elif request.content_type == "application/x-www-form-urlencoded":
+                data = dict(await request.post())
+            else:
                 data = dict(request.query)
         else:
             data = dict(request.query)
@@ -138,20 +145,46 @@ class HttpController:
             if to_json:
                 return web.json_response(Response(code=0, data=result).to_dict())
             else:
-                return web.Response(body=json.dumps(result), content_type="text/plain")
+                return web.Response(
+                    body=json.dumps(result, ensure_ascii=False),
+                    content_type="text/plain",
+                    charset="utf-8",
+                )
         except Exception as e:
             logger.error(f"JS error: {format_error(e, filter=None)}")
             return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
+
+    def _parse_callback(self, code: Any) -> Any:
+        if not isinstance(code, str):
+            return code
+        if "def " in code:
+            loc: Dict[str, Any] = {}
+            exec(code, globals(), loc)
+            for name in ("tab_callback", "callback"):
+                func = loc.get(name)
+                if callable(func) and asyncio.iscoroutinefunction(func):
+                    return func
+        raise ValueError(
+            "Invalid callback code, must define 'tab_callback' or 'callback' like: `async def callback(tab, data, task): ...`"
+        )
 
     async def do(self, request: web.Request) -> web.Response:
         """Handle do custom callback request."""
         _, dto_params, other_dtos, timeout = await self._get_params(request)
         try:
             # result is the returned value from callback
+            code = dto_params.get("tab_callback") or dto_params.get("callback")
+            data = dto_params.get("data")
+            if isinstance(data, str):
+                for method in (json.loads, literal_eval):
+                    try:
+                        data = method(data)
+                        break
+                    except ValueError:
+                        pass
             result = await self.engine.do(
-                tab_callback=dto_params.get("tab_callback")
-                or dto_params.get("callback"),
-                data=dto_params.get("data"),
+                tab_callback=self._parse_callback(code),
+                data=data,
                 timeout=timeout,
                 **other_dtos,
             )
