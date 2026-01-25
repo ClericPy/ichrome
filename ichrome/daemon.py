@@ -32,6 +32,7 @@ from .base import (
 )
 from .exceptions import ChromeException, ChromeRuntimeError, ChromeTypeError
 from .logs import logger
+from .schemas.daemon_config import DefaultConfig
 
 
 class ChromeDaemon(object):
@@ -125,8 +126,8 @@ class ChromeDaemon(object):
     MOBILE_UA = "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Mobile Safari/537.36"
     IGNORE_USER_DIR_FLAGS = {"null", "None", "/dev/null", "''", '""'}
     MAX_WAIT_CHECKING_SECONDS = 15
-    DEFAULT_USER_DIR_PATH = Path.home() / "ichrome_user_data"
-    DEFAULT_EXTRA_CONFIG = ["--disable-gpu", "--no-first-run", "--window-size=1920,1080"]
+    DEFAULT_USER_DIR_PATH = Path(DefaultConfig.user_data_dir)
+    DEFAULT_EXTRA_CONFIG = DefaultConfig.extra_config
     DEFAULT_POPEN_ARGS = {"start_new_session": True}
     LAUNCHED_PIDS: Set[int] = set()
     WIN32_PATHS = [
@@ -155,21 +156,21 @@ class ChromeDaemon(object):
     def __init__(
         self,
         chrome_path: Optional[str] = None,
-        host="127.0.0.1",
-        port=9222,
-        headless=False,
+        host=DefaultConfig.host,
+        port=DefaultConfig.port,
+        headless=DefaultConfig.headless,
         user_agent=None,
         proxy=None,
         user_data_dir=None,
-        disable_image=False,
-        start_url="about:blank",
+        disable_image=DefaultConfig.disable_image,
+        start_url=DefaultConfig.start_url,
         extra_config=None,
-        max_deaths=1,
+        max_deaths=DefaultConfig.max_deaths,
         daemon=True,
         block=False,
-        timeout=3,
-        debug=False,
-        proc_check_interval=5,
+        timeout=DefaultConfig.timeout,
+        debug=DefaultConfig.debug,
+        proc_check_interval=DefaultConfig.proc_check_interval,
         on_startup=None,
         on_shutdown=None,
         before_startup=None,
@@ -595,7 +596,7 @@ class ChromeDaemon(object):
             return False
 
     @classmethod
-    def get_free_port(cls, host="127.0.0.1", start=9222, max_tries=100, timeout=1):
+    def get_free_port(cls, host=DefaultConfig.host, start=DefaultConfig.port, max_tries=100, timeout=1):
         for offset in range(max_tries):
             port = start + offset
             if cls._check_host_port_in_use(host, port, timeout):
@@ -603,7 +604,7 @@ class ChromeDaemon(object):
         raise ChromeRuntimeError(f"No free port beteen {start} and {start + max_tries}")
 
     @staticmethod
-    def _check_host_port_in_use(host="127.0.0.1", port=9222, timeout=1):
+    def _check_host_port_in_use(host=DefaultConfig.host, port=DefaultConfig.port, timeout=1):
         sock = None
         try:
             sock = socket.socket()
@@ -870,21 +871,21 @@ class AsyncChromeDaemon(ChromeDaemon):
     def __init__(
         self,
         chrome_path=None,
-        host="127.0.0.1",
-        port=9222,
-        headless=False,
+        host=DefaultConfig.host,
+        port=DefaultConfig.port,
+        headless=DefaultConfig.headless,
         user_agent=None,
         proxy=None,
         user_data_dir=None,
-        disable_image=False,
-        start_url="about:blank",
+        disable_image=DefaultConfig.disable_image,
+        start_url=DefaultConfig.start_url,
         extra_config=None,
-        max_deaths=1,
+        max_deaths=DefaultConfig.max_deaths,
         daemon=True,
         block=False,
-        timeout=3,
-        debug=False,
-        proc_check_interval=5,
+        timeout=DefaultConfig.timeout,
+        debug=DefaultConfig.debug,
+        proc_check_interval=DefaultConfig.proc_check_interval,
         on_startup=None,
         on_shutdown=None,
         before_startup=None,
@@ -1227,9 +1228,9 @@ class AsyncChromeDaemon(ChromeDaemon):
 
 
 class ChromeWorkers:
-    def __init__(self, start_port=9222, workers=1, kwargs=None):
-        self.start_port = start_port or 9222
-        self.workers = workers or 1
+    def __init__(self, start_port=DefaultConfig.port, workers=DefaultConfig.workers, kwargs=None):
+        self.start_port = start_port or DefaultConfig.port
+        self.workers = workers or DefaultConfig.workers
         self.kwargs = kwargs or {}
         self.daemons: List[AsyncChromeDaemon] = []
         self.tasks = []

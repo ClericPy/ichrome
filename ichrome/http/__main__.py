@@ -113,7 +113,7 @@ def main():
     parser.add_argument(
         "-c",
         "--config",
-        help="load config from JSON file to overwrite arguments",
+        help="load config from JSON file to overwrite arguments. If the file does not exist, a default config file will be created.",
     )
 
     args = parser.parse_args()
@@ -143,7 +143,18 @@ def main():
             if "chrome" in config_data:
                 chrome_config.update(config_data["chrome"])
         else:
-            logger.error(f"Config file not found: {args.config}")
+            # Create default config file if it doesn't exist
+            from dataclasses import asdict
+
+            default_config = {
+                "server": asdict(server_config),
+                "chrome": asdict(chrome_config),
+            }
+            config_path.write_text(json.dumps(default_config, indent=4))
+            logger.info(
+                f"Config file not found, created default config at: {args.config}"
+            )
+            return
 
     async def run_server():
         async with ChromeEngine(**chrome_config.to_engine_params()) as engine:
