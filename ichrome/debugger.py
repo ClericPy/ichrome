@@ -12,6 +12,8 @@ from .async_utils import AsyncChrome, AsyncTab
 from .daemon import AsyncChromeDaemon, ChromeDaemon
 from .exceptions import ChromeRuntimeError, ChromeValueError
 from .logs import logger
+from .schemas.daemon_config import DefaultConfig
+
 
 __doc__ = r"""
 >>> from ichrome.debugger import *
@@ -56,10 +58,22 @@ class SyncLoop:
     @property
     def loop(self):
         if not self._loop:
-            self.__class__._loop = asyncio.get_event_loop()
+            try:
+                self.__class__._loop = asyncio.get_event_loop()
+            except RuntimeError:
+                self.__class__._loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.__class__._loop)
         return self._loop
 
     def run_sync(self, future):
+        if self.loop.is_running():
+            if not asyncio.iscoroutine(future):
+
+                async def _wrap(aw):
+                    return await aw
+
+                future = _wrap(future)
+            return asyncio.run_coroutine_threadsafe(future, self.loop).result()
         return self.loop.run_until_complete(future)
 
     def wrap_sync(self, function):
@@ -166,7 +180,7 @@ class Daemon(SyncLoop):
 
 
 class Chrome(SyncLoop):
-    def __init__(self, host="127.0.0.1", port="9222", timeout=2, retry=1):
+    def __init__(self, host=DefaultConfig.host, port=DefaultConfig.port, timeout=2, retry=1):
         self._self = AsyncChrome(host=host, port=port, timeout=timeout, retry=retry)
         self.start_running()
 
@@ -197,7 +211,7 @@ class Chrome(SyncLoop):
 
     def get_tab(self, index=0):
         r = self.run_sync(self._self.get_server("/json"))
-        rjsons = [rjson for rjson in r.json() if (rjson["type"] == "page")]
+        rjsons = [rjson for rjson in self.run_sync(r.json()) if (rjson["type"] == "page")]
         if index is None:
             return [Tab(self, **rjson) for rjson in rjsons]
         else:
@@ -274,12 +288,12 @@ def connect_a_chrome(host="127.0.0.1", port=None, **daemon_kwargs) -> Chrome:
         return chrome
 
 
-def get_a_tab(host="127.0.0.1", port=9222, **daemon_kwargs) -> AsyncTab:
+def get_a_tab(host=DefaultConfig.host, port=DefaultConfig.port, **daemon_kwargs) -> AsyncTab:
     chrome = connect_a_chrome(host=host, port=port, **daemon_kwargs)
     return chrome.get_tab()
 
 
-def get_a_new_tab(host="127.0.0.1", port=9222, **daemon_kwargs) -> AsyncTab:
+def get_a_new_tab(host=DefaultConfig.host, port=DefaultConfig.port, **daemon_kwargs) -> AsyncTab:
     chrome = connect_a_chrome(host=host, port=port, **daemon_kwargs)
     return chrome.new_tab()
 
@@ -335,7 +349,7 @@ async def crawl_once(**kwargs):
         raise ChromeValueError(f"Can not crawl with null start_url: {url}")
     async with AsyncChromeDaemon(**kwargs) as cd:
         async with AsyncChrome(
-            host=kwargs.get("host", "127.0.0.1"),
+            host=kwargs.get("host", DefaultConfig.host),
             port=cd.port,
             timeout=cd._timeout or 2,
         ) as chrome:
@@ -348,8 +362,8 @@ async def crawl_once(**kwargs):
 async def clear_cache_handler(**kwargs):
     async with AsyncChromeDaemon(**kwargs) as cd:
         async with AsyncChrome(
-            host=kwargs.get("host", "127.0.0.1"),
-            port=kwargs.get("port", 9222),
+            host=kwargs.get("host", DefaultConfig.host),
+            port=kwargs.get("port", DefaultConfig.port),
             timeout=cd._timeout or 2,
         ) as chrome:
             async with chrome.connect_tab(0, auto_close=True) as tab:
@@ -384,7 +398,7 @@ Input `-h` to show more help.
 Now enjoy it!
          """
         async with AsyncChrome(
-            host=kwargs.get("host") or "127.0.0.1", port=int(kwargs.get("port", 9222))
+            host=kwargs.get("host") or DefaultConfig.host, port=int(kwargs.get("port", DefaultConfig.port))
         ) as chrome:
             async with chrome.connect_tab(auto_close=True) as tab:
                 tab: AsyncTab

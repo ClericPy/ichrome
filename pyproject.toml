@@ -1,0 +1,39 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "ichrome"
+dynamic = ["version"]
+description = "Chrome controller for Humans, base on Chrome Devtools Protocol(CDP) and python3.8+. Read more: https://github.com/ClericPy/ichrome."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT License" }
+keywords = ["chrome", "Chrome Devtools Protocol", "daemon", "CDP", "browser"]
+authors = [
+  { name = "ClericPy", email = "clericpy@gmail.com" },
+]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+  "psutil",
+  "aiohttp",
+  "morebuiltins>=1.3.7",
+]
+
+[project.urls]
+Homepage = "https://github.com/ClericPy/ichrome"
+Source = "https://github.com/ClericPy/ichrome"
+
+[project.scripts]
+ichrome = "ichrome.__main__:main"
+"ichrome.http" = "ichrome.http.__main__:main"

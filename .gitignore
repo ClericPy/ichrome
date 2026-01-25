@@ -106,3 +106,6 @@ venv.bak/
 .vscode/
 ichrome_user_data/
 temp*
+temp/
+
+CLAUDE.md

@@ -7,7 +7,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from ichrome import AsyncTab
-from ichrome.routers.fastapi_routes import ChromeAPIRouter
+from ichrome.web.routers.fastapi_routes import ChromeAPIRouter
 
 app = FastAPI()
 # reset max_msg_size and window size for a large size screenshot

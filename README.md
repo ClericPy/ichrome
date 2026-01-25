@@ -2,7 +2,13 @@
 
 ----------
 
-> Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.7+. [Read Docs](https://clericpy.github.io/ichrome/)
+> Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.8+. [Read Docs](https://clericpy.github.io/ichrome/)
+
+**🚀 [NEW] ichrome v6.0.0 is available! Now supporting `ichrome.http` - a RESTful API server to control Chrome via HTTP requests.**
+
+> `uvx --from ichrome ichrome.http`  
+> or  
+> `python -m ichrome.http`
 
 ![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
 
@@ -41,7 +47,6 @@ async def test():
 asyncio.run(test())
 ```
 
-### [Read Docs](https://clericpy.github.io/ichrome/)
 
 # Why?
 
@@ -72,9 +77,11 @@ asyncio.run(test())
   - Commonly used functions
   - `Incognito Mode`
 - `ChromeEngine` as the progress pool
-  - support HTTP `api` router with [FastAPI](https://github.com/tiangolo/fastapi) (EXPERIMENTAL)
-    - launch the chrome pool with `python -m ichrome.web`
-      - `python -m ichrome.web --help` for usage
+  - support HTTP `api` router with [aiohttp](https://docs.aiohttp.org/en/stable/)
+    - `python -m ichrome.http` or `uvx ichrome.http`
+    - `python -m ichrome.http --help` for usage
+  - ~~`python -m ichrome.web` (Removed since v6.0.0)~~
+
 - `Flatten` mode with `sessionId`
   - Create only **1** WebSocket connection
   - New in version 2.9.0
@@ -84,3 +91,9 @@ asyncio.run(test())
     - `AsyncTab._DEFAULT_FLATTEN = True`
 - The install script of chromium
 - debug mode for sync usage with `ichrome.debugger` >4.0.0 (EXPERIMENTAL)
+
+# Breaking Changes
+1. v6.0.0
+   1. `ichrome.web` module is removed, use ichrome.http instead.
+   2. refactor the `ChromeEngine` method parameters.
+      1. add `wait` condition before engine.do

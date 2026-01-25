@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 import argparse
 import asyncio
+import os
 import re
 import sys
+import time
 from pathlib import Path
 
 from ichrome import ChromeDaemon, ChromeWorkers, __version__, logger
 from ichrome.base import get_readable_dir_size
+from ichrome.schemas.daemon_config import DefaultConfig
 
 
 def show_best(proxy=None):
@@ -32,16 +35,17 @@ def show_best(proxy=None):
         return f"{system.lower()}-{machine.lower()}"
 
     def get_json(url, f):
-        import requests
+        from morebuiltins.request import req
+        import json
 
         try:
-            r = requests.get(
+            r = req.get(
                 url,
                 timeout=3,
                 headers={"User-Agent": ""},
                 proxies={"all": proxy},
             )
-            f.set_result(r.json())
+            f.set_result(json.loads(getattr(r, "text", "{}")))
         except Exception as e:
             f.set_exception(e)
 
@@ -109,7 +113,28 @@ Other operations:
     4. crawl the URL, output the HTML DOM:
         python -m ichrome --crawl --timeout=2 http://myip.ipip.net/
 """
-    parser = argparse.ArgumentParser(usage=usage)
+
+    def show_help_and_chrome_paths():
+        parser.print_help()
+        print("\n" + "=" * 50)
+        print("Found Chrome paths:")
+        print("=" * 50)
+        chrome_paths = ChromeDaemon.get_exist_chrome_path_list()
+        if chrome_paths:
+            for i, path in enumerate(chrome_paths):
+                mtime_str = time.strftime(
+                    "%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(path))
+                )
+                print(f"  - {mtime_str} | {path}{' (default)' if i == 0 else ''}")
+        else:
+            print("  (No Chrome installation found)")
+        print("=" * 50, flush=True)
+        return
+
+    parser = argparse.ArgumentParser(usage=usage, add_help=False)
+    parser.add_argument(
+        "-h", "--help", help="show this help message and exit", action="store_true"
+    )
     parser.add_argument(
         "-v", "-V", "--version", help="ichrome version info", action="store_true"
     )
@@ -124,18 +149,18 @@ Other operations:
         "--chrome-path",
         "--chrome_path",
         help="chrome executable file path, default to null(automatic searching)",
-        default="",
+        default=DefaultConfig.chrome_path,
     )
     parser.add_argument(
         "-H",
         "--host",
-        help="--remote-debugging-address, default to 127.0.0.1",
-        default="127.0.0.1",
+        help=f"--remote-debugging-address, default to {DefaultConfig.host}",
+        default=DefaultConfig.host,
     )
     parser.add_argument(
         "-p",
         "--port",
-        help="--remote-debugging-port, default to 9222",
+        help=f"--remote-debugging-port, default to {DefaultConfig.port}",
         default=argparse.SUPPRESS,
         type=int,
     )
@@ -172,48 +197,48 @@ Other operations:
         "-U",
         "--user-data-dir",
         "--user_data_dir",
-        help="user_data_dir to save user data, default to ~/ichrome_user_data",
-        default=Path.home() / "ichrome_user_data",
+        help=f"user_data_dir to save user data, default to {DefaultConfig.user_data_dir}",
+        default=Path(DefaultConfig.user_data_dir),
     )
     parser.add_argument(
         "--disable-image",
         "--disable_image",
-        help="disable image for loading performance, default to False",
+        help=f"disable image for loading performance, default to {DefaultConfig.disable_image}",
         action="store_true",
     )
     parser.add_argument(
         "-url",
         "--start-url",
         "--start_url",
-        help="start url while launching chrome, default to about:blank",
-        default="about:blank",
+        help=f"start url while launching chrome, default to {DefaultConfig.start_url}",
+        default=DefaultConfig.start_url,
     )
     parser.add_argument(
         "--max-deaths",
         "--max_deaths",
-        help="restart times. default to 1 for without auto-restart",
-        default=1,
+        help=f"restart times. default to {DefaultConfig.max_deaths} for without auto-restart",
+        default=DefaultConfig.max_deaths,
         type=int,
     )
     parser.add_argument(
         "--timeout",
-        help="timeout to connect the remote server, default to 1 for localhost",
-        default=1,
+        help=f"timeout to connect the remote server, default to {DefaultConfig.timeout} for localhost",
+        default=DefaultConfig.timeout,
         type=int,
     )
     parser.add_argument(
         "-w",
         "--workers",
-        help="the number of worker processes, default to 1",
-        default=1,
+        help=f"the number of worker processes, default to {DefaultConfig.workers}",
+        default=DefaultConfig.workers,
         type=int,
     )
     parser.add_argument(
         "--proc-check-interval",
         "--proc_check_interval",
         dest="proc_check_interval",
-        help="check chrome process alive every interval seconds",
-        default=5,
+        help=f"check chrome process alive every interval seconds, default to {DefaultConfig.proc_check_interval}",
+        default=DefaultConfig.proc_check_interval,
         type=int,
     )
     parser.add_argument(
@@ -288,6 +313,9 @@ Other operations:
     )
     args, extra_config = parser.parse_known_args()
 
+    if args.help:
+        show_help_and_chrome_paths()
+        return
     if args.version:
         print(__version__)
         return
@@ -295,14 +323,20 @@ Other operations:
         return show_best(proxy=args.proxy)
     if args.config:
         path = Path(args.config)
-        if not path.is_file():
-            logger.error(f"config file not found: {path}")
-            raise FileNotFoundError(path.as_posix())
         import json
 
+        if not path.is_file() or path.stat().st_size == 0:
+            default_config = DefaultConfig.to_dict()
+            if not path.parent.is_dir():
+                path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(default_config, indent=4))
+            logger.warning(
+                f"config file {path.as_posix()} not found or empty, created default config."
+            )
+
         kwargs = json.loads(path.read_text())
-        start_port = kwargs.pop("port", 9222)
-        workers = kwargs.pop("workers", 1)
+        start_port = kwargs.pop("port", DefaultConfig.port)
+        workers = kwargs.pop("workers", DefaultConfig.workers)
         asyncio.run(ChromeWorkers.run_chrome_workers(start_port, workers, kwargs))
         return
     if args.shutdown:
@@ -371,14 +405,17 @@ Other operations:
         from .debugger import clear_cache_handler
 
         kwargs["headless"] = getattr(args, "headless", True)
-        port = kwargs.get("port") or 9222
+        port = kwargs.get("port") or DefaultConfig.port
         main_user_dir = ChromeDaemon._ensure_user_dir(kwargs["user_data_dir"])
+        if main_user_dir is None:
+            print("user_data_dir is None, cannot clear cache", flush=True)
+            return
         port_user_dir = main_user_dir / f"chrome_{port}"
         print(f"Clearing cache(port={port}): {get_readable_dir_size(port_user_dir)}")
         asyncio.run(clear_cache_handler(**kwargs))
         print(f"Cleared  cache(port={port}): {get_readable_dir_size(port_user_dir)}")
     else:
-        start_port = getattr(args, "port", 9222)
+        start_port = getattr(args, "port", DefaultConfig.port)
         if args.demo:
             from .debugger import repl_tab
 

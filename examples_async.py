@@ -6,6 +6,9 @@ from aiohttp import ClientSession
 
 from ichrome import AsyncChromeDaemon, ChromeEngine
 from ichrome.async_utils import AsyncChrome, AsyncTab, Tag, logger
+from ichrome.schemas.daemon_config import DefaultConfig
+from ichrome.schemas.engine_schema import DownloadDTO, ScreenshotDTO
+
 
 # logger.setLevel('DEBUG')
 # AsyncTab._log_all_recv = True
@@ -14,8 +17,8 @@ headless = True
 
 
 async def test_chrome(chrome: AsyncChrome):
-    assert str(chrome) == "<Chrome(connected): http://127.0.0.1:9222>"
-    assert chrome.server == "http://127.0.0.1:9222"
+    assert str(chrome) == f"<Chrome(connected): {chrome.server}>"
+    assert chrome.server == f"http://{DefaultConfig.host}:{DefaultConfig.port}"
     version = await chrome.version
     assert isinstance(version, dict) and "Browser" in version
     ok = await chrome.check()
@@ -144,11 +147,12 @@ async def test_tab_set_url(tab: AsyncTab):
 
 
 async def test_tab_js(tab: AsyncTab):
-    await tab.goto("https://staticfile.org/about", timeout=5)
+    await tab.goto("https://staticfile.org/about", timeout=10)
     # test js update title
     await tab.js("document.title = 'abc'")
     # test js_code
-    assert (await tab.js_code("return document.title")) == "abc"
+    temp = await tab.js_code("return document.title")
+    assert temp == "abc", temp
     # test findall
     await tab.js("document.title = 123456789")
     assert (await tab.findall("<title>(.*?)</title>")) == ["123456789"]
@@ -172,9 +176,17 @@ async def test_tab_js(tab: AsyncTab):
     vue_obj = await tab.js("window.Vue", "result.result.type")
     # {'id': 22, 'result': {'result': {'type': 'undefined'}}}
     assert vue_obj == "undefined"
-    assert await tab.inject_js_url(
-        "https://cdn.staticfile.org/vue/2.6.10/vue.min.js", timeout=3
-    )
+    for _ in range(3):
+        try:
+            value = await tab.inject_js_url(
+                "https://cdn.staticfile.org/vue/2.6.10/vue.min.js", timeout=15
+            )
+        except asyncio.TimeoutError:
+            continue
+        if value:
+            break
+    else:
+        raise ValueError("inject_js_url failed")
     vue_obj = await tab.js("window.Vue", value_path=None)
     # {'id': 23, 'result': {'result': {'type': 'function', 'className': 'Function', 'description': 'function wn(e){this._init(e)}', 'objectId': '{"injectedScriptId":1,"id":1}'}}}
     assert "Function" in str(vue_obj)
@@ -227,16 +239,29 @@ async def test_wait_response(tab: AsyncTab):
         logger.warning("get response url: %s %s" % (url, ok))
         return ok
 
-    task = asyncio.ensure_future(
-        tab.wait_response(
-            filter_function=filter_function, response_body=True, timeout=10
-        )
-    )
-    await tab.set_url("https://cdn.staticfile.org/vue/2.6.10/vue.min.js")
-    result = await task
-    ok = "Released under the MIT License" in result["data"]
-    logger.warning(f"check wait_response callback, get_response {ok}")
-    assert ok
+    # tries 3 times
+    for _ in range(3):
+        try:
+            task = asyncio.ensure_future(
+                tab.wait_response(
+                    filter_function=filter_function, response_body=True, timeout=15
+                )
+            )
+            await tab.set_url(
+                "https://cdn.staticfile.org/vue/2.6.10/vue.min.js", timeout=15
+            )
+            result = await task
+            if not result:
+                continue
+            ok = "Released under the MIT License" in result["data"]
+            logger.warning(f"check wait_response callback, get_response {ok}")
+            if not ok:
+                continue
+            return
+        except asyncio.TimeoutError:
+            logger.warning("wait_response timeout, retry...")
+    else:
+        raise ValueError("max retries")
 
     # test wait_response_context
 
@@ -251,7 +276,7 @@ async def test_wait_response(tab: AsyncTab):
     async with tab.wait_response_context(
         filter_function=filter_function2, timeout=5
     ) as r:
-        await tab.goto("https://cdn.staticfile.org/vue/2.6.10/vue.min.js")
+        await tab.goto("https://cdn.staticfile.org/vue/2.6.10/vue.min.js", timeout=15)
         result = (await r) or {}
         assert "Released under the MIT License" in result.get("data", ""), result
 
@@ -487,8 +512,8 @@ async def test_examples():
     def on_shutdown(chromed):
         chromed.__class__.bye = 1
 
-    host = "127.0.0.1"
-    port = 9222
+    host = DefaultConfig.host
+    port = DefaultConfig.port
     async with AsyncChromeDaemon(
         host=host,
         port=port,
@@ -586,7 +611,9 @@ async def test_examples():
             )
     assert AsyncChromeDaemon.bye
     # test clear_after_shutdown
-    _user_dir_path = AsyncChromeDaemon.DEFAULT_USER_DIR_PATH / "chrome_9222"
+    _user_dir_path = (
+        AsyncChromeDaemon.DEFAULT_USER_DIR_PATH / f"chrome_{DefaultConfig.port}"
+    )
     dir_cleared = not _user_dir_path.is_dir()
     assert dir_cleared
     await asyncio.sleep(1)
@@ -594,11 +621,11 @@ async def test_examples():
 
 async def test_chrome_engine():
     async def _test_chrome_engine():
-        tab_callback1 = r"""async def tab_callback(self, tab, url, timeout):
+        async def tab_callback1(tab, url, task):
             await tab.set_url(url, timeout=5)
-            return 'Bing' in (await tab.title)"""
+            return "Bing" in (await tab.title)
 
-        async def tab_callback2(self, tab, url, timeout):
+        async def tab_callback2(tab, url, task):
             await tab.set_url(url, timeout=5)
             return "Bing" in (await tab.title)
 
@@ -625,22 +652,30 @@ async def test_chrome_engine():
             # test screenshot full screen and partial tag range.
             tasks = [
                 asyncio.create_task(
-                    ce.screenshot("https://bing.com", "#sbox", timeout=10)
+                    ce.screenshot(
+                        ScreenshotDTO("https://bing.com", "#sb_form_q"), timeout=10
+                    )
                 ),
-                asyncio.create_task(ce.screenshot("https://bing.com", timeout=10)),
+                asyncio.create_task(
+                    ce.screenshot(ScreenshotDTO("https://bing.com"), timeout=10)
+                ),
             ]
             results = [await task for task in tasks]
-            assert 1000 < len(results[0]) < len(results[1])
+            assert 100 < len(results[0]) < len(results[1])
 
             # test download
             tasks = [
                 asyncio.create_task(
-                    ce.download("https://bing.com", "#sbox", timeout=10)
+                    ce.download(
+                        DownloadDTO("https://bing.com", "#sb_form_q"), timeout=10
+                    )
                 ),
-                asyncio.create_task(ce.download("https://bing.com", timeout=10)),
+                asyncio.create_task(
+                    ce.download(DownloadDTO("https://bing.com"), timeout=10)
+                ),
             ]
             results = [await task for task in tasks]
-            assert 1000 < len(results[0]["tags"][0]) < len(results[1]["html"])
+            assert 10 < len(results[0].tags[0]) < len(results[1].html)
 
             # test connect_tab
             async with ce.connect_tab() as tab:

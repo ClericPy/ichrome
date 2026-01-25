@@ -49,7 +49,7 @@ def test_js(tab: AsyncTab):
 
 def main():
     with Daemon(
-        user_data_dir="./debug_cache", clear_after_shutdown=True, headless=0
+        user_data_dir="./temp/debug_cache", clear_after_shutdown=True, headless=0
     ) as daemon:
         with Chrome(host=daemon.host, port=daemon.port) as chrome:
             tab = chrome.get_tab()
