@@ -213,7 +213,7 @@ class ChromeTask(asyncio.Future):
             raise error
         except Exception as error:
             logger.exception(f"{self} catch an error while running task, {error!r}")
-            self.set_result(result)
+            self.set_exception(error)
 
     def set_result(self, result):
         if self._state == "PENDING":

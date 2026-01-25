@@ -111,7 +111,7 @@ class HttpController:
                 )
         except Exception as e:
             logger.error(f"Download error: {format_error(e, filter=None)}")
-            return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
+            return web.json_response(Response(code=1, msg=repr(e)).to_dict(), status=500)
 
     async def screenshot(self, request: web.Request) -> web.Response:
         """Handle screenshot request."""
@@ -134,7 +134,7 @@ class HttpController:
                 return web.Response(body=result, content_type=content_type)
         except Exception as e:
             logger.error(f"Screenshot error: {format_error(e, filter=None)}")
-            return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
+            return web.json_response(Response(code=1, msg=repr(e)).to_dict(), status=500)
 
     async def js(self, request: web.Request) -> web.Response:
         """Handle js request."""
@@ -152,7 +152,7 @@ class HttpController:
                 )
         except Exception as e:
             logger.error(f"JS error: {format_error(e, filter=None)}")
-            return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
+            return web.json_response(Response(code=1, msg=repr(e)).to_dict(), status=500)
 
     def _parse_callback(self, code: Any) -> Any:
         if not isinstance(code, str):
@@ -188,10 +188,27 @@ class HttpController:
                 timeout=timeout,
                 **other_dtos,
             )
-            return web.json_response(Response(code=0, data=result).to_dict())
+            # check isinstance of web.Response to return directly
+            if isinstance(result, web.Response):
+                return result
+            else:
+                resp = Response(code=0, data=None)
+                if isinstance(result, bytes):
+                    result = {"data_base64": b64encode(result).decode("utf-8")}
+                elif isinstance(result, str):
+                    pass
+                elif isinstance(result, (int, float, dict, list, type(None))):
+                    try:
+                        result = json.loads(json.dumps(result, default=repr))
+                    except Exception:
+                        result = repr(result)
+                else:
+                    result = repr(result)
+                resp.data = result
+                return web.json_response(resp.to_dict())
         except Exception as e:
             logger.error(f"Do error: {format_error(e, filter=None)}")
-            return web.json_response(Response(code=1, msg=str(e)).to_dict(), status=500)
+            return web.json_response(Response(code=1, msg=repr(e)).to_dict(), status=500)
 
     async def docs(self, request: web.Request) -> web.Response:
         """Handle docs documentation request."""
