@@ -6,6 +6,10 @@
 
 **🚀 [NEW] ichrome v6.0.0 is available! Now supporting `ichrome.http` - a RESTful API server to control Chrome via HTTP requests.**
 
+> `uvx --from ichrome ichrome.http`  
+> or  
+> `python -m ichrome.http`
+
 ![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
 
 > If you encounter any problems, please let me know through [issues](https://github.com/ClericPy/ichrome/issues), some of them will be a good opinion for the enhancement of `ichrome`.
