@@ -4,35 +4,35 @@
 
 -----------
 
-> Chrome controller for Humans, base on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.8+.
+> Chrome controller for Humans, based on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.8+.
 
 **🚀 [NEW] ichrome v6.0.0 is available! Now supporting [ichrome.http](./reference/WebAPP.md) - a RESTful API server to control Chrome via HTTP requests.**
 
 ![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
 
-If you encounter any problems, please let me know through [issues](https://github.com/ClericPy/ichrome/issues), some of them will be a good opinion for the enhancement of `ichrome`.
+If you encounter any problems, please let me know through [issues](https://github.com/ClericPy/ichrome/issues); your feedback is valuable for enhancing `ichrome`.
 
 # Why?
 
 - In desperate need of a stable toolkit to communicate with Chrome browser (or other Blink-based browsers such as Chromium)
     - `ichrome` includes fast http & websocket connections (based on aiohttp) within an **asyncio** environment
 - Pyppeteer is awesome
-    - But I don't need so much, and the spelling of pyppeteer is confused
-    - Event-driven architecture(EDA) is not always smart.
+    - But I don't need so much, and the spelling of 'pyppeteer' is confusing
+    - Event-driven architecture (EDA) is not always ideal.
 - Selenium is slow
-    - Webdriver often comes with memory leak
+    - Webdriver often comes with memory leaks
         - PhantomJS development is suspended
-    - No native coroutine(`asyncio`) support
-- Playwright comes too late
+    - No native coroutine (`asyncio`) support
+- Playwright arrived too late
     - This may be a good choice for both `sync` and `async` usage
-        - The 1st author of `puppeteer` joined it.
-    - But its core code is based on Node.js, which is too hard to monkey-patch.
+        - The original author of `puppeteer` joined the team.
+    - But its core code is based on Node.js, which is hard to monkey-patch.
 
 # Features
 
-> As we known, **`Javascript` is the first-class citizen of the Browser world**, so learn to use it with `ichrome` frequently.
+> As we know, **`Javascript` is the first-class citizen of the Browser world**, so learn to use it frequently with `ichrome`.
 
-- A process daemon of Chrome instances
+- A process daemon for Chrome instances
     - **auto-restart**
     - command-line usage
     - `async` environment compatible
@@ -40,8 +40,8 @@ If you encounter any problems, please let me know through [issues](https://githu
 - Operations on Tabs under stable `websocket`
     - Commonly used functions
     - `Incognito Mode`
-- `ChromeEngine` as the progress pool
-    - support HTTP `api` router with [FastAPI](https://github.com/tiangolo/fastapi)
+- `ChromeEngine` as the process pool
+    - support HTTP `api` router with [aiohttp](https://docs.aiohttp.org/en/stable/)
 - `Flatten` mode with `sessionId`
     - Create only **1** WebSocket connection
     - New in version 2.9.0
