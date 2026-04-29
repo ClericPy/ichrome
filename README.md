@@ -4,12 +4,14 @@
 
 > Chrome controller for Humans, based on [Chrome Devtools Protocol(CDP)](https://chromedevtools.github.io/devtools-protocol/) and python3.8+. [Read Docs](https://clericpy.github.io/ichrome/)
 
-**🚀 [NEW] ichrome v6.0.0 is available! Now supporting `ichrome.http` - a RESTful API server to control Chrome via HTTP requests.**
+**🚀 [NEW] ichrome v6.0.1 is available! Now supporting `ichrome.http` - a RESTful API server to control Chrome via HTTP requests.**
 
 > `uvx --from ichrome ichrome.http`  
 > or  
 > `python -m ichrome.http`  
 > then view the interactive API docs at `http://localhost:8080/docs`
+>
+> Want to add your own endpoints? Wrap tab operations as business logic into HTTP routes. See [demo/custom_routes_guide.py](demo/custom_routes_guide.py) for a quick guide.
 
 ![image](https://github.com/ClericPy/ichrome/raw/master/structure.png)
 

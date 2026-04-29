@@ -13,12 +13,9 @@ import asyncio
 import json
 from pathlib import Path
 
-from aiohttp import web
-
 from ..logs import logger
-from ..pool import ChromeEngine
-from .app import API_DOCS, create_app
 from ..schemas.http_schema import ChromeConfig, ServerConfig
+from .app import API_DOCS, HttpServer
 
 
 def main():
@@ -157,24 +154,8 @@ def main():
             return
 
     async def run_server():
-        async with ChromeEngine(**chrome_config.to_engine_params()) as engine:
-            app = await create_app(engine, api_prefix=server_config.api_prefix)
-            runner = web.AppRunner(app)
-            await runner.setup()
-            site = web.TCPSite(runner, server_config.host, server_config.port)
-            logger.info(
-                f"HTTP server starting on http://{server_config.host}:{server_config.port}, "
-                f"visit http://{server_config.host}:{server_config.port}{server_config.api_prefix.rstrip('/')}/docs for API documentation and examples."
-            )
-            await site.start()
-            try:
-                while True:
-                    await asyncio.sleep(3600)
-            finally:
-                try:
-                    await runner.cleanup()
-                except Exception:
-                    pass
+        async with HttpServer(chrome_config, server_config) as server:
+            await server.run_server()
 
     try:
         asyncio.run(run_server())

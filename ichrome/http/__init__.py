@@ -18,8 +18,7 @@ Examples:
         curl "http://127.0.0.1:8080/docs"
 """
 
+from .app import HttpServer, create_app
 from .controller import HttpController
-from .app import create_app
 
-
-__all__ = ["HttpController", "create_app"]
+__all__ = ["HttpController", "HttpServer", "create_app"]
